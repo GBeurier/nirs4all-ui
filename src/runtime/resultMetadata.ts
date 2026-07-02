@@ -1,11 +1,18 @@
 export type RuntimeDiagnosticTone = "error" | "warning" | "info";
 
+/**
+ * One normalized runtime diagnostic. Mirrors the rt_error.v1 wire envelope
+ * (`nirs4all-ecosystem/docs/contracts/runtime/rt_error.v1.schema.json`):
+ * `verb` / `cause` / `message` / `mitigation` / `unsupported_capability` are
+ * carried; `portable_level` is opaque (CAP-002) and never interpreted here.
+ */
 export interface RuntimeDiagnosticItem {
   id: string;
   verb: string | null;
   cause: string | null;
   message: string;
   mitigation: string | null;
+  unsupportedCapability: string | null;
   tone: RuntimeDiagnosticTone;
 }
 
@@ -169,6 +176,7 @@ function normalizeRuntimeDiagnostic(raw: unknown, index: number): RuntimeDiagnos
   const cause = readStringField(record, ["cause", "code"]);
   const verb = readStringField(record, ["verb", "operation"]);
   const mitigation = readStringField(record, ["mitigation", "hint", "suggestion"]);
+  const unsupportedCapability = readStringField(record, ["unsupported_capability", "unsupportedCapability"]);
 
   return {
     id: `${index}-${cause ?? "diagnostic"}-${message.slice(0, 32)}`,
@@ -176,6 +184,7 @@ function normalizeRuntimeDiagnostic(raw: unknown, index: number): RuntimeDiagnos
     cause,
     message,
     mitigation,
+    unsupportedCapability,
     tone: resolveDiagnosticTone(record),
   };
 }
@@ -228,6 +237,28 @@ export function formatRuntimeTokenLabel(value: string | null | undefined): strin
       return partLower.charAt(0).toUpperCase() + partLower.slice(1);
     })
     .join(" ");
+}
+
+/**
+ * Format a runtime refusal (an rt_error.v1 envelope normalized to a
+ * `RuntimeDiagnosticItem`) as the shared multi-line message hosts show when a
+ * strict-mode run is refused (banner, execution log, toast):
+ *
+ *   `<Verb> refused: <Cause>`
+ *   `<message>`
+ *   `Mitigation: <mitigation>`              (when present)
+ *   `Missing capability: <Capability>`      (when present)
+ */
+export function formatRuntimeRefusalText(
+  item: Pick<RuntimeDiagnosticItem, "verb" | "cause" | "message" | "mitigation" | "unsupportedCapability">,
+): string {
+  const lines = [
+    `${formatRuntimeTokenLabel(item.verb)} refused: ${formatRuntimeTokenLabel(item.cause)}`,
+    item.message,
+  ];
+  if (item.mitigation) lines.push(`Mitigation: ${item.mitigation}`);
+  if (item.unsupportedCapability) lines.push(`Missing capability: ${formatRuntimeTokenLabel(item.unsupportedCapability)}`);
+  return lines.join("\n");
 }
 
 function resolveRuntimeEngineTone(engine: string | null, isFallback: boolean): RuntimeEngineTone {
