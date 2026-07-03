@@ -1,0 +1,16 @@
+{
+  "name": "nirs4all-ui",
+  "short_name": "n4u",
+  "description": "Shared React components and view-model helpers for nirs4all Studio and Web.",
+  "icons": [
+    {
+      "src": "./favicon.svg",
+      "sizes": "64x64",
+      "type": "image/svg+xml"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#2563eb"
+}

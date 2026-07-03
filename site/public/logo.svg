@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 180" role="img" aria-labelledby="title">
+  <title id="title">nirs4all-ui</title>
+  <rect x="20" y="20" width="140" height="140" rx="28" fill="#2563EB"/>
+  <path d="M42 112c18 0 28-4 38-18 13-18 18-56 34-60 16-3 20 40 31 59 11 18 23 22 36-4 10-20 23-40 45 3" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="126" cy="112" r="14" fill="#fff"/>
+  <path d="M204 113V68h18v10c5-8 13-12 24-12 19 0 30 13 30 34v13h-18V99c0-11-6-17-16-17-12 0-20 8-20 22v9h-18Z" fill="#0F172A"/>
+  <path d="M292 113V68h18v45h-18Zm9-53c-7 0-12-5-12-11s5-11 12-11 12 5 12 11-5 11-12 11Z" fill="#0F172A"/>
+  <path d="M328 113V38h18v75h-18Z" fill="#0F172A"/>
+  <path d="M392 113V96h-40V83l42-45h16v42h14v16h-14v17h-18Zm-18-33h18V60l-18 20Z" fill="#E9362D"/>
+  <path d="M436 113V38h18v75h-18Zm34 0V68h18v45h-18Zm9-53c-7 0-12-5-12-11s5-11 12-11 12 5 12 11-5 11-12 11Z" fill="#2563EB"/>
+</svg>
