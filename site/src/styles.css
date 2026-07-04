@@ -189,6 +189,7 @@ h2 {
 
 .inventory-grid,
 .surface-grid,
+.component-catalog,
 .runtime-layout,
 .score-layout,
 .asset-layout {
@@ -251,6 +252,7 @@ code {
 .native-row span,
 .metric-group span,
 .helper-group span,
+.component-detail li,
 .fact-grid span,
 .preset-columns span,
 .token-list,
@@ -271,6 +273,75 @@ code {
 .token-list li {
   border-left: 3px solid #f59e0b;
   padding-left: 10px;
+}
+
+.component-card {
+  min-height: auto;
+  position: relative;
+}
+
+.component-detail-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.component-detail {
+  border-top: 1px solid #e4e8ef;
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+}
+
+.component-detail strong {
+  color: #18202a;
+  font-size: 0.9rem;
+}
+
+.component-detail ul {
+  display: grid;
+  gap: 7px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.component-detail li {
+  border-left: 3px solid #2563eb;
+  padding-left: 10px;
+}
+
+.component-status {
+  background: #ecfdf3;
+  border: 1px solid #bdebd1;
+  border-radius: 999px;
+  color: #087443;
+  font-size: 0.72rem;
+  font-weight: 850;
+  justify-self: start;
+  line-height: 1;
+  padding: 7px 10px;
+  text-transform: uppercase;
+}
+
+.demo-heading {
+  display: grid;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.demo-heading .kicker {
+  margin-bottom: 0;
+}
+
+.demo-heading h3 {
+  font-size: 1.2rem;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.code-sample {
+  background: #0f172a;
 }
 
 .engine-badge {
@@ -602,6 +673,7 @@ th {
   }
 
   .preset-columns,
+  .component-detail-grid,
   .metric-counts {
     grid-template-columns: 1fr;
   }

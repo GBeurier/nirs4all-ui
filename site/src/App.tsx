@@ -173,6 +173,19 @@ const exportGroups = [
   },
 ];
 
+const reusableComponentCards = [
+  {
+    name: "RuntimeEngineBadge",
+    entry: "nirs4all-ui/components",
+    status: "exported",
+    summary:
+      "A stateless badge for host-provided runtime metadata. It renders dag-ml/native/fallback lineage without owning layout, icons, state, or execution.",
+    props: ["source or status", "lineage", "label and title", "icon nodes", "className"],
+    hostOwned: ["placement", "density", "icon system", "runtime payload adaptation"],
+    importLine: 'import { RuntimeEngineBadge } from "nirs4all-ui/components";',
+  },
+];
+
 const scoreHelperGroups = [
   {
     title: "Metric keys",
@@ -331,8 +344,41 @@ export function App() {
         </div>
       </Section>
 
-      <Section id="components" title="Component Surface" kicker="components">
-        <div className="surface-grid">
+      <Section id="components" title="Reusable React Components" kicker="components">
+        <div className="component-catalog">
+          {reusableComponentCards.map((component) => (
+            <article className="surface-panel component-card" key={component.name}>
+              <div className="panel-head">
+                <span>{component.name}</span>
+                <code>{component.entry}</code>
+              </div>
+              <p>{component.summary}</p>
+              <div className="component-detail-grid">
+                <div className="component-detail">
+                  <strong>Stable props</strong>
+                  <ul>
+                    {component.props.map((item) => <li key={item}>{item}</li>)}
+                  </ul>
+                </div>
+                <div className="component-detail">
+                  <strong>Host-owned</strong>
+                  <ul>
+                    {component.hostOwned.map((item) => <li key={item}>{item}</li>)}
+                  </ul>
+                </div>
+              </div>
+              <pre className="code-sample">{component.importLine}</pre>
+              <span className="component-status">{component.status}</span>
+            </article>
+          ))}
+        </div>
+
+        <div className="demo-heading">
+          <span className="kicker">live renderings</span>
+          <h3>RuntimeEngineBadge states</h3>
+        </div>
+
+        <div className="surface-grid component-demo-grid">
           {runtimeSources.map((item) => {
             const status = buildRuntimeEngineStatus(item.source);
             return (
