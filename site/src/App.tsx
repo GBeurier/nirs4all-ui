@@ -701,8 +701,8 @@ export function App() {
             </div>
             <img src="./logo.svg" alt="nirs4all-ui logo" />
             <p>
-              Public site assets are present for the single-page showcase, while
-              packaged brand files remain available through the `assets/*` export.
+              The single-page showcase serves the same brand kit exported by the
+              package through the `assets/*` path.
             </p>
           </article>
           <article className="surface-panel asset-list-panel">
