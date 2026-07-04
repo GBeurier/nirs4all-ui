@@ -276,6 +276,21 @@ const runtimeHelperGroups = [
 const publicationAssets = [
   { name: "logo.svg", role: "Header and Open Graph identity", path: "./logo.svg" },
   { name: "favicon.svg", role: "Browser icon and manifest icon", path: "./favicon.svg" },
+  {
+    name: "assets/brand/nirs4all-ui/icon.svg",
+    role: "Stable GitHub Pages icon URL",
+    path: "./assets/brand/nirs4all-ui/icon.svg",
+  },
+  {
+    name: "assets/brand/nirs4all-ui/horizontal.svg",
+    role: "Horizontal package mark",
+    path: "./assets/brand/nirs4all-ui/horizontal.svg",
+  },
+  {
+    name: "assets/brand/nirs4all-ui/stacked.svg",
+    role: "Stacked package mark",
+    path: "./assets/brand/nirs4all-ui/stacked.svg",
+  },
   { name: "robots.txt", role: "GitHub Pages crawler policy", path: "./robots.txt" },
   { name: "sitemap.xml", role: "Canonical GitHub Pages URL", path: "./sitemap.xml" },
   { name: "site.webmanifest", role: "Install metadata", path: "./site.webmanifest" },
@@ -790,8 +805,8 @@ export function App() {
             </div>
             <img src="./logo.svg" alt="nirs4all-ui logo" />
             <p>
-              The single-page showcase serves the same brand kit exported by the
-              package through the `assets/*` path.
+              The single-page showcase publishes namespaced GitHub Pages URLs for
+              the same brand kit exported by the package through `assets/brand/*`.
             </p>
           </article>
           <article className="surface-panel asset-list-panel">
