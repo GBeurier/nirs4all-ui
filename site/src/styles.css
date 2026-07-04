@@ -43,6 +43,10 @@ main {
   z-index: 10;
 }
 
+.topbar > * {
+  min-width: 0;
+}
+
 .brand {
   display: block;
   height: 44px;
@@ -55,6 +59,8 @@ nav {
   flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-end;
+  max-width: 100%;
+  min-width: 0;
 }
 
 nav a {
@@ -232,6 +238,7 @@ h2 {
 .panel-head span {
   font-weight: 850;
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 code {
@@ -356,6 +363,109 @@ code {
   max-width: 100%;
   min-height: 34px;
   padding: 7px 12px;
+}
+
+.status-badge {
+  align-items: center;
+  border: 1px solid #c9d3df;
+  border-radius: 8px;
+  display: inline-flex;
+  font-size: 0.88rem;
+  font-weight: 850;
+  gap: 8px;
+  justify-self: start;
+  min-height: 38px;
+  padding: 8px 10px;
+}
+
+.status-progress {
+  border-left: 1px solid currentColor;
+  font-variant-numeric: tabular-nums;
+  margin-left: 2px;
+  padding-left: 8px;
+}
+
+.diagnostic-list {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.diagnostic-item {
+  border: 1px solid #e4e8ef;
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+}
+
+.diagnostic-item strong {
+  color: #18202a;
+  font-size: 0.9rem;
+}
+
+.diagnostic-item span {
+  color: #58677a;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.diagnostic-meta {
+  border-top: 1px solid #e4e8ef;
+  padding-top: 6px;
+}
+
+.metric-badge-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.metric-badge {
+  align-items: center;
+  border: 1px solid #e4e8ef;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 64px;
+  padding: 10px;
+}
+
+.metric-label,
+.metric-direction {
+  color: #58677a;
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.metric-value {
+  color: #18202a;
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.metric-direction {
+  justify-self: end;
+}
+
+.metric-better {
+  border-color: #bdebd1;
+  background: #ecfdf3;
+}
+
+.metric-worse {
+  border-color: #ffd7ae;
+  background: #fff7ed;
+}
+
+.metric-equal {
+  background: #f2f4f7;
 }
 
 .tone-success {
@@ -674,6 +784,7 @@ th {
 
   .preset-columns,
   .component-detail-grid,
+  .metric-badge-grid,
   .metric-counts {
     grid-template-columns: 1fr;
   }
@@ -687,6 +798,7 @@ th {
 
   nav {
     justify-content: flex-start;
+    width: 100%;
   }
 
   .inventory-grid,

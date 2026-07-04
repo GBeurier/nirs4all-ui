@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
 
 import {
+  MetricValueBadge,
+  RuntimeDiagnosticList,
   RuntimeEngineBadge,
+  RuntimeResultStatusBadge,
 } from "../../src/components/index.js";
 import {
   RUNTIME_RESULT_STATUSES,
@@ -140,7 +143,12 @@ const exportGroups = [
   {
     entry: "nirs4all-ui/components",
     title: "React components",
-    items: ["RuntimeEngineBadge"],
+    items: [
+      "MetricValueBadge",
+      "RuntimeDiagnosticList",
+      "RuntimeEngineBadge",
+      "RuntimeResultStatusBadge",
+    ],
     note: "Presentational only; hosts provide classes and icon nodes.",
   },
   {
@@ -183,6 +191,36 @@ const reusableComponentCards = [
     props: ["source or status", "lineage", "label and title", "icon nodes", "className"],
     hostOwned: ["placement", "density", "icon system", "runtime payload adaptation"],
     importLine: 'import { RuntimeEngineBadge } from "nirs4all-ui/components";',
+  },
+  {
+    name: "RuntimeResultStatusBadge",
+    entry: "nirs4all-ui/components",
+    status: "exported",
+    summary:
+      "A compact status badge for queued/running/completed/failed/partial runtime states. It uses shared display tokens while leaving iconography and classes to the host.",
+    props: ["status or view", "progress", "icon map", "formatProgress", "className"],
+    hostOwned: ["status placement", "visual tone", "icon components", "progress wording"],
+    importLine: 'import { RuntimeResultStatusBadge } from "nirs4all-ui/components";',
+  },
+  {
+    name: "RuntimeDiagnosticList",
+    entry: "nirs4all-ui/components",
+    status: "exported",
+    summary:
+      "A normalized runtime diagnostic list for rt_error.v1-like payloads. Hosts can render the default content or supply a custom item renderer.",
+    props: ["source or diagnostics", "empty content", "item class resolver", "renderItem"],
+    hostOwned: ["severity styling", "container layout", "empty state copy", "custom rendering"],
+    importLine: 'import { RuntimeDiagnosticList } from "nirs4all-ui/components";',
+  },
+  {
+    name: "MetricValueBadge",
+    entry: "nirs4all-ui/components",
+    status: "exported",
+    summary:
+      "A direction-aware metric badge for score cards and compact tables. It canonicalizes metric aliases and can show better/worse/equal comparison state.",
+    props: ["metric", "value", "compareTo", "label", "comparison classes"],
+    hostOwned: ["density", "comparison colors", "surrounding table/grid", "tooltip policy"],
+    importLine: 'import { MetricValueBadge } from "nirs4all-ui/components";',
   },
 ];
 
@@ -306,7 +344,7 @@ export function App() {
           </h1>
           <p>
             A static GitHub Pages catalogue generated from the package exports:
-            one presentational React component, runtime status contracts, score
+            presentational React components, runtime status contracts, score
             helpers, and bundled brand assets.
           </p>
         </div>
@@ -321,8 +359,8 @@ export function App() {
             <span>runtime statuses</span>
           </div>
           <div>
-            <strong>1</strong>
-            <span>React component</span>
+            <strong>{reusableComponentCards.length}</strong>
+            <span>React components</span>
           </div>
         </div>
       </section>
@@ -405,16 +443,67 @@ export function App() {
             );
           })}
 
-          <article className="surface-panel gap-panel">
+          <article className="surface-panel">
             <div className="panel-head">
-              <span>Documented gaps</span>
-              <code>no simulated UI</code>
+              <span>Runtime status badge</span>
+              <code>
+                Runtime<wbr />Result<wbr />Status<wbr />Badge
+              </code>
             </div>
-            <p>
-              The package currently exports one React component. Tables, banners,
-              charts, and navigation remain host-owned until shared contracts are
-              promoted into this package.
-            </p>
+            <RuntimeResultStatusBadge
+              status="running"
+              progress={68}
+              className="status-badge status-running"
+              icon={<StatusIcon icon="refresh" />}
+              progressClassName="status-progress"
+            />
+            <RuntimeResultStatusBadge
+              status="completed"
+              className="status-badge status-completed"
+              icon={<StatusIcon icon="check" />}
+              showProgress={false}
+            />
+          </article>
+
+          <article className="surface-panel diagnostic-component-panel">
+            <div className="panel-head">
+              <span>Diagnostic list</span>
+              <code>
+                Runtime<wbr />Diagnostic<wbr />List
+              </code>
+            </div>
+            <RuntimeDiagnosticList
+              diagnostics={diagnostics}
+              className="diagnostic-list"
+              itemClassName={(item) => `diagnostic-item tone-${item.tone}`}
+              metadataClassName="diagnostic-meta"
+            />
+          </article>
+
+          <article className="surface-panel metric-badge-panel">
+            <div className="panel-head">
+              <span>Metric value badges</span>
+              <code>
+                Metric<wbr />Value<wbr />Badge
+              </code>
+            </div>
+            <div className="metric-badge-grid">
+              {scoreRows.slice(0, 4).map((row) => (
+                <MetricValueBadge
+                  key={row.metric}
+                  metric={row.metric}
+                  value={row.value}
+                  compareTo={row.challenger}
+                  className="metric-badge"
+                  betterClassName="metric-better"
+                  worseClassName="metric-worse"
+                  equalClassName="metric-equal"
+                  metricClassName="metric-label"
+                  valueClassName="metric-value"
+                  directionClassName="metric-direction"
+                />
+              ))}
+            </div>
           </article>
         </div>
       </Section>
