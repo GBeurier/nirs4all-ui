@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import {
   RuntimeEngineBadge,
 } from "../../src/components/index.js";
@@ -8,18 +10,52 @@ import {
   buildRuntimeResultStatusView,
   formatRuntimeEngineTitle,
   formatRuntimeRefusalText,
+  formatRuntimeTokenLabel,
+  getRuntimeResultEmptyMessage,
+  getRuntimeResultStatusDisplay,
+  getRuntimeResultStatusProgress,
+  isBusyRuntimeResultStatus,
+  isRuntimeResultStatus,
   normalizeRuntimeDiagnostics,
+  resolveRuntimeResultStatus,
+  runtimeEngineLabel,
 } from "../../src/runtime/index.js";
 import {
+  ALL_CLASSIFICATION_METRICS,
+  ALL_REGRESSION_METRICS,
+  ALL_SCORE_METRICS,
   CLASSIFICATION_PRESETS,
+  DEFAULT_DATASET_ITEM_CLASSIFICATION_METRICS,
+  DEFAULT_DATASET_ITEM_REGRESSION_METRICS,
+  LEGACY_DATASET_ITEM_CLASSIFICATION_METRICS,
+  LEGACY_DATASET_ITEM_REGRESSION_METRICS,
   REGRESSION_PRESETS,
+  canonicalMetricKey,
+  filterMetricsForTaskType,
   formatMetricDisplayName,
+  formatMetricName,
   formatMetricValue,
+  formatScore,
+  getAvailableMetricKeysForTaskTypes,
+  getAvailableMetrics,
+  getDefaultSelectedMetrics,
   getDefaultSelectedMetricsForTaskTypes,
+  getDefaultSelectionUpgradeCandidatesForTaskTypes,
+  getLegacySelectedMetricsForTaskTypes,
   getMetricDefinition,
+  getMetricDefinitions,
+  getMetricsForTaskType,
+  getPresetsForTaskType,
+  getPresetsForTaskTypes,
   groupMetricDefinitions,
   isBetterScore,
+  isClassificationTaskType,
+  isKnownMetricKey,
+  isLowerBetter,
   metricKeyCandidates,
+  normalizeMetricLookupKey,
+  orderMetricKeys,
+  parseJsonRecord,
   parseScoreNumber,
 } from "../../src/score/index.js";
 
@@ -44,24 +80,41 @@ const fallbackFixture = {
   ],
 };
 
+const nestedRuntimeFixture = {
+  execution_metadata: {
+    rt_result: {
+      manifest: { engine: "wasm-local" },
+      diagnostics: [{ message: "Native artifact bundle attached.", severity: "info" }],
+    },
+  },
+};
+
 const runtimeSources = [
   { id: "dagml", label: "DAG-ML execution", source: engineFixture },
   { id: "fallback", label: "Strict fallback diagnostic", source: fallbackFixture },
+  { id: "nested", label: "Nested runtime envelope", source: nestedRuntimeFixture },
   {
-    id: "wasm",
-    label: "Local WASM execution",
-    source: { engine_actual: "wasm-local", engine_requested: "wasm-local" },
+    id: "lineage",
+    label: "Legacy lineage prop",
+    lineage: { executed: true },
+    source: null,
   },
 ];
 
 const scoreRows = [
   { metric: "rmse", value: 0.32742, challenger: 0.41291 },
-  { metric: "r2", value: 0.91881, challenger: 0.88763 },
+  { metric: "r2_score", value: 0.91881, challenger: 0.88763 },
   { metric: "rpd", value: 3.11492, challenger: 2.7731 },
-  { metric: "balanced_accuracy", value: 0.84218, challenger: 0.8294 },
+  { metric: "balanced accuracy", value: 0.84218, challenger: 0.8294 },
+  { metric: "bias", value: -0.01831, challenger: 0.0412 },
 ];
 
-const groupedMetrics = groupMetricDefinitions(getDefaultSelectedMetricsForTaskTypes(["regression", "classification"]));
+const mixedTaskTypes = ["regression", "classification"];
+const defaultMetricKeys = getDefaultSelectedMetricsForTaskTypes(mixedTaskTypes);
+const legacyMetricKeys = getLegacySelectedMetricsForTaskTypes(mixedTaskTypes);
+const availableMixedMetrics = getAvailableMetricKeysForTaskTypes(mixedTaskTypes);
+const upgradeCandidates = getDefaultSelectionUpgradeCandidatesForTaskTypes(mixedTaskTypes);
+const groupedMetrics = groupMetricDefinitions(defaultMetricKeys);
 const nativeAffordance = buildRuntimeNativeResultsAffordance({
   artifactCount: 4,
   hasRefit: true,
@@ -69,6 +122,113 @@ const nativeAffordance = buildRuntimeNativeResultsAffordance({
 const disabledNativeAffordance = buildRuntimeNativeResultsAffordance();
 const fallbackStatus = buildRuntimeEngineStatus(fallbackFixture);
 const diagnostics = normalizeRuntimeDiagnostics(fallbackFixture);
+const queuedEmptyMessage = getRuntimeResultEmptyMessage("queued", {
+  queued: "Queued until a host runtime starts.",
+  running: "Runtime is producing a result.",
+  fallback: "No result payload is available.",
+});
+const invalidStatusFallback = resolveRuntimeResultStatus("archived", "partial");
+const parsedScoreRecord = parseJsonRecord('{"rmse":"0.32742","r2_score":0.91881}');
+
+const exportGroups = [
+  {
+    entry: "nirs4all-ui",
+    title: "Root barrel",
+    items: ["score namespace", "runtime namespace", "components namespace"],
+    note: "Convenience import for package-wide consumers.",
+  },
+  {
+    entry: "nirs4all-ui/components",
+    title: "React components",
+    items: ["RuntimeEngineBadge"],
+    note: "Presentational only; hosts provide classes and icon nodes.",
+  },
+  {
+    entry: "nirs4all-ui/runtime",
+    title: "Runtime view models",
+    items: [
+      "status display tokens",
+      "engine status summaries",
+      "rt_error.v1 diagnostics",
+      "native result affordances",
+    ],
+    note: "Pure TypeScript helpers; no runtime execution.",
+  },
+  {
+    entry: "nirs4all-ui/score",
+    title: "Score view models",
+    items: [
+      "metric key normalization",
+      "metric catalog and presets",
+      "direction-aware parsing",
+      "comparison and formatting",
+    ],
+    note: "Catalog mirrors the shared NIRS4ALL metric vocabulary.",
+  },
+  {
+    entry: "nirs4all-ui/assets/*",
+    title: "Brand assets",
+    items: ["icon SVG/PNG", "horizontal marks", "stacked marks", "Open Graph image"],
+    note: "Packaged assets for downstream docs and registries.",
+  },
+];
+
+const scoreHelperGroups = [
+  {
+    title: "Metric keys",
+    items: ["normalizeMetricLookupKey", "canonicalMetricKey", "metricKeyCandidates"],
+  },
+  {
+    title: "Value helpers",
+    items: ["parseScoreNumber", "parseJsonRecord", "formatScore", "formatMetricValue", "isBetterScore"],
+  },
+  {
+    title: "Catalog selectors",
+    items: [
+      "getMetricDefinition",
+      "getMetricDefinitions",
+      "getDefaultSelectedMetricsForTaskTypes",
+      "getAvailableMetricKeysForTaskTypes",
+      "getPresetsForTaskTypes",
+    ],
+  },
+];
+
+const runtimeHelperGroups = [
+  {
+    title: "Result status",
+    items: [
+      "isRuntimeResultStatus",
+      "resolveRuntimeResultStatus",
+      "getRuntimeResultStatusDisplay",
+      "buildRuntimeResultStatusView",
+      "isBusyRuntimeResultStatus",
+      "getRuntimeResultEmptyMessage",
+    ],
+  },
+  {
+    title: "Engine metadata",
+    items: [
+      "buildRuntimeEngineStatus",
+      "formatRuntimeEngineTitle",
+      "normalizeRuntimeDiagnostics",
+      "formatRuntimeRefusalText",
+      "runtimeEngineLabel",
+    ],
+  },
+  {
+    title: "Native results",
+    items: ["buildRuntimeNativeResultsAffordance", "RuntimeNativeResultsAffordanceView"],
+  },
+];
+
+const publicationAssets = [
+  { name: "logo.svg", role: "Header and Open Graph identity", path: "./logo.svg" },
+  { name: "favicon.svg", role: "Browser icon and manifest icon", path: "./favicon.svg" },
+  { name: "robots.txt", role: "GitHub Pages crawler policy", path: "./robots.txt" },
+  { name: "sitemap.xml", role: "Canonical GitHub Pages URL", path: "./sitemap.xml" },
+  { name: "site.webmanifest", role: "Install metadata", path: "./site.webmanifest" },
+];
 
 function StatusIcon({ icon }: { icon: string }) {
   return <span className={`status-icon status-icon-${icon}`} aria-hidden="true" />;
@@ -79,19 +239,22 @@ function BadgeIcon({ tone }: { tone: string }) {
 }
 
 function Section({
+  id,
   title,
   kicker,
   children,
 }: {
+  id: string;
   title: string;
   kicker: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
+  const headingId = `${id}-heading`;
   return (
-    <section className="section" aria-labelledby={title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}>
-      <div>
+    <section className="section" id={id} aria-labelledby={headingId}>
+      <div className="section-heading">
         <span className="kicker">{kicker}</span>
-        <h2 id={title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}>{title}</h2>
+        <h2 id={headingId}>{title}</h2>
       </div>
       {children}
     </section>
@@ -99,44 +262,77 @@ function Section({
 }
 
 export function App() {
+  const knownMetricDefinition = getMetricDefinition("r2_score");
+  const filteredClassificationMetrics = filterMetricsForTaskType(
+    ["rmse", "accuracy", "balanced_accuracy", "rpd"],
+    "classification",
+  );
+  const regressionPreset = getPresetsForTaskType("regression").find((preset) => preset.id === "nirs");
+  const mixedPresets = getPresetsForTaskTypes(mixedTaskTypes);
+
   return (
     <main>
       <header className="topbar">
-        <img src="./logo.svg" alt="nirs4all-ui" className="brand" />
+        <a href="#" aria-label="nirs4all-ui home">
+          <img src="./logo.svg" alt="nirs4all-ui" className="brand" />
+        </a>
         <nav aria-label="Package exports">
+          <a href="#exports">Exports</a>
           <a href="#components">Components</a>
           <a href="#runtime">Runtime</a>
           <a href="#score">Score</a>
+          <a href="#assets">Assets</a>
         </nav>
       </header>
 
-      <section className="intro">
-        <div>
-          <span className="kicker">Shared Studio/Web UI</span>
-          <h1>
-            <span className="headline-part">nirs4all-ui</span>{" "}
-            <span className="headline-part">components</span>{" "}
-            <span className="headline-part">and view models</span>
+      <section className="intro" aria-labelledby="intro-heading">
+        <div className="intro-copy">
+          <span className="kicker">Shared Studio/Web package</span>
+          <h1 id="intro-heading">
+            nirs4all-ui component and view-model showcase
           </h1>
+          <p>
+            A static GitHub Pages catalogue generated from the package exports:
+            one presentational React component, runtime status contracts, score
+            helpers, and bundled brand assets.
+          </p>
         </div>
-        <div className="intro-grid">
-          <div className="summary-panel">
-            <strong>Exports</strong>
-            <span>components</span>
-            <span>runtime</span>
-            <span>score</span>
+        <div className="intro-visual" aria-label="Package summary">
+          <img src="./favicon.svg" alt="" />
+          <div>
+            <strong>{ALL_SCORE_METRICS.length}</strong>
+            <span>score metrics</span>
           </div>
-          <div className="summary-panel">
-            <strong>Boundary</strong>
-            <span>presentational React</span>
-            <span>pure TypeScript helpers</span>
-            <span>host-owned app state</span>
+          <div>
+            <strong>{RUNTIME_RESULT_STATUSES.length}</strong>
+            <span>runtime statuses</span>
+          </div>
+          <div>
+            <strong>1</strong>
+            <span>React component</span>
           </div>
         </div>
       </section>
 
-      <Section title="Component Surface" kicker="components" >
-        <div id="components" className="surface-grid">
+      <Section id="exports" title="Export Inventory" kicker="package surface">
+        <div className="inventory-grid">
+          {exportGroups.map((group) => (
+            <article className="surface-panel export-panel" key={group.entry}>
+              <div className="panel-head">
+                <span>{group.title}</span>
+                <code>{group.entry}</code>
+              </div>
+              <ul className="token-list">
+                {group.items.map((item) => <li key={item}>{item}</li>)}
+              </ul>
+              <p>{group.note}</p>
+            </article>
+          ))}
+        </div>
+      </Section>
+
+      <Section id="components" title="Component Surface" kicker="components">
+        <div className="surface-grid">
           {runtimeSources.map((item) => {
             const status = buildRuntimeEngineStatus(item.source);
             return (
@@ -148,27 +344,45 @@ export function App() {
                   </code>
                 </div>
                 <RuntimeEngineBadge
+                  lineage={item.lineage}
                   source={item.source}
                   className={`engine-badge tone-${status?.tone ?? "default"}`}
                   defaultIcon={<BadgeIcon tone={status?.tone ?? "default"} />}
                   fallbackIcon={<BadgeIcon tone="warning" />}
                 />
-                <p>{formatRuntimeEngineTitle(status) ?? "No runtime metadata"}</p>
+                <p>
+                  {formatRuntimeEngineTitle(status)
+                    ?? runtimeEngineLabel(item.lineage)
+                    ?? "No runtime metadata"}
+                </p>
               </article>
             );
           })}
+
+          <article className="surface-panel gap-panel">
+            <div className="panel-head">
+              <span>Documented gaps</span>
+              <code>no simulated UI</code>
+            </div>
+            <p>
+              The package currently exports one React component. Tables, banners,
+              charts, and navigation remain host-owned until shared contracts are
+              promoted into this package.
+            </p>
+          </article>
         </div>
       </Section>
 
-      <Section title="Runtime View Models" kicker="runtime">
-        <div id="runtime" className="runtime-layout">
+      <Section id="runtime" title="Runtime View Models" kicker="runtime">
+        <div className="runtime-layout">
           <div className="status-strip" aria-label="Runtime statuses">
             {RUNTIME_RESULT_STATUSES.map((status, index) => {
               const view = buildRuntimeResultStatusView(status, status === "running" ? 68 : null);
+              const display = getRuntimeResultStatusDisplay(status);
               return (
                 <div className={`status-tile status-${status}`} key={status}>
                   <StatusIcon icon={view.icon} />
-                  <span>{view.label}</span>
+                  <span>{display.label}</span>
                   <strong>{view.progress ?? (index + 1) * 12}</strong>
                 </div>
               );
@@ -202,11 +416,45 @@ export function App() {
             </div>
             <p>{fallbackStatus?.detailLabel}</p>
           </article>
+
+          <article className="surface-panel">
+            <div className="panel-head">
+              <span>Status helpers</span>
+              <code>statusDisplay</code>
+            </div>
+            <div className="fact-grid">
+              <span>queued known</span>
+              <strong>{String(isRuntimeResultStatus("queued"))}</strong>
+              <span>archived fallback</span>
+              <strong>{invalidStatusFallback}</strong>
+              <span>running progress</span>
+              <strong>{getRuntimeResultStatusProgress("running", 42)}</strong>
+              <span>failed busy</span>
+              <strong>{String(isBusyRuntimeResultStatus("failed"))}</strong>
+              <span>queued empty copy</span>
+              <strong>{queuedEmptyMessage}</strong>
+              <span>token label</span>
+              <strong>{formatRuntimeTokenLabel("wasm_local")}</strong>
+            </div>
+          </article>
+
+          <article className="surface-panel helper-panel">
+            <div className="panel-head">
+              <span>Runtime exports</span>
+              <code>nirs4all-ui/runtime</code>
+            </div>
+            {runtimeHelperGroups.map((group) => (
+              <div className="helper-group" key={group.title}>
+                <strong>{group.title}</strong>
+                <span>{group.items.join(", ")}</span>
+              </div>
+            ))}
+          </article>
         </div>
       </Section>
 
-      <Section title="Score View Models" kicker="score">
-        <div id="score" className="score-layout">
+      <Section id="score" title="Score View Models" kicker="score">
+        <div className="score-layout">
           <article className="surface-panel score-table">
             <div className="panel-head">
               <span>Direction-aware values</span>
@@ -223,12 +471,13 @@ export function App() {
               </thead>
               <tbody>
                 {scoreRows.map((row) => {
+                  const metric = canonicalMetricKey(row.metric);
                   const currentWins = isBetterScore(row.value, row.challenger, row.metric);
                   return (
                     <tr key={row.metric}>
                       <td>{formatMetricDisplayName(row.metric)}</td>
-                      <td>{formatMetricValue(row.value, row.metric)}</td>
-                      <td>{formatMetricValue(row.challenger, row.metric)}</td>
+                      <td>{formatMetricValue(row.value, metric)}</td>
+                      <td>{formatMetricValue(row.challenger, metric)}</td>
                       <td>{currentWins ? "current" : "candidate"}</td>
                     </tr>
                   );
@@ -257,12 +506,16 @@ export function App() {
               <span>Normalization</span>
               <code>metricKeyCandidates</code>
             </div>
-            <div className="normalization">
-              <span>root mean squared error</span>
+            <div className="fact-grid">
+              <span>lookup</span>
+              <strong>{normalizeMetricLookupKey("R2 score")}</strong>
+              <span>canonical</span>
+              <strong>{canonicalMetricKey("r2_score")}</strong>
+              <span>aliases</span>
               <strong>{metricKeyCandidates("root mean squared error").join(" / ")}</strong>
-              <span>R2 score</span>
-              <strong>{getMetricDefinition("r2_score")?.label}</strong>
-              <span>Numeric strings</span>
+              <span>definition</span>
+              <strong>{knownMetricDefinition?.label}</strong>
+              <span>numeric string</span>
               <strong>{formatMetricValue(parseScoreNumber("0.91342"), "r2")}</strong>
             </div>
           </article>
@@ -281,6 +534,143 @@ export function App() {
                 <strong>Classification</strong>
                 {CLASSIFICATION_PRESETS.map((preset) => <span key={preset.id}>{preset.label}</span>)}
               </div>
+              <div>
+                <strong>Mixed tasks</strong>
+                {mixedPresets.map((preset) => <span key={preset.id}>{preset.label}</span>)}
+              </div>
+            </div>
+          </article>
+
+          <article className="surface-panel">
+            <div className="panel-head">
+              <span>Task selection</span>
+              <code>metric catalog</code>
+            </div>
+            <div className="fact-grid">
+              <span>regression defaults</span>
+              <strong>{getDefaultSelectedMetrics("regression").join(", ")}</strong>
+              <span>classification compact</span>
+              <strong>{getMetricsForTaskType("classification").join(", ")}</strong>
+              <span>classification filter</span>
+              <strong>{filteredClassificationMetrics.join(", ")}</strong>
+              <span>known MCC</span>
+              <strong>{String(isKnownMetricKey("mcc"))}</strong>
+              <span>task detector</span>
+              <strong>{String(isClassificationTaskType("binary_classification"))}</strong>
+            </div>
+          </article>
+
+          <article className="surface-panel">
+            <div className="panel-head">
+              <span>Catalog scope</span>
+              <code>ALL_SCORE_METRICS</code>
+            </div>
+            <div className="metric-counts">
+              <div>
+                <strong>{ALL_REGRESSION_METRICS.length}</strong>
+                <span>regression</span>
+              </div>
+              <div>
+                <strong>{ALL_CLASSIFICATION_METRICS.length}</strong>
+                <span>classification</span>
+              </div>
+              <div>
+                <strong>{availableMixedMetrics.length}</strong>
+                <span>mixed available</span>
+              </div>
+              <div>
+                <strong>{getAvailableMetrics("classification").length}</strong>
+                <span>available class</span>
+              </div>
+            </div>
+          </article>
+
+          <article className="surface-panel helper-panel">
+            <div className="panel-head">
+              <span>Score exports</span>
+              <code>nirs4all-ui/score</code>
+            </div>
+            {scoreHelperGroups.map((group) => (
+              <div className="helper-group" key={group.title}>
+                <strong>{group.title}</strong>
+                <span>{group.items.join(", ")}</span>
+              </div>
+            ))}
+          </article>
+
+          <article className="surface-panel">
+            <div className="panel-head">
+              <span>Compatibility helpers</span>
+              <code>legacy selections</code>
+            </div>
+            <div className="fact-grid">
+              <span>default constants</span>
+              <strong>
+                {DEFAULT_DATASET_ITEM_REGRESSION_METRICS.length}
+                {" / "}
+                {DEFAULT_DATASET_ITEM_CLASSIFICATION_METRICS.length}
+              </strong>
+              <span>legacy constants</span>
+              <strong>
+                {LEGACY_DATASET_ITEM_REGRESSION_METRICS.length}
+                {" / "}
+                {LEGACY_DATASET_ITEM_CLASSIFICATION_METRICS.length}
+              </strong>
+              <span>mixed legacy</span>
+              <strong>{legacyMetricKeys.join(", ")}</strong>
+              <span>upgrade candidates</span>
+              <strong>{upgradeCandidates.length}</strong>
+              <span>ordered sample</span>
+              <strong>{orderMetricKeys(["rpd", "rmse", "accuracy"]).join(", ")}</strong>
+            </div>
+          </article>
+
+          <article className="surface-panel">
+            <div className="panel-head">
+              <span>Formatting helpers</span>
+              <code>scoreValues</code>
+            </div>
+            <div className="fact-grid">
+              <span>formatScore</span>
+              <strong>{formatScore(parsedScoreRecord?.rmse as string | undefined)}</strong>
+              <span>formatMetricName</span>
+              <strong>{formatMetricName("median absolute error")}</strong>
+              <span>lower is better</span>
+              <strong>{String(isLowerBetter("rmse"))}</strong>
+              <span>NIRS preset</span>
+              <strong>{regressionPreset?.keys.join(", ")}</strong>
+              <span>definitions</span>
+              <strong>{getMetricDefinitions(["rmse", "r2", "mcc"]).map((metric) => metric.abbreviation).join(", ")}</strong>
+            </div>
+          </article>
+        </div>
+      </Section>
+
+      <Section id="assets" title="GitHub Pages Assets" kicker="publication">
+        <div className="asset-layout">
+          <article className="surface-panel brand-panel">
+            <div className="panel-head">
+              <span>Brand files</span>
+              <code>assets/brand</code>
+            </div>
+            <img src="./logo.svg" alt="nirs4all-ui logo" />
+            <p>
+              Public site assets are present for the single-page showcase, while
+              packaged brand files remain available through the `assets/*` export.
+            </p>
+          </article>
+          <article className="surface-panel asset-list-panel">
+            <div className="panel-head">
+              <span>Pages metadata</span>
+              <code>site/public</code>
+            </div>
+            <div className="asset-list">
+              {publicationAssets.map((asset) => (
+                <a href={asset.path} key={asset.name}>
+                  <strong>{asset.name}</strong>
+                  <span>{asset.role}</span>
+                </a>
+              ))}
             </div>
           </article>
         </div>
