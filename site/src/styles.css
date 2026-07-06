@@ -91,7 +91,7 @@ nav a:hover,
   color: #f8fafc;
   display: grid;
   gap: 28px;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 480px);
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 620px);
   min-height: 360px;
 }
 
@@ -149,7 +149,7 @@ h2 {
   color: #18202a;
   display: grid;
   gap: 12px;
-  grid-template-columns: 88px repeat(3, minmax(0, 1fr));
+  grid-template-columns: 88px repeat(4, minmax(0, 1fr));
   min-height: 144px;
   padding: 18px;
 }
@@ -194,6 +194,7 @@ h2 {
 }
 
 .inventory-grid,
+.public-api-grid,
 .surface-grid,
 .component-catalog,
 .runtime-layout,
@@ -209,6 +210,10 @@ h2 {
 
 .surface-grid {
   grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.public-api-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .surface-panel,
@@ -260,6 +265,7 @@ code {
 .metric-group span,
 .helper-group span,
 .component-detail li,
+.component-api-row span,
 .fact-grid span,
 .preset-columns span,
 .token-list,
@@ -318,6 +324,20 @@ code {
   padding-left: 10px;
 }
 
+.component-api-row {
+  align-items: center;
+  border-top: 1px solid #e4e8ef;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  justify-content: space-between;
+  padding-top: 12px;
+}
+
+.component-api-row span {
+  font-weight: 750;
+}
+
 .component-status {
   background: #ecfdf3;
   border: 1px solid #bdebd1;
@@ -349,6 +369,19 @@ code {
 
 .code-sample {
   background: #0f172a;
+}
+
+.symbol-cloud {
+  align-content: start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.symbol-cloud code {
+  background: #f8fafc;
+  border-color: #e4e8ef;
+  color: #405166;
 }
 
 .engine-badge {
@@ -739,6 +772,7 @@ th {
 
 @media (max-width: 1180px) {
   .inventory-grid,
+  .public-api-grid,
   .surface-grid,
   .score-layout {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -802,6 +836,7 @@ th {
   }
 
   .inventory-grid,
+  .public-api-grid,
   .surface-grid,
   .score-layout {
     grid-template-columns: 1fr;

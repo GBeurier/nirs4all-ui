@@ -8,6 +8,7 @@ import {
 } from "../../src/components/index.js";
 import {
   RUNTIME_RESULT_STATUSES,
+  RUNTIME_RESULT_STATUS_DISPLAY,
   buildRuntimeEngineStatus,
   buildRuntimeNativeResultsAffordance,
   buildRuntimeResultStatusView,
@@ -25,13 +26,16 @@ import {
 } from "../../src/runtime/index.js";
 import {
   ALL_CLASSIFICATION_METRICS,
+  ALL_GENERAL_METRICS,
   ALL_REGRESSION_METRICS,
   ALL_SCORE_METRICS,
+  CLASSIFICATION_METRICS,
   CLASSIFICATION_PRESETS,
   DEFAULT_DATASET_ITEM_CLASSIFICATION_METRICS,
   DEFAULT_DATASET_ITEM_REGRESSION_METRICS,
   LEGACY_DATASET_ITEM_CLASSIFICATION_METRICS,
   LEGACY_DATASET_ITEM_REGRESSION_METRICS,
+  REGRESSION_METRICS,
   REGRESSION_PRESETS,
   canonicalMetricKey,
   filterMetricsForTaskType,
@@ -181,10 +185,140 @@ const exportGroups = [
   },
 ];
 
+const publicApiGroups = [
+  {
+    entry: "nirs4all-ui",
+    title: "Root namespace exports",
+    symbols: ["score", "runtime", "components"],
+  },
+  {
+    entry: "nirs4all-ui/components",
+    title: "Component exports",
+    symbols: [
+      "MetricValueBadge",
+      "MetricValueBadgeProps",
+      "RuntimeDiagnosticList",
+      "RuntimeDiagnosticListProps",
+      "RuntimeEngineBadge",
+      "RuntimeEngineBadgeProps",
+      "RuntimeResultStatusBadge",
+      "RuntimeResultStatusBadgeProps",
+    ],
+  },
+  {
+    entry: "nirs4all-ui/runtime",
+    title: "Runtime exports",
+    symbols: [
+      "RUNTIME_RESULT_STATUSES",
+      "RuntimeResultStatus",
+      "RuntimeResultStatusIcon",
+      "RuntimeResultBadgeVariant",
+      "RuntimeResultStatusDisplay",
+      "RuntimeResultStatusView",
+      "RuntimeResultEmptyMessages",
+      "RUNTIME_RESULT_STATUS_DISPLAY",
+      "isRuntimeResultStatus",
+      "resolveRuntimeResultStatus",
+      "getRuntimeResultStatusDisplay",
+      "isBusyRuntimeResultStatus",
+      "getRuntimeResultStatusProgress",
+      "buildRuntimeResultStatusView",
+      "getRuntimeResultEmptyMessage",
+      "RuntimeDiagnosticTone",
+      "RuntimeDiagnosticItem",
+      "RuntimeEngineTone",
+      "RuntimeEngineStatusView",
+      "RuntimeNativeResultsAffordanceInput",
+      "RuntimeNativeResultsAffordanceView",
+      "normalizeRuntimeDiagnostics",
+      "formatRuntimeTokenLabel",
+      "formatRuntimeRefusalText",
+      "buildRuntimeEngineStatus",
+      "formatRuntimeEngineTitle",
+      "buildRuntimeNativeResultsAffordance",
+      "RuntimeEngineLineage",
+      "runtimeEngineLabel",
+    ],
+  },
+  {
+    entry: "nirs4all-ui/score",
+    title: "Score exports",
+    symbols: [
+      "normalizeMetricLookupKey",
+      "canonicalMetricKey",
+      "metricKeyCandidates",
+      "parseScoreNumber",
+      "parseJsonRecord",
+      "isLowerBetter",
+      "isBetterScore",
+      "formatScore",
+      "formatMetricValue",
+      "formatMetricName",
+      "formatMetricDisplayName",
+      "REGRESSION_METRICS",
+      "CLASSIFICATION_METRICS",
+      "DEFAULT_DATASET_ITEM_REGRESSION_METRICS",
+      "LEGACY_DATASET_ITEM_REGRESSION_METRICS",
+      "DEFAULT_DATASET_ITEM_CLASSIFICATION_METRICS",
+      "LEGACY_DATASET_ITEM_CLASSIFICATION_METRICS",
+      "MetricDefinition",
+      "MetricGroup",
+      "ALL_GENERAL_METRICS",
+      "ALL_REGRESSION_METRICS",
+      "ALL_CLASSIFICATION_METRICS",
+      "ALL_SCORE_METRICS",
+      "isClassificationTaskType",
+      "getMetricsForTaskType",
+      "getMetricDefinition",
+      "isKnownMetricKey",
+      "orderMetricKeys",
+      "getMetricDefinitions",
+      "groupMetricDefinitions",
+      "getDefaultSelectedMetricsForTaskTypes",
+      "getLegacySelectedMetricsForTaskTypes",
+      "getDefaultSelectionUpgradeCandidatesForTaskTypes",
+      "getAvailableMetricKeysForTaskTypes",
+      "filterMetricsForTaskType",
+      "getAvailableMetrics",
+      "MetricPreset",
+      "REGRESSION_PRESETS",
+      "CLASSIFICATION_PRESETS",
+      "getPresetsForTaskType",
+      "getPresetsForTaskTypes",
+      "getDefaultSelectedMetrics",
+    ],
+  },
+  {
+    entry: "nirs4all-ui/assets/*",
+    title: "Asset exports",
+    symbols: [
+      "assets/brand/icon.svg",
+      "assets/brand/icon-32.png",
+      "assets/brand/icon-180.png",
+      "assets/brand/icon-256.png",
+      "assets/brand/icon-512.png",
+      "assets/brand/favicon.ico",
+      "assets/brand/horizontal.svg",
+      "assets/brand/horizontal-dark.svg",
+      "assets/brand/horizontal.png",
+      "assets/brand/stacked.svg",
+      "assets/brand/stacked-dark.svg",
+      "assets/brand/stacked.png",
+      "assets/brand/og.png",
+    ],
+  },
+];
+
+const publicApiSymbolCount = publicApiGroups.reduce(
+  (total, group) => total + group.symbols.length,
+  0,
+);
+
 const reusableComponentCards = [
   {
     name: "RuntimeEngineBadge",
     entry: "nirs4all-ui/components",
+    propsInterface: "RuntimeEngineBadgeProps",
     status: "exported",
     summary:
       "A stateless badge for host-provided runtime metadata. It renders dag-ml/native/fallback lineage without owning layout, icons, state, or execution.",
@@ -195,6 +329,7 @@ const reusableComponentCards = [
   {
     name: "RuntimeResultStatusBadge",
     entry: "nirs4all-ui/components",
+    propsInterface: "RuntimeResultStatusBadgeProps",
     status: "exported",
     summary:
       "A compact status badge for queued/running/completed/failed/partial runtime states. It uses shared display tokens while leaving iconography and classes to the host.",
@@ -205,6 +340,7 @@ const reusableComponentCards = [
   {
     name: "RuntimeDiagnosticList",
     entry: "nirs4all-ui/components",
+    propsInterface: "RuntimeDiagnosticListProps",
     status: "exported",
     summary:
       "A normalized runtime diagnostic list for rt_error.v1-like payloads. Hosts can render the default content or supply a custom item renderer.",
@@ -215,6 +351,7 @@ const reusableComponentCards = [
   {
     name: "MetricValueBadge",
     entry: "nirs4all-ui/components",
+    propsInterface: "MetricValueBadgeProps",
     status: "exported",
     summary:
       "A direction-aware metric badge for score cards and compact tables. It canonicalizes metric aliases and can show better/worse/equal comparison state.",
@@ -277,6 +414,11 @@ const publicationAssets = [
   { name: "logo.svg", role: "Header and Open Graph identity", path: "./logo.svg" },
   { name: "favicon.svg", role: "Browser icon and manifest icon", path: "./favicon.svg" },
   {
+    name: "assets/brand/nirs4all-ui/og.png",
+    role: "1200 x 630 social preview image",
+    path: "./assets/brand/nirs4all-ui/og.png",
+  },
+  {
     name: "assets/brand/nirs4all-ui/icon.svg",
     role: "Stable GitHub Pages icon URL",
     path: "./assets/brand/nirs4all-ui/icon.svg",
@@ -290,6 +432,11 @@ const publicationAssets = [
     name: "assets/brand/nirs4all-ui/stacked.svg",
     role: "Stacked package mark",
     path: "./assets/brand/nirs4all-ui/stacked.svg",
+  },
+  {
+    name: "assets/brand/nirs4all-ui/icon-512.png",
+    role: "Installable app icon",
+    path: "./assets/brand/nirs4all-ui/icon-512.png",
   },
   { name: "robots.txt", role: "GitHub Pages crawler policy", path: "./robots.txt" },
   { name: "sitemap.xml", role: "Canonical GitHub Pages URL", path: "./sitemap.xml" },
@@ -377,6 +524,10 @@ export function App() {
             <strong>{reusableComponentCards.length}</strong>
             <span>React components</span>
           </div>
+          <div>
+            <strong>{publicApiSymbolCount}</strong>
+            <span>public entries</span>
+          </div>
         </div>
       </section>
 
@@ -392,6 +543,25 @@ export function App() {
                 {group.items.map((item) => <li key={item}>{item}</li>)}
               </ul>
               <p>{group.note}</p>
+            </article>
+          ))}
+        </div>
+
+        <div className="demo-heading">
+          <span className="kicker">complete public API</span>
+          <h3>Exported symbols and package assets</h3>
+        </div>
+
+        <div className="public-api-grid">
+          {publicApiGroups.map((group) => (
+            <article className="surface-panel api-panel" key={group.entry}>
+              <div className="panel-head">
+                <span>{group.title}</span>
+                <code>{group.entry}</code>
+              </div>
+              <div className="symbol-cloud" aria-label={`${group.title} symbols`}>
+                {group.symbols.map((symbol) => <code key={symbol}>{symbol}</code>)}
+              </div>
             </article>
           ))}
         </div>
@@ -420,6 +590,10 @@ export function App() {
                   </ul>
                 </div>
               </div>
+              <div className="component-api-row">
+                <span>Props interface</span>
+                <code>{component.propsInterface}</code>
+              </div>
               <pre className="code-sample">{component.importLine}</pre>
               <span className="component-status">{component.status}</span>
             </article>
@@ -443,7 +617,7 @@ export function App() {
                   </code>
                 </div>
                 <RuntimeEngineBadge
-                  lineage={item.lineage}
+                  lineage={item.lineage ?? null}
                   source={item.source}
                   className={`engine-badge tone-${status?.tone ?? "default"}`}
                   defaultIcon={<BadgeIcon tone={status?.tone ?? "default"} />}
@@ -579,6 +753,8 @@ export function App() {
               <strong>{invalidStatusFallback}</strong>
               <span>running progress</span>
               <strong>{getRuntimeResultStatusProgress("running", 42)}</strong>
+              <span>display map</span>
+              <strong>{Object.keys(RUNTIME_RESULT_STATUS_DISPLAY).length} statuses</strong>
               <span>failed busy</span>
               <strong>{String(isBusyRuntimeResultStatus("failed"))}</strong>
               <span>queued empty copy</span>
@@ -701,6 +877,8 @@ export function App() {
               <strong>{getDefaultSelectedMetrics("regression").join(", ")}</strong>
               <span>classification compact</span>
               <strong>{getMetricsForTaskType("classification").join(", ")}</strong>
+              <span>compact constants</span>
+              <strong>{REGRESSION_METRICS.join(", ")} / {CLASSIFICATION_METRICS.join(", ")}</strong>
               <span>classification filter</span>
               <strong>{filteredClassificationMetrics.join(", ")}</strong>
               <span>known MCC</span>
@@ -719,6 +897,10 @@ export function App() {
               <div>
                 <strong>{ALL_REGRESSION_METRICS.length}</strong>
                 <span>regression</span>
+              </div>
+              <div>
+                <strong>{ALL_GENERAL_METRICS.length}</strong>
+                <span>general</span>
               </div>
               <div>
                 <strong>{ALL_CLASSIFICATION_METRICS.length}</strong>
