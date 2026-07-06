@@ -14,6 +14,10 @@
   "files": [
     "assets",
     "dist",
+    "LICENSE",
+    "LICENSES",
+    "LICENSING.md",
+    "THIRD_PARTY_NOTICES.md",
     "README.md"
   ],
   "main": "./dist/index.js",
