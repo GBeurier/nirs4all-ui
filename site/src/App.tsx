@@ -17,6 +17,11 @@ import {
   resolveDatasetTaskKind,
 } from "../../src/dataset/index.js";
 import {
+  NIRS4ALL_BRANDS,
+  generateNirs4allBrandSvg,
+  getNirs4allBrandAssetPath,
+} from "../../src/brand/index.js";
+import {
   RUNTIME_RESULT_STATUSES,
   RUNTIME_RESULT_STATUS_DISPLAY,
   buildRuntimeEngineStatus,
@@ -75,6 +80,12 @@ import {
   parseJsonRecord,
   parseScoreNumber,
 } from "../../src/score/index.js";
+import {
+  NIRS4ALL_CSS_TOKENS,
+  NIRS4ALL_DEFAULT_THEME,
+  NIRS4ALL_STYLE_ASSETS,
+  getNirs4allCssVariable,
+} from "../../src/styles/index.js";
 import packageJson from "../../package.json" with { type: "json" };
 import { CANONICAL_SITE_URL, PUBLICATION_ASSETS } from "./showcaseMetadata.js";
 
@@ -223,10 +234,22 @@ const exportGroups = [
     note: "Catalog mirrors the shared NIRS4ALL metric vocabulary.",
   },
   {
+    entry: "nirs4all-ui/brand",
+    title: "Brand system",
+    items: ["ecosystem marks", "asset paths", "SVG generator", "brand palettes"],
+    note: "Reusable graphical identity for docs, apps, registries, and custom hosts.",
+  },
+  {
+    entry: "nirs4all-ui/styles",
+    title: "Default styles",
+    items: ["CSS tokens", "host utility classes", "motion assets", "theme manifest"],
+    note: "Framework-agnostic assets exported without importing CSS from JavaScript.",
+  },
+  {
     entry: "nirs4all-ui/assets/*",
     title: "Brand assets",
-    items: ["icon SVG/PNG", "horizontal marks", "stacked marks", "Open Graph image"],
-    note: "Packaged assets for downstream docs and registries.",
+    items: ["package logo kit", "ecosystem SVG marks", "default CSS", "spectra animation"],
+    note: "Packaged static assets for downstream apps, docs, registries, and Pages.",
   },
 ];
 
@@ -281,7 +304,7 @@ const publicApiGroups = [
   {
     entry: "nirs4all-ui",
     title: "Root namespace exports",
-    symbols: ["score", "runtime", "dataset", "components"],
+    symbols: ["score", "runtime", "dataset", "components", "brand", "styles"],
   },
   {
     entry: "nirs4all-ui/components",
@@ -424,6 +447,40 @@ const publicApiGroups = [
       "assets/brand/stacked-dark.svg",
       "assets/brand/stacked.png",
       "assets/brand/og.png",
+      "assets/brands/nirs4all/icon.svg",
+      "assets/brands/nirs4all-core/horizontal.svg",
+      "assets/brands/nirs4all-ui/stacked.svg",
+      "assets/brands/nirs4all-providers/icon.svg",
+      "assets/styles/nirs4all-default.css",
+      "assets/motion/nirs-spectra.svg",
+    ],
+  },
+  {
+    entry: "nirs4all-ui/brand",
+    title: "Brand exports",
+    symbols: [
+      "NIRS4ALL_BRANDS",
+      "Nirs4allBrandId",
+      "Nirs4allBrandVariant",
+      "Nirs4allBrandDefinition",
+      "listNirs4allBrands",
+      "isNirs4allBrandId",
+      "getNirs4allBrandDefinition",
+      "getNirs4allBrandAssetPath",
+      "generateNirs4allBrandSvg",
+    ],
+  },
+  {
+    entry: "nirs4all-ui/styles",
+    title: "Style exports",
+    symbols: [
+      "NIRS4ALL_STYLE_ASSETS",
+      "NIRS4ALL_CSS_TOKENS",
+      "NIRS4ALL_DEFAULT_THEME",
+      "Nirs4allStyleAsset",
+      "Nirs4allCssToken",
+      "getNirs4allStyleAsset",
+      "getNirs4allCssVariable",
     ],
   },
 ];
@@ -555,6 +612,23 @@ const datasetHelperGroups = [
   },
 ];
 
+const visualSystemStats = [
+  { label: "brands", value: NIRS4ALL_BRANDS.length },
+  { label: "style assets", value: NIRS4ALL_STYLE_ASSETS.length },
+  { label: "CSS tokens", value: NIRS4ALL_CSS_TOKENS.length },
+  { label: "theme colors", value: Object.keys(NIRS4ALL_DEFAULT_THEME.colors).length },
+];
+
+const brandCards = NIRS4ALL_BRANDS.map((brand) => ({
+  brand,
+  iconSvg: generateNirs4allBrandSvg(brand, {
+    variant: "icon",
+    animated: brand.id === "nirs4all-ui",
+  }),
+  horizontalPath: getNirs4allBrandAssetPath(brand, "horizontal"),
+  stackedPath: getNirs4allBrandAssetPath(brand, "stacked"),
+}));
+
 function StatusIcon({ icon }: { icon: string }) {
   return <span className={`status-icon status-icon-${icon}`} aria-hidden="true" />;
 }
@@ -608,6 +682,7 @@ export function App() {
           <a href="#dataset">Dataset</a>
           <a href="#runtime">Runtime</a>
           <a href="#score">Score</a>
+          <a href="#visual-system">Visual</a>
           <a href="#assets">Assets</a>
         </nav>
       </header>
@@ -621,7 +696,8 @@ export function App() {
           <p>
             A static GitHub Pages catalogue generated from the package exports:
             presentational React components, dataset previews, runtime status
-            contracts, score helpers, bundled brand assets, and the boundary
+            contracts, score helpers, reusable brand generators, default style
+            tokens, motion assets, bundled publication assets, and the boundary
             between reusable UI and custom app hosts.
           </p>
         </div>
@@ -642,6 +718,10 @@ export function App() {
           <div>
             <strong>{reusableComponentCards.length}</strong>
             <span>React components</span>
+          </div>
+          <div>
+            <strong>{NIRS4ALL_BRANDS.length}</strong>
+            <span>brand kits</span>
           </div>
           <div>
             <strong>{publicApiSymbolCount}</strong>
@@ -1245,6 +1325,99 @@ export function App() {
               <strong>{getMetricDefinitions(["rmse", "r2", "mcc"]).map((metric) => metric.abbreviation).join(", ")}</strong>
             </div>
           </article>
+        </div>
+      </Section>
+
+      <Section id="visual-system" title="Reusable Visual System" kicker="brand + styles">
+        <div className="visual-layout">
+          <article className="surface-panel visual-summary-panel">
+            <div className="panel-head">
+              <span>Default host foundation</span>
+              <code>nirs4all-ui/styles</code>
+            </div>
+            <div className="visual-stat-grid">
+              {visualSystemStats.map((stat) => (
+                <div key={stat.label}>
+                  <strong>{stat.value}</strong>
+                  <span>{stat.label}</span>
+                </div>
+              ))}
+            </div>
+            <div className="n4-spectrum-strip" aria-hidden="true" />
+            <p>
+              The CSS asset is plain framework-agnostic CSS: hosts can import it
+              from `nirs4all-ui/assets/styles/nirs4all-default.css` and still own
+              routing, state, icons, data loading, and runtime execution.
+            </p>
+          </article>
+
+          <article className="surface-panel motion-panel">
+            <div className="panel-head">
+              <span>Reusable spectra motion</span>
+              <code>assets/motion/nirs-spectra.svg</code>
+            </div>
+            <img src="./assets/motion/nirs-spectra.svg" alt="Animated NIRS spectra motif" />
+            <p>
+              SVG motion is shipped as a static asset and can be used in docs,
+              splash surfaces, empty states, and custom application shells.
+            </p>
+          </article>
+
+          <article className="surface-panel style-token-panel">
+            <div className="panel-head">
+              <span>CSS token manifest</span>
+              <code>NIRS4ALL_CSS_TOKENS</code>
+            </div>
+            <div className="symbol-cloud">
+              {NIRS4ALL_CSS_TOKENS.slice(0, 12).map((token) => (
+                <code key={token}>{getNirs4allCssVariable(token)}</code>
+              ))}
+            </div>
+          </article>
+
+          <article className="surface-panel style-token-panel">
+            <div className="panel-head">
+              <span>Style assets</span>
+              <code>NIRS4ALL_STYLE_ASSETS</code>
+            </div>
+            <div className="asset-list compact">
+              {NIRS4ALL_STYLE_ASSETS.map((asset) => (
+                <a href={`./${asset.path}`} key={asset.id}>
+                  <strong>{asset.path}</strong>
+                  <span>{asset.description}</span>
+                </a>
+              ))}
+            </div>
+          </article>
+        </div>
+
+        <div className="brand-grid" aria-label="Reusable NIRS4ALL brand assets">
+          {brandCards.map(({ brand, iconSvg, horizontalPath, stackedPath }) => (
+            <article className="surface-panel ecosystem-brand-card" key={brand.id}>
+              <div className="panel-head">
+                <span>{brand.name}</span>
+                <code>assets/brands/{brand.id}</code>
+              </div>
+              <img
+                src={`data:image/svg+xml;utf8,${encodeURIComponent(iconSvg)}`}
+                alt={`${brand.name} generated icon`}
+              />
+              <p>{brand.description}</p>
+              <div className="brand-swatch-row" aria-label={`${brand.name} palette`}>
+                {Object.values(brand.palette).map((color) => (
+                  <span key={color} style={{ backgroundColor: color }} title={color} />
+                ))}
+              </div>
+              <div className="fact-grid compact">
+                <span>horizontal</span>
+                <strong>{horizontalPath}</strong>
+                <span>stacked</span>
+                <strong>{stackedPath}</strong>
+                <span>package</span>
+                <strong>{brand.packageName}</strong>
+              </div>
+            </article>
+          ))}
         </div>
       </Section>
 

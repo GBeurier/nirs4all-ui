@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, rmSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -7,11 +7,11 @@ import { defineConfig, type Plugin } from "vite";
 const configDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(configDirectory, "..");
 
-function copyBrandAssets(): Plugin {
+function copyVisualAssets(): Plugin {
   let outputDirectory = "";
 
   return {
-    name: "nirs4all-ui-brand-assets",
+    name: "nirs4all-ui-visual-assets",
     apply: "build",
     configResolved(config) {
       outputDirectory = isAbsolute(config.build.outDir)
@@ -19,23 +19,27 @@ function copyBrandAssets(): Plugin {
         : resolve(config.root, config.build.outDir);
     },
     closeBundle() {
-      const source = resolve(repositoryRoot, "assets", "brand");
-      const target = resolve(outputDirectory, "assets", "brand", "nirs4all-ui");
+      const packageBrandSource = resolve(repositoryRoot, "assets", "brand");
+      const packageBrandTarget = resolve(outputDirectory, "assets", "brand", "nirs4all-ui");
+      const visualAssetGroups = ["brands", "styles", "motion"] as const;
 
-      if (!existsSync(source)) {
-        throw new Error(`Missing nirs4all-ui brand assets at ${source}`);
+      if (!existsSync(packageBrandSource)) {
+        throw new Error(`Missing nirs4all-ui brand assets at ${packageBrandSource}`);
       }
 
-      rmSync(target, { recursive: true, force: true });
-      mkdirSync(target, { recursive: true });
-      const files = readdirSync(source, { withFileTypes: true }).filter((entry) => entry.isFile());
+      rmSync(packageBrandTarget, { recursive: true, force: true });
+      mkdirSync(packageBrandTarget, { recursive: true });
+      cpSync(packageBrandSource, packageBrandTarget, { recursive: true });
 
-      if (files.length === 0) {
-        throw new Error(`Missing nirs4all-ui brand asset files at ${source}`);
-      }
-
-      for (const file of files) {
-        copyFileSync(resolve(source, file.name), resolve(target, file.name));
+      for (const group of visualAssetGroups) {
+        const source = resolve(repositoryRoot, "assets", group);
+        const target = resolve(outputDirectory, "assets", group);
+        if (!existsSync(source)) {
+          throw new Error(`Missing nirs4all-ui visual assets at ${source}`);
+        }
+        rmSync(target, { recursive: true, force: true });
+        mkdirSync(target, { recursive: true });
+        cpSync(source, target, { recursive: true });
       }
     },
   };
@@ -47,7 +51,7 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: true,
   },
-  plugins: [copyBrandAssets()],
+  plugins: [copyVisualAssets()],
   publicDir: "public",
   root: "site",
 });

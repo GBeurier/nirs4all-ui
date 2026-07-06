@@ -105,7 +105,11 @@ async function writeConsumerProject(consumerDir, label) {
     path.join(consumerDir, "src", "type-smoke.tsx"),
     `import { createElement, type ReactElement, type ReactNode } from "react";
 import { renderToString } from "react-dom/server";
-	import { components, dataset, runtime, score } from "nirs4all-ui";
+	import { brand, components, dataset, runtime, score, styles } from "nirs4all-ui";
+	import {
+	  generateNirs4allBrandSvg,
+	  type Nirs4allBrandDefinition,
+	} from "nirs4all-ui/brand";
 	import {
 	  DatasetPreviewCard,
 	  MetricValueBadge,
@@ -130,10 +134,18 @@ import {
   getMetricDefinition,
   type MetricDefinition,
 } from "nirs4all-ui/score";
+import {
+  getNirs4allStyleAsset,
+  type Nirs4allStyleAsset,
+} from "nirs4all-ui/styles";
 
 	const metric: MetricDefinition | undefined = getMetricDefinition("accuracy");
 	const formatted: string = formatMetricValue(0.91234, metric?.key);
 	const rootFormatted: string = score.formatMetricValue(0.12345, "rmse");
+	const uiBrand: Nirs4allBrandDefinition = brand.getNirs4allBrandDefinition("nirs4all-ui");
+	const brandSvg: string = generateNirs4allBrandSvg(uiBrand, { variant: "icon" });
+	const styleAsset: Nirs4allStyleAsset = getNirs4allStyleAsset("default-theme");
+	const primaryVariable: string = styles.getNirs4allCssVariable("n4-color-primary");
 	const datasetPreview: DatasetPreviewView | null = buildDatasetPreview({
 	  name: "Packed consumer dataset",
 	  taskType: "regression",
@@ -183,9 +195,10 @@ const engineBadge: ReactElement = createElement(RuntimeEngineBadge, {
   },
   defaultIcon,
 });
-const diagnosticsList: ReactElement = createElement(RuntimeDiagnosticList, { diagnostics });
+	const diagnosticsList: ReactElement = createElement(RuntimeDiagnosticList, { diagnostics });
+	const visualMetadata: ReactElement = createElement("span", null, uiBrand.name, brandSvg.length, styleAsset.path, primaryVariable);
 
-renderToString(createElement("section", null, datasetCard, metricBadge, rootDatasetCard, rootMetricBadge, statusBadge, engineBadge, diagnosticsList));
+renderToString(createElement("section", null, datasetCard, metricBadge, rootDatasetCard, rootMetricBadge, statusBadge, engineBadge, diagnosticsList, visualMetadata));
 `,
   );
 
@@ -193,11 +206,13 @@ renderToString(createElement("section", null, datasetCard, metricBadge, rootData
     path.join(consumerDir, "src", "runtime-smoke.mjs"),
     `import React from "react";
 import { renderToString } from "react-dom/server";
-import { components, dataset, runtime, score } from "nirs4all-ui";
+import { brand, components, dataset, runtime, score, styles } from "nirs4all-ui";
+import { generateNirs4allBrandSvg, getNirs4allBrandDefinition } from "nirs4all-ui/brand";
 import { DatasetPreviewCard, MetricValueBadge, RuntimeResultStatusBadge } from "nirs4all-ui/components";
 import { buildDatasetPreview } from "nirs4all-ui/dataset";
 import { buildRuntimeResultStatusView } from "nirs4all-ui/runtime";
 import { canonicalMetricKey, formatMetricValue } from "nirs4all-ui/score";
+import { getNirs4allCssVariable, getNirs4allStyleAsset } from "nirs4all-ui/styles";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -206,6 +221,12 @@ function assert(condition, message) {
 assert(score.canonicalMetricKey("r2-score") === "r2", "root score namespace import failed");
 assert(canonicalMetricKey("r2_score") === "r2", "score subpath import failed");
 assert(dataset.buildDatasetPreview({ name: "Root dataset" })?.title === "Root dataset", "root dataset namespace import failed");
+assert(brand.getNirs4allBrandDefinition("nirs4all-core").shortName === "core", "root brand namespace import failed");
+assert(getNirs4allBrandDefinition("nirs4all-ui").role === "Reusable visual system", "brand subpath import failed");
+assert(generateNirs4allBrandSvg("nirs4all-ui", { variant: "icon" }).includes("nirs4all-ui"), "brand generator failed");
+assert(styles.getNirs4allStyleAsset("default-theme").path.endsWith("nirs4all-default.css"), "root styles namespace import failed");
+assert(getNirs4allStyleAsset("spectra-motion").path.endsWith("nirs-spectra.svg"), "styles subpath import failed");
+assert(getNirs4allCssVariable("n4-color-primary") === "var(--n4-color-primary)", "style token helper failed");
 
 const datasetPreview = buildDatasetPreview({
   name: "Packed consumer dataset",

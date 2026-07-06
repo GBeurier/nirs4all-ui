@@ -38,6 +38,8 @@ describe("GitHub Pages showcase", () => {
     expect(markup).toContain("nirs4all-ui/dataset");
     expect(markup).toContain("nirs4all-ui/score");
     expect(markup).toContain("nirs4all-ui/runtime");
+    expect(markup).toContain("nirs4all-ui/brand");
+    expect(markup).toContain("nirs4all-ui/styles");
     expect(markup).toContain(`v${packageJson.version}`);
     expect(markup).toContain("buildDatasetPreview");
     expect(markup).toContain("RUNTIME_RESULT_STATUS_DISPLAY");
@@ -47,6 +49,10 @@ describe("GitHub Pages showcase", () => {
     expect(markup).toContain("custom app host");
     expect(markup).toContain("Consumer import surface");
     expect(markup).toContain("nirs4all-ui/assets/brand/icon.svg");
+    expect(markup).toContain("generateNirs4allBrandSvg");
+    expect(markup).toContain("NIRS4ALL_DEFAULT_THEME");
+    expect(markup).toContain("assets/styles/nirs4all-default.css");
+    expect(markup).toContain("assets/motion/nirs-spectra.svg");
 
     for (const asset of PUBLICATION_ASSETS) {
       expect(markup).toContain(asset.name);
@@ -72,6 +78,12 @@ describe("GitHub Pages showcase", () => {
       .toBe(readRepositoryFile("assets/brand/horizontal.svg"));
     expect(readRepositoryFile("site/public/favicon.svg"))
       .toBe(readRepositoryFile("assets/brand/icon.svg"));
+    expect(readRepositoryFile("assets/brands/README.md"))
+      .toContain("NIRS4ALL reusable brand assets");
+    expect(readRepositoryFile("assets/styles/nirs4all-default.css"))
+      .toContain("--n4-color-primary");
+    expect(readRepositoryFile("assets/motion/nirs-spectra.svg"))
+      .toContain("Animated NIRS spectra motif");
 
     expect(robots).toContain("User-agent: *");
     expect(robots).toContain("Allow: /");
