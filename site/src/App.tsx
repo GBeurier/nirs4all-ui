@@ -1,11 +1,21 @@
 import type { ReactNode } from "react";
 
 import {
+  DatasetPreviewCard,
   MetricValueBadge,
   RuntimeDiagnosticList,
   RuntimeEngineBadge,
   RuntimeResultStatusBadge,
 } from "../../src/components/index.js";
+import {
+  buildDatasetPreview,
+  formatDatasetCount,
+  formatDatasetSpectralRange,
+  formatDatasetTaskLabel,
+  normalizeDatasetSplitCounts,
+  parseDatasetCount,
+  resolveDatasetTaskKind,
+} from "../../src/dataset/index.js";
 import {
   RUNTIME_RESULT_STATUSES,
   RUNTIME_RESULT_STATUS_DISPLAY,
@@ -120,6 +130,22 @@ const scoreRows = [
   { metric: "bias", value: -0.01831, challenger: 0.0412 },
 ];
 
+const datasetFixture = {
+  id: "corn-calibration-v1",
+  title: "Corn NIR calibration",
+  description: "Moisture and protein spectra prepared for shared Studio/Web dataset previews.",
+  taskType: "regression",
+  sampleCount: 120,
+  wavelengthCount: 256,
+  targetCount: 2,
+  splitCounts: [
+    { id: "calibration", label: "Calibration", count: 90 },
+    { id: "validation", label: "Validation", count: 30 },
+  ],
+  spectralRange: { start: 900, end: 1700 },
+  tags: ["NIR", "reference"],
+};
+
 const mixedTaskTypes = ["regression", "classification"];
 const defaultMetricKeys = getDefaultSelectedMetricsForTaskTypes(mixedTaskTypes);
 const legacyMetricKeys = getLegacySelectedMetricsForTaskTypes(mixedTaskTypes);
@@ -133,6 +159,9 @@ const nativeAffordance = buildRuntimeNativeResultsAffordance({
 const disabledNativeAffordance = buildRuntimeNativeResultsAffordance();
 const fallbackStatus = buildRuntimeEngineStatus(fallbackFixture);
 const diagnostics = normalizeRuntimeDiagnostics(fallbackFixture);
+const datasetPreview = buildDatasetPreview(datasetFixture);
+const datasetSplits = normalizeDatasetSplitCounts(datasetFixture.splitCounts, datasetFixture.sampleCount);
+const datasetSpectralRange = formatDatasetSpectralRange(datasetFixture.spectralRange);
 const queuedEmptyMessage = getRuntimeResultEmptyMessage("queued", {
   queued: "Queued until a host runtime starts.",
   running: "Runtime is producing a result.",
@@ -145,19 +174,31 @@ const exportGroups = [
   {
     entry: "nirs4all-ui",
     title: "Root barrel",
-    items: ["score namespace", "runtime namespace", "components namespace"],
+    items: ["score namespace", "runtime namespace", "dataset namespace", "components namespace"],
     note: "Convenience import for package-wide consumers.",
   },
   {
     entry: "nirs4all-ui/components",
     title: "React components",
     items: [
+      "DatasetPreviewCard",
       "MetricValueBadge",
       "RuntimeDiagnosticList",
       "RuntimeEngineBadge",
       "RuntimeResultStatusBadge",
     ],
     note: "Presentational only; hosts provide classes and icon nodes.",
+  },
+  {
+    entry: "nirs4all-ui/dataset",
+    title: "Dataset view models",
+    items: [
+      "dataset preview contract",
+      "count and split labels",
+      "spectral range formatting",
+      "badges and stats",
+    ],
+    note: "Pure TypeScript helpers for shared dataset summary cards.",
   },
   {
     entry: "nirs4all-ui/runtime",
@@ -193,12 +234,14 @@ const publicApiGroups = [
   {
     entry: "nirs4all-ui",
     title: "Root namespace exports",
-    symbols: ["score", "runtime", "components"],
+    symbols: ["score", "runtime", "dataset", "components"],
   },
   {
     entry: "nirs4all-ui/components",
     title: "Component exports",
     symbols: [
+      "DatasetPreviewCard",
+      "DatasetPreviewCardProps",
       "MetricValueBadge",
       "MetricValueBadgeProps",
       "RuntimeDiagnosticList",
@@ -207,6 +250,31 @@ const publicApiGroups = [
       "RuntimeEngineBadgeProps",
       "RuntimeResultStatusBadge",
       "RuntimeResultStatusBadgeProps",
+    ],
+  },
+  {
+    entry: "nirs4all-ui/dataset",
+    title: "Dataset exports",
+    symbols: [
+      "DatasetPreviewTaskKind",
+      "DatasetPreviewTone",
+      "DatasetPreviewCount",
+      "DatasetSplitCountInput",
+      "DatasetSplitCountsInput",
+      "DatasetSpectralRangeInput",
+      "DatasetPreviewInput",
+      "DatasetSplitCountView",
+      "DatasetPreviewBadge",
+      "DatasetPreviewStat",
+      "DatasetPreviewView",
+      "parseDatasetCount",
+      "formatDatasetCount",
+      "resolveDatasetTaskKind",
+      "formatDatasetTaskLabel",
+      "formatDatasetTokenLabel",
+      "normalizeDatasetSplitCounts",
+      "formatDatasetSpectralRange",
+      "buildDatasetPreview",
     ],
   },
   {
@@ -320,6 +388,17 @@ const publicApiSymbolCount = publicApiGroups.reduce(
 
 const reusableComponentCards = [
   {
+    name: "DatasetPreviewCard",
+    entry: "nirs4all-ui/components",
+    propsInterface: "DatasetPreviewCardProps",
+    status: "exported",
+    summary:
+      "A stateless dataset summary card backed by the shared preview contract. Hosts adapt dataset records and keep ownership of layout density, tags, and visual tone.",
+    props: ["dataset or view", "badges and stats", "renderBadge", "renderStat", "class resolvers"],
+    hostOwned: ["data loading", "dataset routing", "icon system", "card placement"],
+    importLine: 'import { DatasetPreviewCard } from "nirs4all-ui/components";',
+  },
+  {
     name: "RuntimeEngineBadge",
     entry: "nirs4all-ui/components",
     propsInterface: "RuntimeEngineBadgeProps",
@@ -414,6 +493,21 @@ const runtimeHelperGroups = [
   },
 ];
 
+const datasetHelperGroups = [
+  {
+    title: "Preview builder",
+    items: ["buildDatasetPreview", "DatasetPreviewInput", "DatasetPreviewView"],
+  },
+  {
+    title: "Count and split helpers",
+    items: ["parseDatasetCount", "formatDatasetCount", "normalizeDatasetSplitCounts"],
+  },
+  {
+    title: "Task and range labels",
+    items: ["resolveDatasetTaskKind", "formatDatasetTaskLabel", "formatDatasetSpectralRange"],
+  },
+];
+
 function StatusIcon({ icon }: { icon: string }) {
   return <span className={`status-icon status-icon-${icon}`} aria-hidden="true" />;
 }
@@ -463,6 +557,7 @@ export function App() {
         <nav aria-label="Package exports">
           <a href="#exports">Exports</a>
           <a href="#components">Components</a>
+          <a href="#dataset">Dataset</a>
           <a href="#runtime">Runtime</a>
           <a href="#score">Score</a>
           <a href="#assets">Assets</a>
@@ -477,8 +572,8 @@ export function App() {
           </h1>
           <p>
             A static GitHub Pages catalogue generated from the package exports:
-            presentational React components, runtime status contracts, score
-            helpers, and bundled brand assets.
+            presentational React components, dataset previews, runtime status
+            contracts, score helpers, and bundled brand assets.
           </p>
         </div>
         <div className="intro-visual" aria-label="Package summary">
@@ -668,6 +763,106 @@ export function App() {
                 />
               ))}
             </div>
+          </article>
+
+          <DatasetPreviewCard
+            view={datasetPreview}
+            className="surface-panel dataset-preview-card"
+            headerClassName="dataset-card-header"
+            titleClassName="dataset-card-title"
+            descriptionClassName="dataset-card-description"
+            badgeListClassName="dataset-badge-row"
+            badgeClassName={(badge) => `dataset-badge tone-${badge.tone}`}
+            statListClassName="dataset-stat-grid"
+            statClassName={(stat) => `dataset-stat tone-${stat.tone}`}
+            statLabelClassName="dataset-stat-label"
+            statValueClassName="dataset-stat-value"
+            statDetailClassName="dataset-stat-detail"
+          />
+        </div>
+      </Section>
+
+      <Section id="dataset" title="Dataset Preview View Models" kicker="dataset">
+        <div className="dataset-layout">
+          <DatasetPreviewCard
+            view={datasetPreview}
+            className="surface-panel dataset-preview-card dataset-preview-feature"
+            headerClassName="dataset-card-header"
+            titleClassName="dataset-card-title"
+            descriptionClassName="dataset-card-description"
+            badgeListClassName="dataset-badge-row"
+            badgeClassName={(badge) => `dataset-badge tone-${badge.tone}`}
+            statListClassName="dataset-stat-grid"
+            statClassName={(stat) => `dataset-stat tone-${stat.tone}`}
+            statLabelClassName="dataset-stat-label"
+            statValueClassName="dataset-stat-value"
+            statDetailClassName="dataset-stat-detail"
+          />
+
+          <article className="surface-panel">
+            <div className="panel-head">
+              <span>Preview contract</span>
+              <code>buildDatasetPreview</code>
+            </div>
+            <div className="fact-grid">
+              <span>title</span>
+              <strong>{datasetPreview?.title}</strong>
+              <span>task kind</span>
+              <strong>{resolveDatasetTaskKind(datasetFixture.taskType)}</strong>
+              <span>task label</span>
+              <strong>{formatDatasetTaskLabel(datasetFixture.taskType)}</strong>
+              <span>samples</span>
+              <strong>{formatDatasetCount(datasetFixture.sampleCount, "sample")}</strong>
+              <span>features</span>
+              <strong>{datasetPreview?.featureCountLabel}</strong>
+            </div>
+          </article>
+
+          <article className="surface-panel">
+            <div className="panel-head">
+              <span>Split summary</span>
+              <code>normalizeDatasetSplitCounts</code>
+            </div>
+            <div className="metric-groups">
+              {datasetSplits.map((split) => (
+                <div className="metric-group" key={split.id}>
+                  <strong>{split.label}</strong>
+                  <span>{split.countLabel} / {split.percentageLabel}</span>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="surface-panel">
+            <div className="panel-head">
+              <span>Range and count helpers</span>
+              <code>datasetPreview</code>
+            </div>
+            <div className="fact-grid">
+              <span>spectral range</span>
+              <strong>{datasetSpectralRange}</strong>
+              <span>string count</span>
+              <strong>{parseDatasetCount("128.9")}</strong>
+              <span>class copy</span>
+              <strong>{formatDatasetCount(3, "class", "classes")}</strong>
+              <span>badges</span>
+              <strong>{datasetPreview?.badges.length}</strong>
+              <span>stats</span>
+              <strong>{datasetPreview?.stats.map((stat) => stat.label).join(", ")}</strong>
+            </div>
+          </article>
+
+          <article className="surface-panel helper-panel">
+            <div className="panel-head">
+              <span>Dataset exports</span>
+              <code>nirs4all-ui/dataset</code>
+            </div>
+            {datasetHelperGroups.map((group) => (
+              <div className="helper-group" key={group.title}>
+                <strong>{group.title}</strong>
+                <span>{group.items.join(", ")}</span>
+              </div>
+            ))}
           </article>
         </div>
       </Section>

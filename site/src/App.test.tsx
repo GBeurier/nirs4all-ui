@@ -26,6 +26,7 @@ describe("GitHub Pages showcase", () => {
     }
 
     for (const propsInterface of [
+      "DatasetPreviewCardProps",
       "RuntimeEngineBadgeProps",
       "RuntimeResultStatusBadgeProps",
       "RuntimeDiagnosticListProps",
@@ -34,9 +35,11 @@ describe("GitHub Pages showcase", () => {
       expect(markup).toContain(propsInterface);
     }
 
+    expect(markup).toContain("nirs4all-ui/dataset");
     expect(markup).toContain("nirs4all-ui/score");
     expect(markup).toContain("nirs4all-ui/runtime");
     expect(markup).toContain(`v${packageJson.version}`);
+    expect(markup).toContain("buildDatasetPreview");
     expect(markup).toContain("RUNTIME_RESULT_STATUS_DISPLAY");
     expect(markup).toContain("ALL_SCORE_METRICS");
 

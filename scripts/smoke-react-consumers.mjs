@@ -105,16 +105,22 @@ async function writeConsumerProject(consumerDir, label) {
     path.join(consumerDir, "src", "type-smoke.tsx"),
     `import { createElement, type ReactElement, type ReactNode } from "react";
 import { renderToString } from "react-dom/server";
-import { components, runtime, score } from "nirs4all-ui";
-import {
-  MetricValueBadge,
-  RuntimeDiagnosticList,
-  RuntimeEngineBadge,
-  RuntimeResultStatusBadge,
-  type MetricValueBadgeProps,
-} from "nirs4all-ui/components";
-import {
-  buildRuntimeResultStatusView,
+	import { components, dataset, runtime, score } from "nirs4all-ui";
+	import {
+	  DatasetPreviewCard,
+	  MetricValueBadge,
+	  RuntimeDiagnosticList,
+	  RuntimeEngineBadge,
+	  RuntimeResultStatusBadge,
+	  type DatasetPreviewCardProps,
+	  type MetricValueBadgeProps,
+	} from "nirs4all-ui/components";
+	import {
+	  buildDatasetPreview,
+	  type DatasetPreviewView,
+	} from "nirs4all-ui/dataset";
+	import {
+	  buildRuntimeResultStatusView,
   normalizeRuntimeDiagnostics,
   type RuntimeDiagnosticItem,
   type RuntimeResultStatusView,
@@ -125,10 +131,21 @@ import {
   type MetricDefinition,
 } from "nirs4all-ui/score";
 
-const metric: MetricDefinition | undefined = getMetricDefinition("accuracy");
-const formatted: string = formatMetricValue(0.91234, metric?.key);
-const rootFormatted: string = score.formatMetricValue(0.12345, "rmse");
-const status: RuntimeResultStatusView = buildRuntimeResultStatusView("running", 42);
+	const metric: MetricDefinition | undefined = getMetricDefinition("accuracy");
+	const formatted: string = formatMetricValue(0.91234, metric?.key);
+	const rootFormatted: string = score.formatMetricValue(0.12345, "rmse");
+	const datasetPreview: DatasetPreviewView | null = buildDatasetPreview({
+	  name: "Packed consumer dataset",
+	  taskType: "regression",
+	  sampleCount: 12,
+	  wavelengthCount: 64,
+	});
+	const rootDatasetPreview: DatasetPreviewView | null = dataset.buildDatasetPreview({
+	  name: "Root namespace dataset",
+	  taskType: "classification",
+	  classCount: 3,
+	});
+	const status: RuntimeResultStatusView = buildRuntimeResultStatusView("running", 42);
 const rootStatus: RuntimeResultStatusView = runtime.buildRuntimeResultStatusView("completed");
 const diagnostics: RuntimeDiagnosticItem[] = normalizeRuntimeDiagnostics([
   { message: "GPU unavailable", cause: "unsupported_capability" },
@@ -140,8 +157,13 @@ const badgeProps: MetricValueBadgeProps = {
   value: formatted,
   compareTo: "0.9000",
 };
+const datasetCardProps: DatasetPreviewCardProps = {
+  view: datasetPreview,
+};
 
+const datasetCard: ReactElement = createElement(DatasetPreviewCard, datasetCardProps);
 const metricBadge: ReactElement = createElement(MetricValueBadge, badgeProps);
+const rootDatasetCard: ReactElement = createElement(components.DatasetPreviewCard, { view: rootDatasetPreview });
 const rootMetricBadge: ReactElement = createElement(components.MetricValueBadge, {
   metric: "rmse",
   value: rootFormatted,
@@ -163,7 +185,7 @@ const engineBadge: ReactElement = createElement(RuntimeEngineBadge, {
 });
 const diagnosticsList: ReactElement = createElement(RuntimeDiagnosticList, { diagnostics });
 
-renderToString(createElement("section", null, metricBadge, rootMetricBadge, statusBadge, engineBadge, diagnosticsList));
+renderToString(createElement("section", null, datasetCard, metricBadge, rootDatasetCard, rootMetricBadge, statusBadge, engineBadge, diagnosticsList));
 `,
   );
 
@@ -171,8 +193,9 @@ renderToString(createElement("section", null, metricBadge, rootMetricBadge, stat
     path.join(consumerDir, "src", "runtime-smoke.mjs"),
     `import React from "react";
 import { renderToString } from "react-dom/server";
-import { components, runtime, score } from "nirs4all-ui";
-import { MetricValueBadge, RuntimeResultStatusBadge } from "nirs4all-ui/components";
+import { components, dataset, runtime, score } from "nirs4all-ui";
+import { DatasetPreviewCard, MetricValueBadge, RuntimeResultStatusBadge } from "nirs4all-ui/components";
+import { buildDatasetPreview } from "nirs4all-ui/dataset";
 import { buildRuntimeResultStatusView } from "nirs4all-ui/runtime";
 import { canonicalMetricKey, formatMetricValue } from "nirs4all-ui/score";
 
@@ -182,17 +205,29 @@ function assert(condition, message) {
 
 assert(score.canonicalMetricKey("r2-score") === "r2", "root score namespace import failed");
 assert(canonicalMetricKey("r2_score") === "r2", "score subpath import failed");
+assert(dataset.buildDatasetPreview({ name: "Root dataset" })?.title === "Root dataset", "root dataset namespace import failed");
+
+const datasetPreview = buildDatasetPreview({
+  name: "Packed consumer dataset",
+  taskType: "regression",
+  sampleCount: 12,
+  wavelengthCount: 64,
+});
+assert(datasetPreview?.sampleCountLabel === "12 samples", "dataset subpath import failed");
 
 const status = buildRuntimeResultStatusView("running", 33);
 assert(runtime.buildRuntimeResultStatusView("completed").label === "Completed", "runtime root namespace import failed");
 assert(status.progress === 33, "runtime subpath import failed");
 
 const html = renderToString(React.createElement("section", null,
+  React.createElement(DatasetPreviewCard, { view: datasetPreview }),
   React.createElement(MetricValueBadge, { metric: "accuracy", value: 0.95, compareTo: 0.9 }),
   React.createElement(RuntimeResultStatusBadge, { view: status }),
+  React.createElement(components.DatasetPreviewCard, { dataset: { name: "Root component dataset" } }),
   React.createElement(components.MetricValueBadge, { metric: "rmse", value: 1.2345 }),
 ));
 
+assert(html.includes("Packed consumer dataset"), "dataset component subpath render failed");
 assert(html.includes("Acc"), "component subpath render failed");
 assert(html.includes(formatMetricValue(1.2345, "rmse")), "root component namespace render failed");
 console.log("${label}: packed consumer imports, render, and types passed");
