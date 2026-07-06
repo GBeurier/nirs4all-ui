@@ -412,6 +412,7 @@ const runtimeHelperGroups = [
 
 const publicationAssets = [
   { name: "logo.svg", role: "Header and Open Graph identity", path: "./logo.svg" },
+  { name: "favicon.ico", role: "Legacy browser and crawler icon", path: "./favicon.ico" },
   { name: "favicon.svg", role: "Browser icon and manifest icon", path: "./favicon.svg" },
   {
     name: "assets/brand/nirs4all-ui/og.png",

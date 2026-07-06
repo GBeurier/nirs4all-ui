@@ -30,6 +30,7 @@ describe("GitHub Pages showcase", () => {
     expect(markup).toContain("RUNTIME_RESULT_STATUS_DISPLAY");
     expect(markup).toContain("ALL_SCORE_METRICS");
     expect(markup).toContain("assets/brand/nirs4all-ui/og.png");
+    expect(markup).toContain("favicon.ico");
     expect(markup).toContain("site.webmanifest");
   });
 });
