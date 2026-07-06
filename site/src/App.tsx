@@ -66,6 +66,7 @@ import {
   parseScoreNumber,
 } from "../../src/score/index.js";
 import packageJson from "../../package.json" with { type: "json" };
+import { CANONICAL_SITE_URL, PUBLICATION_ASSETS } from "./showcaseMetadata.js";
 
 const packageVersion = packageJson.version;
 
@@ -411,40 +412,6 @@ const runtimeHelperGroups = [
     title: "Native results",
     items: ["buildRuntimeNativeResultsAffordance", "RuntimeNativeResultsAffordanceView"],
   },
-];
-
-const publicationAssets = [
-  { name: "logo.svg", role: "Header and Open Graph identity", path: "./logo.svg" },
-  { name: "favicon.ico", role: "Legacy browser and crawler icon", path: "./favicon.ico" },
-  { name: "favicon.svg", role: "Browser icon and manifest icon", path: "./favicon.svg" },
-  {
-    name: "assets/brand/nirs4all-ui/og.png",
-    role: "1200 x 630 social preview image",
-    path: "./assets/brand/nirs4all-ui/og.png",
-  },
-  {
-    name: "assets/brand/nirs4all-ui/icon.svg",
-    role: "Stable GitHub Pages icon URL",
-    path: "./assets/brand/nirs4all-ui/icon.svg",
-  },
-  {
-    name: "assets/brand/nirs4all-ui/horizontal.svg",
-    role: "Horizontal package mark",
-    path: "./assets/brand/nirs4all-ui/horizontal.svg",
-  },
-  {
-    name: "assets/brand/nirs4all-ui/stacked.svg",
-    role: "Stacked package mark",
-    path: "./assets/brand/nirs4all-ui/stacked.svg",
-  },
-  {
-    name: "assets/brand/nirs4all-ui/icon-512.png",
-    role: "Installable app icon",
-    path: "./assets/brand/nirs4all-ui/icon-512.png",
-  },
-  { name: "robots.txt", role: "GitHub Pages crawler policy", path: "./robots.txt" },
-  { name: "sitemap.xml", role: "Canonical GitHub Pages URL", path: "./sitemap.xml" },
-  { name: "site.webmanifest", role: "Install metadata", path: "./site.webmanifest" },
 ];
 
 function StatusIcon({ icon }: { icon: string }) {
@@ -999,13 +966,33 @@ export function App() {
               the same brand kit exported by the package through `assets/brand/*`.
             </p>
           </article>
+          <article className="surface-panel">
+            <div className="panel-head">
+              <span>Publication contract</span>
+              <code>canonical + crawler metadata</code>
+            </div>
+            <div className="fact-grid">
+              <span>canonical URL</span>
+              <strong>{CANONICAL_SITE_URL}</strong>
+              <span>robots policy</span>
+              <strong>Allow all; large image previews enabled</strong>
+              <span>sitemap target</span>
+              <strong>{CANONICAL_SITE_URL}sitemap.xml</strong>
+              <span>manifest scope</span>
+              <strong>standalone install surface with packaged brand icons</strong>
+              <span>logo source</span>
+              <strong>site/public/logo.svg mirrors assets/brand/horizontal.svg</strong>
+              <span>asset count</span>
+              <strong>{PUBLICATION_ASSETS.length} published files</strong>
+            </div>
+          </article>
           <article className="surface-panel asset-list-panel">
             <div className="panel-head">
               <span>Pages metadata</span>
               <code>site/public</code>
             </div>
             <div className="asset-list">
-              {publicationAssets.map((asset) => (
+              {PUBLICATION_ASSETS.map((asset) => (
                 <a href={asset.path} key={asset.name}>
                   <strong>{asset.name}</strong>
                   <span>{asset.role}</span>
