@@ -65,6 +65,9 @@ import {
   parseJsonRecord,
   parseScoreNumber,
 } from "../../src/score/index.js";
+import packageJson from "../../package.json" with { type: "json" };
+
+const packageVersion = packageJson.version;
 
 const engineFixture = {
   engine_actual: "dag-ml",
@@ -513,6 +516,10 @@ export function App() {
         </div>
         <div className="intro-visual" aria-label="Package summary">
           <img src="./favicon.svg" alt="" />
+          <div>
+            <strong>v{packageVersion}</strong>
+            <span>npm version</span>
+          </div>
           <div>
             <strong>{ALL_SCORE_METRICS.length}</strong>
             <span>score metrics</span>

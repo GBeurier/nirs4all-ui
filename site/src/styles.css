@@ -149,7 +149,7 @@ h2 {
   color: #18202a;
   display: grid;
   gap: 12px;
-  grid-template-columns: 88px repeat(4, minmax(0, 1fr));
+  grid-template-columns: 88px repeat(5, minmax(0, 1fr));
   min-height: 144px;
   padding: 18px;
 }

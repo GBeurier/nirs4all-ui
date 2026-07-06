@@ -27,6 +27,7 @@ describe("GitHub Pages showcase", () => {
 
     expect(markup).toContain("nirs4all-ui/score");
     expect(markup).toContain("nirs4all-ui/runtime");
+    expect(markup).toContain("v0.1.4");
     expect(markup).toContain("RUNTIME_RESULT_STATUS_DISPLAY");
     expect(markup).toContain("ALL_SCORE_METRICS");
     expect(markup).toContain("assets/brand/nirs4all-ui/og.png");
