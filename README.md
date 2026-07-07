@@ -82,10 +82,9 @@ build also copies the package brand kit to namespaced GitHub Pages URLs under
 `assets/brand/nirs4all-ui/` and publishes the reusable visual system under
 `assets/brands/`, `assets/styles/`, and `assets/motion/`.
 The npm package keeps the same files available through the
-`nirs4all-ui/assets/*` export. The default Pages base is `/nirs4all-ui/` for
-the GitHub project-page path; set
-`NIRS4ALL_UI_BASE=/` and add a `CNAME` only when switching to a dedicated
-subdomain such as `ui.nirs4all.org`.
+`nirs4all-ui/assets/*` export. Production Pages is served from
+`https://ui.nirs4all.org/` with `NIRS4ALL_UI_BASE=/` and `site/public/CNAME`;
+local project-page previews can still use the default `/nirs4all-ui/` Vite base.
 
 `site/src/App.test.tsx` is the focused hardening check for the showcase: it
 verifies that every public React component export appears in the page and that
