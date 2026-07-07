@@ -1,4 +1,4 @@
-export const CANONICAL_SITE_URL = "https://ui.nirs4all.org/";
+export const CANONICAL_SITE_URL = "https://gbeurier.github.io/nirs4all-ui/";
 export const BRAND_ASSET_BASE_PATH = "./assets/brand/nirs4all-ui";
 export const REUSABLE_BRAND_BASE_PATH = "./assets/brands";
 export const REUSABLE_STYLE_BASE_PATH = "./assets/styles";
@@ -55,7 +55,6 @@ export const PUBLICATION_ASSETS: readonly PublicationAsset[] = [
     path: `${REUSABLE_MOTION_BASE_PATH}/nirs-spectra.svg`,
   },
   { name: "robots.txt", role: "GitHub Pages crawler policy", path: "./robots.txt" },
-  { name: "sitemap.xml", role: "Canonical UI domain URL", path: "./sitemap.xml" },
-  { name: "CNAME", role: "GitHub Pages custom domain", path: "./CNAME" },
+  { name: "sitemap.xml", role: "Canonical GitHub Pages URL", path: "./sitemap.xml" },
   { name: "site.webmanifest", role: "Install metadata", path: "./site.webmanifest" },
 ] as const;

@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://ui.nirs4all.org/sitemap.xml
+Sitemap: https://gbeurier.github.io/nirs4all-ui/sitemap.xml
