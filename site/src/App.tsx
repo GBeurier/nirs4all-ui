@@ -230,6 +230,53 @@ const exportGroups = [
   },
 ];
 
+const hostIntegrationSteps = [
+  {
+    title: "nirs4all-core",
+    code: "portable data",
+    items: ["dataset records", "score payloads", "runtime envelopes"],
+  },
+  {
+    title: "nirs4all-ui",
+    code: "view contracts",
+    items: ["pure helpers", "stateless components", "packaged brand assets"],
+  },
+  {
+    title: "custom app host",
+    code: "ownership boundary",
+    items: ["routing and state", "icons and classes", "execution and I/O policy"],
+  },
+];
+
+const hostBoundaryRows = [
+  {
+    area: "Dataset previews",
+    ui: "buildDatasetPreview + DatasetPreviewCard",
+    host: "adapt local catalog records and decide placement",
+  },
+  {
+    area: "Runtime feedback",
+    ui: "buildRuntimeEngineStatus + RuntimeDiagnosticList",
+    host: "supply runtime envelopes, icons, and status layout",
+  },
+  {
+    area: "Score displays",
+    ui: "formatMetricValue + MetricValueBadge",
+    host: "choose metric subsets and comparison context",
+  },
+  {
+    area: "Brand delivery",
+    ui: "nirs4all-ui/assets/* + Pages URLs",
+    host: "reuse the package kit or layer host-specific marks",
+  },
+];
+
+const hostImportSample = [
+  'import { buildDatasetPreview } from "nirs4all-ui/dataset";',
+  'import { RuntimeEngineBadge } from "nirs4all-ui/components";',
+  'import iconUrl from "nirs4all-ui/assets/brand/icon.svg";',
+].join("\n");
+
 const publicApiGroups = [
   {
     entry: "nirs4all-ui",
@@ -556,6 +603,7 @@ export function App() {
         </a>
         <nav aria-label="Package exports">
           <a href="#exports">Exports</a>
+          <a href="#hosts">Hosts</a>
           <a href="#components">Components</a>
           <a href="#dataset">Dataset</a>
           <a href="#runtime">Runtime</a>
@@ -573,7 +621,8 @@ export function App() {
           <p>
             A static GitHub Pages catalogue generated from the package exports:
             presentational React components, dataset previews, runtime status
-            contracts, score helpers, and bundled brand assets.
+            contracts, score helpers, bundled brand assets, and the boundary
+            between reusable UI and custom app hosts.
           </p>
         </div>
         <div className="intro-visual" aria-label="Package summary">
@@ -634,6 +683,57 @@ export function App() {
               </div>
             </article>
           ))}
+        </div>
+      </Section>
+
+      <Section id="hosts" title="Custom Host Integration" kicker="core + ui">
+        <div className="host-layout">
+          <article className="surface-panel host-flow-panel">
+            <div className="panel-head">
+              <span>Portable contract flow</span>
+              <code>core -&gt; ui -&gt; host</code>
+            </div>
+            <div className="host-flow" aria-label="Host integration boundaries">
+              {hostIntegrationSteps.map((step) => (
+                <div className="host-flow-step" key={step.title}>
+                  <strong>{step.title}</strong>
+                  <code>{step.code}</code>
+                  <ul className="token-list">
+                    {step.items.map((item) => <li key={item}>{item}</li>)}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="surface-panel host-boundary-panel">
+            <div className="panel-head">
+              <span>Reuse boundary</span>
+              <code>host adapter checklist</code>
+            </div>
+            <div className="host-boundary-table">
+              {hostBoundaryRows.map((row) => (
+                <div className="host-boundary-row" key={row.area}>
+                  <strong>{row.area}</strong>
+                  <span>{row.ui}</span>
+                  <span>{row.host}</span>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="surface-panel host-code-panel">
+            <div className="panel-head">
+              <span>Consumer import surface</span>
+              <code>custom app host</code>
+            </div>
+            <pre className="code-sample">{hostImportSample}</pre>
+            <p>
+              Hosts can combine the same helpers, components, and brand files
+              without importing Studio, Web, provider clients, or runtime
+              execution code.
+            </p>
+          </article>
         </div>
       </Section>
 

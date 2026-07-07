@@ -42,6 +42,11 @@ describe("GitHub Pages showcase", () => {
     expect(markup).toContain("buildDatasetPreview");
     expect(markup).toContain("RUNTIME_RESULT_STATUS_DISPLAY");
     expect(markup).toContain("ALL_SCORE_METRICS");
+    expect(markup).toContain("Custom Host Integration");
+    expect(markup).toContain("nirs4all-core");
+    expect(markup).toContain("custom app host");
+    expect(markup).toContain("Consumer import surface");
+    expect(markup).toContain("nirs4all-ui/assets/brand/icon.svg");
 
     for (const asset of PUBLICATION_ASSETS) {
       expect(markup).toContain(asset.name);

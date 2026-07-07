@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -28,7 +28,15 @@ function copyBrandAssets(): Plugin {
 
       rmSync(target, { recursive: true, force: true });
       mkdirSync(target, { recursive: true });
-      cpSync(source, target, { recursive: true });
+      const files = readdirSync(source, { withFileTypes: true }).filter((entry) => entry.isFile());
+
+      if (files.length === 0) {
+        throw new Error(`Missing nirs4all-ui brand asset files at ${source}`);
+      }
+
+      for (const file of files) {
+        copyFileSync(resolve(source, file.name), resolve(target, file.name));
+      }
     },
   };
 }
