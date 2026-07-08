@@ -105,7 +105,7 @@ async function writeConsumerProject(consumerDir, label) {
     path.join(consumerDir, "src", "type-smoke.tsx"),
     `import { createElement, type ReactElement, type ReactNode } from "react";
 import { renderToString } from "react-dom/server";
-	import { brand, components, dataset, runtime, score, styles } from "nirs4all-ui";
+	import { brand, components, dataset, datasetBuilder, lab, runtime, score, styles } from "nirs4all-ui";
 	import {
 	  generateNirs4allBrandSvg,
 	  type Nirs4allBrandDefinition,
@@ -123,6 +123,16 @@ import { renderToString } from "react-dom/server";
 	  buildDatasetPreview,
 	  type DatasetPreviewView,
 	} from "nirs4all-ui/dataset";
+	import {
+	  autoDetectSource,
+	  buildExportConfig,
+	  type DatasetSource,
+	} from "nirs4all-ui/datasetBuilder";
+	import {
+	  buildDecisionView,
+	  getSampleStatusDisplay,
+	  type DecisionView,
+	} from "nirs4all-ui/lab";
 	import {
 	  buildRuntimeResultStatusView,
   normalizeRuntimeDiagnostics,
@@ -145,7 +155,33 @@ import {
 	const uiBrand: Nirs4allBrandDefinition = brand.getNirs4allBrandDefinition("nirs4all-ui");
 	const brandSvg: string = generateNirs4allBrandSvg(uiBrand, { variant: "icon" });
 	const styleAsset: Nirs4allStyleAsset = getNirs4allStyleAsset("default-theme");
+	const builderStyleAsset: Nirs4allStyleAsset = getNirs4allStyleAsset("dataset-builder");
+	const labStyleAsset: Nirs4allStyleAsset = getNirs4allStyleAsset("quality-lab-theme");
 	const primaryVariable: string = styles.getNirs4allCssVariable("n4-color-primary");
+	const builderSource: DatasetSource = {
+	  id: "spectra",
+	  name: "packed-consumer.csv",
+	  kind: "file",
+	  fileType: "csv",
+	  signalType: "spectra",
+	  status: "parsed",
+	  rowCount: 4,
+	  columnCount: 4,
+	  parsing: { separator: ",", decimal: ".", headerMode: "horizontal" },
+	  usage: { useAs: "x_train" },
+	  columns: [
+	    { id: "sample_id", name: "sample_id", detectedType: "text", assignedRole: "ignored" },
+	    { id: "target", name: "protein", detectedType: "float", assignedRole: "y" },
+	    { id: "wl_1000", name: "1000", detectedType: "float", assignedRole: "x" },
+	    { id: "wl_1001", name: "1001", detectedType: "float", assignedRole: "x" },
+	  ],
+	};
+	const detectedSource: DatasetSource = autoDetectSource(builderSource);
+	const exportConfigName: string = buildExportConfig("packed_consumer", [detectedSource]).name;
+	const rootExportConfigName: string = datasetBuilder.buildExportConfig("root_consumer", [detectedSource]).name;
+	const decision: DecisionView = buildDecisionView({ applicabilityScore: 0.2 }, null, "en");
+	const rootDecision: DecisionView = lab.buildDecisionView({ gateRejected: true }, null, "en");
+	const sampleStatusLabel: string = getSampleStatusDisplay("integrated").label;
 	const datasetPreview: DatasetPreviewView | null = buildDatasetPreview({
 	  name: "Packed consumer dataset",
 	  taskType: "regression",
@@ -195,8 +231,22 @@ const engineBadge: ReactElement = createElement(RuntimeEngineBadge, {
   },
   defaultIcon,
 });
-	const diagnosticsList: ReactElement = createElement(RuntimeDiagnosticList, { diagnostics });
-	const visualMetadata: ReactElement = createElement("span", null, uiBrand.name, brandSvg.length, styleAsset.path, primaryVariable);
+const diagnosticsList: ReactElement = createElement(RuntimeDiagnosticList, { diagnostics });
+	const visualMetadata: ReactElement = createElement(
+	  "span",
+	  null,
+	  uiBrand.name,
+	  brandSvg.length,
+	  styleAsset.path,
+	  builderStyleAsset.path,
+	  labStyleAsset.path,
+	  primaryVariable,
+	  exportConfigName,
+	  rootExportConfigName,
+	  decision.label,
+	  rootDecision.color,
+	  sampleStatusLabel,
+	);
 
 renderToString(createElement("section", null, datasetCard, metricBadge, rootDatasetCard, rootMetricBadge, statusBadge, engineBadge, diagnosticsList, visualMetadata));
 `,
@@ -206,10 +256,12 @@ renderToString(createElement("section", null, datasetCard, metricBadge, rootData
     path.join(consumerDir, "src", "runtime-smoke.mjs"),
     `import React from "react";
 import { renderToString } from "react-dom/server";
-import { brand, components, dataset, runtime, score, styles } from "nirs4all-ui";
+import { brand, components, dataset, datasetBuilder, lab, runtime, score, styles } from "nirs4all-ui";
 import { generateNirs4allBrandSvg, getNirs4allBrandDefinition } from "nirs4all-ui/brand";
 import { DatasetPreviewCard, MetricValueBadge, RuntimeResultStatusBadge } from "nirs4all-ui/components";
 import { buildDatasetPreview } from "nirs4all-ui/dataset";
+import { buildExportConfig } from "nirs4all-ui/datasetBuilder";
+import { buildDecisionView } from "nirs4all-ui/lab";
 import { buildRuntimeResultStatusView } from "nirs4all-ui/runtime";
 import { canonicalMetricKey, formatMetricValue } from "nirs4all-ui/score";
 import { getNirs4allCssVariable, getNirs4allStyleAsset } from "nirs4all-ui/styles";
@@ -225,8 +277,33 @@ assert(brand.getNirs4allBrandDefinition("nirs4all-core").shortName === "core", "
 assert(getNirs4allBrandDefinition("nirs4all-ui").role === "Reusable visual system", "brand subpath import failed");
 assert(generateNirs4allBrandSvg("nirs4all-ui", { variant: "icon" }).includes("nirs4all-ui"), "brand generator failed");
 assert(styles.getNirs4allStyleAsset("default-theme").path.endsWith("nirs4all-default.css"), "root styles namespace import failed");
+assert(styles.getNirs4allStyleAsset("quality-lab-theme").path.endsWith("theme.css"), "root lab theme asset import failed");
 assert(getNirs4allStyleAsset("spectra-motion").path.endsWith("nirs-spectra.svg"), "styles subpath import failed");
+assert(getNirs4allStyleAsset("dataset-builder").path.endsWith("datasetBuilder.css"), "dataset builder style asset failed");
 assert(getNirs4allCssVariable("n4-color-primary") === "var(--n4-color-primary)", "style token helper failed");
+assert(lab.buildDecisionView({ applicabilityScore: 0.1 }, null, "en").color === "reliable", "root lab namespace import failed");
+assert(buildDecisionView({ gateRejected: true }, null, "en").color === "out_of_domain", "lab subpath import failed");
+
+const builderSource = {
+  id: "spectra",
+  name: "packed-consumer.csv",
+  kind: "file",
+  fileType: "csv",
+  signalType: "spectra",
+  status: "parsed",
+  rowCount: 4,
+  columnCount: 4,
+  parsing: { separator: ",", decimal: ".", headerMode: "horizontal" },
+  usage: { useAs: "x_train" },
+  columns: [
+    { id: "sample_id", name: "sample_id", detectedType: "text", assignedRole: "id" },
+    { id: "target", name: "protein", detectedType: "float", assignedRole: "y" },
+    { id: "wl_1000", name: "1000", detectedType: "float", assignedRole: "x" },
+    { id: "wl_1001", name: "1001", detectedType: "float", assignedRole: "x" },
+  ],
+};
+assert(datasetBuilder.buildExportConfig("root_consumer", [builderSource]).name === "root_consumer", "root datasetBuilder namespace import failed");
+assert(buildExportConfig("packed_consumer", [builderSource]).targets.length === 1, "datasetBuilder subpath import failed");
 
 const datasetPreview = buildDatasetPreview({
   name: "Packed consumer dataset",

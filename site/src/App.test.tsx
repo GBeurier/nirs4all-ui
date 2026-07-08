@@ -6,6 +6,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import * as componentExports from "../../src/components/index.js";
+import * as datasetBuilderExports from "../../src/datasetBuilder/index.js";
+import * as labExports from "../../src/lab/index.js";
 import packageJson from "../../package.json" with { type: "json" };
 import { App } from "./App.js";
 import { CANONICAL_SITE_URL, PUBLICATION_ASSETS } from "./showcaseMetadata.js";
@@ -25,6 +27,14 @@ describe("GitHub Pages showcase", () => {
       expect(markup).toContain(component);
     }
 
+    for (const exported of Object.keys(datasetBuilderExports)) {
+      expect(markup).toContain(exported);
+    }
+
+    for (const exported of Object.keys(labExports)) {
+      expect(markup).toContain(exported);
+    }
+
     for (const propsInterface of [
       "DatasetPreviewCardProps",
       "RuntimeEngineBadgeProps",
@@ -40,6 +50,8 @@ describe("GitHub Pages showcase", () => {
     expect(markup).toContain("nirs4all-ui/runtime");
     expect(markup).toContain("nirs4all-ui/brand");
     expect(markup).toContain("nirs4all-ui/styles");
+    expect(markup).toContain("nirs4all-ui/lab");
+    expect(markup).toContain("nirs4all-ui/datasetBuilder");
     expect(markup).toContain(`v${packageJson.version}`);
     expect(markup).toContain("buildDatasetPreview");
     expect(markup).toContain("RUNTIME_RESULT_STATUS_DISPLAY");
@@ -52,6 +64,8 @@ describe("GitHub Pages showcase", () => {
     expect(markup).toContain("generateNirs4allBrandSvg");
     expect(markup).toContain("NIRS4ALL_DEFAULT_THEME");
     expect(markup).toContain("assets/styles/nirs4all-default.css");
+    expect(markup).toContain("assets/datasetBuilder.css");
+    expect(markup).toContain("assets/theme.css");
     expect(markup).toContain("assets/motion/nirs-spectra.svg");
 
     for (const asset of PUBLICATION_ASSETS) {
@@ -82,6 +96,10 @@ describe("GitHub Pages showcase", () => {
       .toContain("NIRS4ALL reusable brand assets");
     expect(readRepositoryFile("assets/styles/nirs4all-default.css"))
       .toContain("--n4-color-primary");
+    expect(readRepositoryFile("assets/datasetBuilder.css"))
+      .toContain(".dsb");
+    expect(readRepositoryFile("assets/theme.css"))
+      .toContain("--success");
     expect(readRepositoryFile("assets/motion/nirs-spectra.svg"))
       .toContain("Animated NIRS spectra motif");
 

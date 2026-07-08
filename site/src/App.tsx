@@ -23,6 +23,8 @@ import {
   generateNirs4allBrandSvg,
   getNirs4allBrandAssetPath,
 } from "../../src/brand/index.js";
+import * as datasetBuilderExports from "../../src/datasetBuilder/index.js";
+import * as labExports from "../../src/lab/index.js";
 import {
   RUNTIME_RESULT_STATUSES,
   RUNTIME_RESULT_STATUS_DISPLAY,
@@ -187,7 +189,14 @@ const exportGroups = [
   {
     entry: "nirs4all-ui",
     title: "Root barrel",
-    items: ["score namespace", "runtime namespace", "dataset namespace", "components namespace"],
+    items: [
+      "score namespace",
+      "runtime namespace",
+      "dataset namespace",
+      "components namespace",
+      "lab namespace",
+      "datasetBuilder namespace",
+    ],
     note: "Convenience import for package-wide consumers.",
   },
   {
@@ -201,6 +210,30 @@ const exportGroups = [
       "RuntimeResultStatusBadge",
     ],
     note: "Presentational only; hosts provide classes and icon nodes.",
+  },
+  {
+    entry: "nirs4all-ui/lab",
+    title: "Lab quality UI",
+    items: [
+      "decision traffic lights",
+      "sample lifecycle",
+      "health findings",
+      "model reports",
+      "worklist tables",
+    ],
+    note: "Reusable quality/lab view contracts consumed by quality-oriented hosts.",
+  },
+  {
+    entry: "nirs4all-ui/datasetBuilder",
+    title: "Dataset Builder",
+    items: [
+      "multisource source descriptors",
+      "role mapping",
+      "partition previews",
+      "validation cards",
+      "export config builder",
+    ],
+    note: "Presentational wizard plus pure dataset-config helpers; hosts own parsing and persistence.",
   },
   {
     entry: "nirs4all-ui/dataset",
@@ -244,13 +277,27 @@ const exportGroups = [
   {
     entry: "nirs4all-ui/styles",
     title: "Default styles",
-    items: ["CSS tokens", "host utility classes", "motion assets", "theme manifest"],
+    items: [
+      "CSS tokens",
+      "host utility classes",
+      "DatasetBuilder CSS",
+      "lab theme CSS",
+      "motion assets",
+      "theme manifest",
+    ],
     note: "Framework-agnostic assets exported without importing CSS from JavaScript.",
   },
   {
     entry: "nirs4all-ui/assets/*",
     title: "Brand assets",
-    items: ["package logo kit", "ecosystem SVG marks", "default CSS", "spectra animation"],
+    items: [
+      "package logo kit",
+      "ecosystem SVG marks",
+      "default CSS",
+      "dataset builder CSS",
+      "quality lab theme",
+      "spectra animation",
+    ],
     note: "Packaged static assets for downstream apps, docs, registries, and Pages.",
   },
 ];
@@ -298,15 +345,18 @@ const hostBoundaryRows = [
 
 const hostImportSample = [
   'import { buildDatasetPreview } from "nirs4all-ui/dataset";',
+  'import { DatasetBuilder } from "nirs4all-ui/datasetBuilder";',
+  'import { DecisionBadge } from "nirs4all-ui/lab";',
   'import { RuntimeEngineBadge } from "nirs4all-ui/components";',
   'import iconUrl from "nirs4all-ui/assets/brand/icon.svg";',
+  '@import "nirs4all-ui/assets/datasetBuilder.css";',
 ].join("\n");
 
 const publicApiGroups = [
   {
     entry: "nirs4all-ui",
     title: "Root namespace exports",
-    symbols: ["score", "runtime", "dataset", "components", "brand", "styles"],
+    symbols: ["score", "runtime", "dataset", "components", "brand", "styles", "lab", "datasetBuilder"],
   },
   {
     entry: "nirs4all-ui/components",
@@ -454,8 +504,20 @@ const publicApiGroups = [
       "assets/brands/nirs4all-ui/stacked.svg",
       "assets/brands/nirs4all-providers/icon.svg",
       "assets/styles/nirs4all-default.css",
+      "assets/datasetBuilder.css",
+      "assets/theme.css",
       "assets/motion/nirs-spectra.svg",
     ],
+  },
+  {
+    entry: "nirs4all-ui/lab",
+    title: "Lab exports",
+    symbols: Object.keys(labExports).sort(),
+  },
+  {
+    entry: "nirs4all-ui/datasetBuilder",
+    title: "DatasetBuilder exports",
+    symbols: Object.keys(datasetBuilderExports).sort(),
   },
   {
     entry: "nirs4all-ui/brand",
