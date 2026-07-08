@@ -53,6 +53,14 @@
       "types": "./dist/styles/index.d.ts",
       "import": "./dist/styles/index.js"
     },
+    "./lab": {
+      "types": "./dist/lab/index.d.ts",
+      "import": "./dist/lab/index.js"
+    },
+    "./datasetBuilder": {
+      "types": "./dist/datasetBuilder/index.d.ts",
+      "import": "./dist/datasetBuilder/index.js"
+    },
     "./assets/*": "./assets/*"
   },
   "scripts": {

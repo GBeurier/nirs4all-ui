@@ -7,6 +7,8 @@ import {
   RuntimeEngineBadge,
   RuntimeResultStatusBadge,
 } from "../../src/components/index.js";
+import { DatasetBuilder } from "../../src/datasetBuilder/index.js";
+import type { DatasetSource } from "../../src/datasetBuilder/index.js";
 import {
   buildDatasetPreview,
   formatDatasetCount,
@@ -629,6 +631,55 @@ const brandCards = NIRS4ALL_BRANDS.map((brand) => ({
   stackedPath: getNirs4allBrandAssetPath(brand, "stacked"),
 }));
 
+const datasetBuilderSources: DatasetSource[] = [
+  {
+    id: "spectra",
+    name: "wheat_spectra_train.csv",
+    kind: "file",
+    fileType: "csv",
+    signalType: "spectra",
+    status: "parsed",
+    rowCount: 12048,
+    columnCount: 238,
+    sizeBytes: 24_100_000,
+    parsing: { separator: ";", decimal: ".", headerMode: "horizontal" },
+    usage: { useAs: "x_train" },
+    columns: [
+      { id: "sample_id", name: "sample_id", detectedType: "text", assignedRole: "ignored", previewValue: "S00123" },
+      { id: "replicate", name: "replicate", detectedType: "integer", assignedRole: "ignored", previewValue: 1 },
+      { id: "plot_id", name: "plot_id", detectedType: "text", assignedRole: "ignored", previewValue: "P17" },
+      { id: "split", name: "split", detectedType: "text", assignedRole: "ignored", previewValue: "train" },
+      ...Array.from({ length: 12 }, (_, i) => ({
+        id: `wavelength_${1000 + i}`,
+        name: `wavelength_${1000 + i}`,
+        detectedType: "float" as const,
+        assignedRole: "ignored" as const,
+        previewValue: Number((0.2 + i * 0.002).toFixed(3)),
+      })),
+    ],
+  },
+  {
+    id: "metadata",
+    name: "metadata.xlsx",
+    kind: "file",
+    fileType: "xlsx",
+    signalType: "metadata",
+    status: "parsed",
+    rowCount: 12048,
+    columnCount: 5,
+    sizeBytes: 900_000,
+    parsing: { sheetName: "Sheet1" },
+    usage: { useAs: "metadata" },
+    columns: [
+      { id: "m_sample_id", name: "sample_id", detectedType: "text", assignedRole: "ignored", previewValue: "S00123" },
+      { id: "protein_pct", name: "protein_pct", detectedType: "float", assignedRole: "ignored", previewValue: 13.45 },
+      { id: "disease_class", name: "disease_class", detectedType: "text", assignedRole: "ignored", previewValue: "healthy" },
+      { id: "cultivar", name: "cultivar", detectedType: "text", assignedRole: "ignored", previewValue: "ARINA" },
+      { id: "operator", name: "operator", detectedType: "text", assignedRole: "ignored", previewValue: "op_07" },
+    ],
+  },
+];
+
 function StatusIcon({ icon }: { icon: string }) {
   return <span className={`status-icon status-icon-${icon}`} aria-hidden="true" />;
 }
@@ -679,6 +730,7 @@ export function App() {
           <a href="#exports">Exports</a>
           <a href="#hosts">Hosts</a>
           <a href="#components">Components</a>
+          <a href="#dataset-builder">Builder</a>
           <a href="#dataset">Dataset</a>
           <a href="#runtime">Runtime</a>
           <a href="#score">Score</a>
@@ -960,6 +1012,24 @@ export function App() {
             statDetailClassName="dataset-stat-detail"
           />
         </div>
+      </Section>
+
+      <Section id="dataset-builder" title="Dataset Builder" kicker="datasetBuilder">
+        <div className="demo-heading">
+          <span className="kicker">live component</span>
+          <h3>Multimodal DatasetBuilder wizard</h3>
+        </div>
+        <p className="section-lead">
+          A self-contained, presentational wizard (Source → Rôle → Colonnes → Validation) that turns
+          heterogeneous, already-parsed source descriptors into a nirs4all dataset config. Local UI state
+          only — the host parses files into <code>DatasetSource</code>s and receives the exported JSON.
+          Import from <code>nirs4all-ui/datasetBuilder</code> with{" "}
+          <code>nirs4all-ui/assets/datasetBuilder.css</code>.
+        </p>
+        <DatasetBuilder
+          defaultSources={datasetBuilderSources}
+          defaultDatasetName="demo_wheat_2025"
+        />
       </Section>
 
       <Section id="dataset" title="Dataset Preview View Models" kicker="dataset">
