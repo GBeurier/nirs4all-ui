@@ -69,7 +69,31 @@ jobs:
       - name: Run package gate
         run: npm run ci
 
+      - name: Decide publish
+        id: gate
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "push" ] && [[ "${GITHUB_REF_NAME}" == v* ]] && [[ "${GITHUB_REF_NAME}" != *-* ]]; then
+            do=true
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" = "false" ]; then
+            do=true
+          else
+            do=false
+            echo "Dry-run only (no publish)."
+          fi
+
+          if [ "$do" = "true" ]; then
+            package_name="$(node -p "require('./package.json').name")"
+            package_version="$(node -p "require('./package.json').version")"
+            if npm view "${package_name}@${package_version}" version >/dev/null 2>&1; then
+              echo "${package_name}@${package_version} already published; skipping publish."
+              do=false
+            fi
+          fi
+          echo "do=$do" >> "$GITHUB_OUTPUT"
+
       - name: Publish to npm
+        if: steps.gate.outputs.do == 'true'
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
