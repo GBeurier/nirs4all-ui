@@ -45,6 +45,16 @@ export const PUBLICATION_ASSETS: readonly PublicationAsset[] = [
     path: `${REUSABLE_BRAND_BASE_PATH}/nirs4all-core/horizontal.svg`,
   },
   {
+    name: "assets/brands/nirs4all-providers/horizontal.svg",
+    role: "Reusable provider-layer brand SVG",
+    path: `${REUSABLE_BRAND_BASE_PATH}/nirs4all-providers/horizontal.svg`,
+  },
+  {
+    name: "assets/brands/nirs4all-ui/horizontal.svg",
+    role: "Reusable shared-UI package brand SVG",
+    path: `${REUSABLE_BRAND_BASE_PATH}/nirs4all-ui/horizontal.svg`,
+  },
+  {
     name: "assets/styles/nirs4all-default.css",
     role: "Default NIRS4ALL visual tokens and host utility classes",
     path: `${REUSABLE_STYLE_BASE_PATH}/nirs4all-default.css`,
