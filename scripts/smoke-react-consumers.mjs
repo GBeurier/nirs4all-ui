@@ -273,7 +273,7 @@ function assert(condition, message) {
 assert(score.canonicalMetricKey("r2-score") === "r2", "root score namespace import failed");
 assert(canonicalMetricKey("r2_score") === "r2", "score subpath import failed");
 assert(dataset.buildDatasetPreview({ name: "Root dataset" })?.title === "Root dataset", "root dataset namespace import failed");
-assert(brand.getNirs4allBrandDefinition("nirs4all-core").shortName === "core", "root brand namespace import failed");
+assert(brand.getNirs4allBrandDefinition("nirs4all-core").shortName === "n4o", "root brand namespace import failed");
 assert(getNirs4allBrandDefinition("nirs4all-ui").role === "Reusable visual system", "brand subpath import failed");
 assert(generateNirs4allBrandSvg("nirs4all-ui", { variant: "icon" }).includes("nirs4all-ui"), "brand generator failed");
 assert(styles.getNirs4allStyleAsset("default-theme").path.endsWith("nirs4all-default.css"), "root styles namespace import failed");
