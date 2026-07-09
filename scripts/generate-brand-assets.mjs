@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -89,20 +89,16 @@ function stackedSvg(brand) {
 `;
 }
 
-async function main() {
-  const root = path.join(repositoryRoot, "assets", "brands");
+function generatedBrandFiles(brand) {
+  return {
+    "icon.svg": iconSvg(brand),
+    "horizontal.svg": horizontalSvg(brand),
+    "stacked.svg": stackedSvg(brand),
+  };
+}
 
-  for (const brand of brands) {
-    const directory = path.join(root, brand.id);
-    await mkdir(directory, { recursive: true });
-    await writeFile(path.join(directory, "icon.svg"), iconSvg(brand));
-    await writeFile(path.join(directory, "horizontal.svg"), horizontalSvg(brand));
-    await writeFile(path.join(directory, "stacked.svg"), stackedSvg(brand));
-  }
-
-  await writeFile(
-    path.join(root, "README.md"),
-    `# NIRS4ALL reusable brand assets
+function generatedReadme() {
+  return `# NIRS4ALL reusable brand assets
 
 Generated SVG brand kit for the NIRS4ALL ecosystem.
 
@@ -110,8 +106,65 @@ Run \`npm run brand:generate\` after editing \`scripts/generate-brand-assets.mjs
 
 Current brands:
 ${brands.map((brand) => `- \`${brand.id}\`: ${brand.role}`).join("\n")}
-`,
-  );
+`;
 }
 
-await main();
+async function writeGeneratedAssets() {
+  const root = path.join(repositoryRoot, "assets", "brands");
+
+  for (const brand of brands) {
+    const directory = path.join(root, brand.id);
+    await mkdir(directory, { recursive: true });
+    for (const [filename, content] of Object.entries(generatedBrandFiles(brand))) {
+      await writeFile(path.join(directory, filename), content);
+    }
+  }
+
+  await writeFile(path.join(root, "README.md"), generatedReadme());
+}
+
+async function checkGeneratedAssets() {
+  const root = path.join(repositoryRoot, "assets", "brands");
+  const stale = [];
+
+  for (const brand of brands) {
+    const directory = path.join(root, brand.id);
+    for (const [filename, expected] of Object.entries(generatedBrandFiles(brand))) {
+      const assetPath = path.join(directory, filename);
+      let actual = "";
+      try {
+        actual = await readFile(assetPath, "utf8");
+      } catch {
+        stale.push(path.relative(repositoryRoot, assetPath));
+        continue;
+      }
+      if (actual !== expected) {
+        stale.push(path.relative(repositoryRoot, assetPath));
+      }
+    }
+  }
+
+  const readmePath = path.join(root, "README.md");
+  try {
+    if ((await readFile(readmePath, "utf8")) !== generatedReadme()) {
+      stale.push(path.relative(repositoryRoot, readmePath));
+    }
+  } catch {
+    stale.push(path.relative(repositoryRoot, readmePath));
+  }
+
+  if (stale.length > 0) {
+    console.error(`Brand assets are stale. Run npm run brand:generate.\n${stale.join("\n")}`);
+    return false;
+  }
+  return true;
+}
+
+if (process.argv.includes("--check")) {
+  const ok = await checkGeneratedAssets();
+  if (!ok) {
+    process.exitCode = 1;
+  }
+} else {
+  await writeGeneratedAssets();
+}
