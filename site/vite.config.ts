@@ -7,6 +7,9 @@ import { defineConfig, type Plugin } from "vite";
 const configDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(configDirectory, "..");
 
+export const VISUAL_ASSET_GROUPS = ["brands", "styles", "motion"] as const;
+export const TOP_LEVEL_VISUAL_ASSETS = ["datasetBuilder.css", "theme.css"] as const;
+
 function copyVisualAssets(): Plugin {
   let outputDirectory = "";
 
@@ -21,7 +24,6 @@ function copyVisualAssets(): Plugin {
     closeBundle() {
       const packageBrandSource = resolve(repositoryRoot, "assets", "brand");
       const packageBrandTarget = resolve(outputDirectory, "assets", "brand", "nirs4all-ui");
-      const visualAssetGroups = ["brands", "styles", "motion"] as const;
 
       if (!existsSync(packageBrandSource)) {
         throw new Error(`Missing nirs4all-ui brand assets at ${packageBrandSource}`);
@@ -31,7 +33,7 @@ function copyVisualAssets(): Plugin {
       mkdirSync(packageBrandTarget, { recursive: true });
       cpSync(packageBrandSource, packageBrandTarget, { recursive: true });
 
-      for (const group of visualAssetGroups) {
+      for (const group of VISUAL_ASSET_GROUPS) {
         const source = resolve(repositoryRoot, "assets", group);
         const target = resolve(outputDirectory, "assets", group);
         if (!existsSync(source)) {
@@ -40,6 +42,16 @@ function copyVisualAssets(): Plugin {
         rmSync(target, { recursive: true, force: true });
         mkdirSync(target, { recursive: true });
         cpSync(source, target, { recursive: true });
+      }
+
+      for (const asset of TOP_LEVEL_VISUAL_ASSETS) {
+        const source = resolve(repositoryRoot, "assets", asset);
+        const target = resolve(outputDirectory, "assets", asset);
+        if (!existsSync(source)) {
+          throw new Error(`Missing nirs4all-ui visual asset at ${source}`);
+        }
+        mkdirSync(dirname(target), { recursive: true });
+        cpSync(source, target);
       }
     },
   };

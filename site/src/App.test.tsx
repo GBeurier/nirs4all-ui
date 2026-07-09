@@ -8,7 +8,9 @@ import { describe, expect, it } from "vitest";
 import * as componentExports from "../../src/components/index.js";
 import * as datasetBuilderExports from "../../src/datasetBuilder/index.js";
 import * as labExports from "../../src/lab/index.js";
+import { NIRS4ALL_STYLE_ASSETS } from "../../src/styles/index.js";
 import packageJson from "../../package.json" with { type: "json" };
+import { TOP_LEVEL_VISUAL_ASSETS, VISUAL_ASSET_GROUPS } from "../vite.config.js";
 import { App } from "./App.js";
 import { CANONICAL_SITE_URL, PUBLICATION_ASSETS } from "./showcaseMetadata.js";
 
@@ -122,5 +124,23 @@ describe("GitHub Pages showcase", () => {
       "./assets/brand/nirs4all-ui/icon-256.png",
       "./assets/brand/nirs4all-ui/icon-512.png",
     ]);
+  });
+
+  it("copies every showcased style asset into the Pages build", () => {
+    const recursiveAssetRoots = new Set<string>([
+      ...VISUAL_ASSET_GROUPS.map((group) => `assets/${group}/`),
+      "assets/brand/nirs4all-ui/",
+    ]);
+    const topLevelAssets = new Set<string>(
+      TOP_LEVEL_VISUAL_ASSETS.map((asset) => `assets/${asset}`),
+    );
+
+    for (const asset of NIRS4ALL_STYLE_ASSETS) {
+      expect(readRepositoryFile(asset.path).length).toBeGreaterThan(0);
+      const copiedByRecursiveGroup = [...recursiveAssetRoots].some((root) =>
+        asset.path.startsWith(root),
+      );
+      expect(copiedByRecursiveGroup || topLevelAssets.has(asset.path)).toBe(true);
+    }
   });
 });
