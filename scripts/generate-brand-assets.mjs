@@ -116,6 +116,10 @@ ${brands.map((brand) => `- \`${brand.id}\`: ${brand.role}`).join("\n")}
 `;
 }
 
+function normalizeGeneratedText(value) {
+  return value.replace(/\r\n?/g, "\n");
+}
+
 async function writeGeneratedAssets() {
   const root = path.join(repositoryRoot, "assets", "brands");
 
@@ -145,7 +149,7 @@ async function checkGeneratedAssets() {
         stale.push(path.relative(repositoryRoot, assetPath));
         continue;
       }
-      if (actual !== expected) {
+      if (normalizeGeneratedText(actual) !== normalizeGeneratedText(expected)) {
         stale.push(path.relative(repositoryRoot, assetPath));
       }
     }
@@ -153,7 +157,7 @@ async function checkGeneratedAssets() {
 
   const readmePath = path.join(root, "README.md");
   try {
-    if ((await readFile(readmePath, "utf8")) !== generatedReadme()) {
+    if (normalizeGeneratedText(await readFile(readmePath, "utf8")) !== normalizeGeneratedText(generatedReadme())) {
       stale.push(path.relative(repositoryRoot, readmePath));
     }
   } catch {
