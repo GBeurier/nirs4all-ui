@@ -503,6 +503,7 @@ const publicApiGroups = [
       "assets/brands/nirs4all-core/horizontal.svg",
       "assets/brands/nirs4all-ui/stacked.svg",
       "assets/brands/nirs4all-providers/icon.svg",
+      "assets/brands/nirs4all-quality/horizontal.svg",
       "assets/styles/nirs4all-default.css",
       "assets/datasetBuilder.css",
       "assets/theme.css",

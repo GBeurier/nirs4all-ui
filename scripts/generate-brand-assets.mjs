@@ -35,6 +35,13 @@ const brands = [
     role: "Soft-import provider bridge",
     palette: { primary: "#D946EF", secondary: "#058E96", accent: "#E9362D", dark: "#2e1065", surface: "#ffffff" },
   },
+  {
+    id: "nirs4all-quality",
+    name: "nirs4all-quality",
+    shortName: "n4q",
+    role: "Quality/lab custom host",
+    palette: { primary: "#4F46E5", secondary: "#058E96", accent: "#E9362D", dark: "#1e1b4b", surface: "#ffffff" },
+  },
 ];
 
 function escapeXml(value) {

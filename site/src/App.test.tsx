@@ -61,12 +61,14 @@ describe("GitHub Pages showcase", () => {
     expect(markup).toContain("Custom Host Integration");
     expect(markup).toContain("nirs4all-core");
     expect(markup).toContain("nirs4all-providers");
+    expect(markup).toContain("nirs4all-quality");
     expect(markup).toContain("custom app host");
     expect(markup).toContain("Consumer import surface");
     expect(markup).toContain("nirs4all-ui/assets/brand/icon.svg");
     expect(markup).toContain("assets/brands/nirs4all-core/horizontal.svg");
     expect(markup).toContain("assets/brands/nirs4all-providers/horizontal.svg");
     expect(markup).toContain("assets/brands/nirs4all-ui/horizontal.svg");
+    expect(markup).toContain("assets/brands/nirs4all-quality/horizontal.svg");
     expect(markup).toContain("generateNirs4allBrandSvg");
     expect(markup).toContain("NIRS4ALL_DEFAULT_THEME");
     expect(markup).toContain("assets/styles/nirs4all-default.css");
