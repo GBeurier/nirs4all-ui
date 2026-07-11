@@ -71,7 +71,7 @@ describe("GitHub Pages showcase", () => {
     expect(markup).toContain("buildDatasetPreview");
     expect(markup).toContain("RUNTIME_RESULT_STATUS_DISPLAY");
     expect(markup).toContain("ALL_SCORE_METRICS");
-    expect(markup).toContain("generateNirs4allBrandSvg");
+    expect(markup).toContain("NIRS4ALL_BRANDS");
     expect(markup).toContain("NIRS4ALL_DEFAULT_THEME");
 
     for (const brandName of ["nirs4all", "nirs4all-core", "nirs4all-ui", "nirs4all-providers", "nirs4all-quality"]) {

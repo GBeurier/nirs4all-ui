@@ -10,7 +10,7 @@ import * as runtimeExports from "../../src/runtime/index.js";
 import * as datasetExports from "../../src/dataset/index.js";
 import * as brandExports from "../../src/brand/index.js";
 import * as stylesExports from "../../src/styles/index.js";
-import { NIRS4ALL_BRANDS, generateNirs4allBrandSvg, getNirs4allBrandAssetPath } from "../../src/brand/index.js";
+import { NIRS4ALL_BRANDS, getNirs4allBrandAssetPath } from "../../src/brand/index.js";
 import { NIRS4ALL_CSS_TOKENS, NIRS4ALL_STYLE_ASSETS, getNirs4allCssVariable } from "../../src/styles/index.js";
 import { DatasetBuilder } from "../../src/datasetBuilder/index.js";
 import type { DatasetSource } from "../../src/datasetBuilder/index.js";
@@ -98,9 +98,15 @@ const datasetBuilderSources: DatasetSource[] = [
   },
 ];
 
+const brandIconSvgs = import.meta.glob("../../assets/brands/*/icon.svg", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
+
 const brandCards = NIRS4ALL_BRANDS.map((brand) => ({
   brand,
-  iconSvg: generateNirs4allBrandSvg(brand, { variant: "icon", animated: brand.id === "nirs4all-ui" }),
+  iconSvg: brandIconSvgs[`../../assets/brands/${brand.id}/icon.svg`] ?? "",
   horizontalPath: getNirs4allBrandAssetPath(brand, "horizontal"),
 }));
 
@@ -328,17 +334,15 @@ export function App() {
         id="brand"
         kicker="brand system"
         title={<>The canonical <em className="n4-gradient-text">ecosystem marks</em></>}
-        lead="The reusable squircle identity — an accent-colored tile with a white NIRS spectrum and peak dot, plus a tri-color wordmark. Generated deterministically from the shared palette; the nirs4all-ui mark animates its spectrum."
+        lead="The real, designer-made mark for every ecosystem project — an accent-colored squircle with a white NIRS spectrum and peak dot, plus the project wordmark. nirs4all-ui is the single home; each mark is vendored here from the flagship so apps and docs consume one source instead of copying their own."
         variant="dark"
       >
         <div className="brand-grid">
           {brandCards.map(({ brand, iconSvg, horizontalPath }) => (
             <article className="brand-card" key={brand.id}>
-              <div
-                className="brand-mark"
-                // eslint-disable-next-line react/no-danger
-                dangerouslySetInnerHTML={{ __html: iconSvg }}
-              />
+              <div className="brand-mark">
+                <img src={`data:image/svg+xml;utf8,${encodeURIComponent(iconSvg)}`} alt={`${brand.name} icon`} />
+              </div>
               <div className="brand-info">
                 <strong>{brand.name}</strong>
                 <span>{brand.role}</span>

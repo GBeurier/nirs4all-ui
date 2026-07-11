@@ -175,3 +175,28 @@ Legend: ✅ shared component available now · 🟡 partial (covers most, some fe
   overlays its own interaction layer.
 - **Test ownership.** Pure geometry/formatting tests live in `nirs4all-ui`;
   integration/interaction tests stay in the apps.
+
+## Brand kit — single source
+
+**Done.** The real, designer-made mark for **every** ecosystem project is now
+vendored in `nirs4all-ui/assets/brands/<id>/` (`icon` + `horizontal`/`stacked` +
+dark variants — 19 projects × 5 SVGs), with the manifest in `src/brand/index.ts`.
+The previous procedural generator — which invented a *different, fake* mark for
+only 5 projects — is retired; `scripts/generate-brand-assets.mjs` now imports the
+marks from the flagship master and verifies them (`npm run brand:check`). This is
+the single home the `gen-brand.mjs` header comment always intended
+(*"the shared UI package = the logical home"*). Each project's mark is distinct
+(its own wordmark + accent tile); the shared red `#E9362D` and teal `#058E96` are
+constant.
+
+**Follow-ups (not done here — the "stop dispersing" work):**
+- [ ] Vendor/generate the raster set per project (`icon-32/180/256/512.png`,
+      `favicon.ico`, `horizontal/stacked.png`, `og.png`) — needs `@resvg/resvg-js`
+      + `png-to-ico` devDeps, mirroring `nirs4all-quality/app/scripts/gen-brand.mjs`.
+- [ ] De-duplicate: every sibling project currently carries its own byte-identical
+      `assets/brand/` copy. Point them at `nirs4all-ui`'s kit and delete the local
+      copies (cross-repo; do per project, like the component rewire above).
+- [ ] Fold the recolor+rasterize generator (today in `nirs4all-quality/app/scripts/
+      gen-brand.mjs`) into `nirs4all-ui` so the whole brand pipeline lives in one place.
+- [ ] Master source of the vector marks is `nirs4all-org/assets/brand/`; if the
+      design changes there, re-run `npm run brand:generate` in `nirs4all-ui`.
