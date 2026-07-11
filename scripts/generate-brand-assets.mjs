@@ -52,30 +52,67 @@ function escapeXml(value) {
     .replaceAll('"', "&quot;");
 }
 
+// --- Canonical nirs4all mark (verbatim geometry from nirs4all-org) ---------
+// A filled "squircle" app tile in the brand's accent color, a white NIRS
+// spectrum curve stroked through it, and a solid white peak dot. Only the tile
+// fill changes per brand; the spectrum + dot are always white. The wordmark is
+// drawn as tri-color text (nirs / 4 / all) in the ecosystem display face.
+const ICON_VIEWBOX = "0 0 307.2823 308.2614";
+const ICON_GROUP_TRANSFORM = "translate(-0.25127103,1.1057433)";
+const CLIP_D = "M 75.196094,-0.47997507 H 381.42019 V 303.18425 H 75.196094 Z";
+const TILE_D =
+  "M 1.5315373,35.750606 C 1.5315373,16.791591 16.89074,1.4323885 35.849755,1.4323885 H 269.47762 c 18.91901,0 34.27821,15.3592025 34.27821,34.3182175 V 269.53846 c 0,18.91902 -15.3592,34.27822 -34.27821,34.27822 H 35.849755 c -18.959015,0 -34.3182177,-15.3592 -34.3182177,-34.27822 z";
+const TILE_TRANSFORM = "matrix(1.0163665,0,0,1.019436,-1.1937273,-2.5659717)";
+const SPECTRUM_D =
+  "m 78.350886,215.76355 c 4.917688,0.027 13.251861,-0.0312 22.323884,-1.53468 6.67965,-1.47992 11.15942,-3.51981 16.79913,-8.67955 5.6797,-5.15973 10.19947,-8.15957 17.11911,-22.35883 6.95964,-14.15927 19.159,-49.59743 24.47873,-62.67675 5.27972,-13.11932 3.63981,-9.91948 7.31962,-15.83918 3.67981,-5.959687 11.4794,-8.59955 16.51914,-6.839641 5.03974,1.759908 9.39951,4.999741 13.71929,17.319101 4.35977,12.35936 6.23967,27.03859 9.4795,37.67804 3.27983,10.67945 4.39978,18.47904 10.11948,26.35863 5.6797,7.87959 12.48129,8.96263 20.43894,4.99974 6.87614,-5.69367 24.35873,-49.63742 26.59862,-51.67731 2.23988,-2.0399 14.71923,-18.23906 34.23822,6.47966 8.91953,11.39941 25.55867,37.55805 38.79798,52.55727";
+const SPECTRUM_TRANSFORM = "translate(-78.046472,1.0051295)";
+const DOT_D =
+  "m 245.65157,200.51477 c 0,-13.5593 10.99943,-24.55873 24.55873,-24.55873 13.59929,0 24.55872,10.99943 24.55872,24.55873 0,13.59929 -10.95943,24.55872 -24.55872,24.55872 -13.5593,0 -24.55873,-10.95943 -24.55873,-24.55872 z";
+const WORDMARK_RED = "#E9362D";
+const DISPLAY_FONT = "'IBM Plex Sans', 'Inter', system-ui, -apple-system, sans-serif";
+
+function iconGeometry(brand, variant) {
+  const clipId = `${brand.id}-${variant}-clip`;
+  const waveId = `${brand.id}-${variant}-wave`;
+  return `<defs><clipPath id="${clipId}" clipPathUnits="userSpaceOnUse"><path d="${CLIP_D}"/></clipPath></defs>
+    <g transform="${ICON_GROUP_TRANSFORM}">
+      <path fill="${brand.palette.primary}" fill-rule="evenodd" d="${TILE_D}" transform="${TILE_TRANSFORM}"/>
+      <path id="${waveId}" fill="none" stroke="#ffffff" stroke-width="19.359" stroke-linecap="butt" stroke-miterlimit="8" clip-path="url(#${clipId})" d="${SPECTRUM_D}" transform="${SPECTRUM_TRANSFORM}"/>
+      <path fill="#ffffff" fill-rule="evenodd" d="${DOT_D}"/>
+    </g>`;
+}
+
+function wordmarkTspans(brand) {
+  const suffix = brand.id.slice("nirs4all".length);
+  const parts = [
+    `<tspan fill="#0f172a">nirs</tspan>`,
+    `<tspan fill="${WORDMARK_RED}">4</tspan>`,
+    `<tspan fill="${brand.palette.primary}">all</tspan>`,
+  ];
+  if (suffix) parts.push(`<tspan fill="#64748b">${escapeXml(suffix)}</tspan>`);
+  return parts.join("");
+}
+
+function estTextWidth(text, fontSize) {
+  return Math.round(text.length * fontSize * 0.62);
+}
+
 function iconSvg(brand) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="${brand.id}-icon-title">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${ICON_VIEWBOX}" role="img" aria-labelledby="${brand.id}-icon-title">
   <title id="${brand.id}-icon-title">${escapeXml(brand.name)}</title>
-  <rect width="128" height="128" rx="24" fill="${brand.palette.surface}"/>
-  <path d="M20 78C31 45 44 44 58 70s26 25 50-20" fill="none" stroke="${brand.palette.primary}" stroke-width="9" stroke-linecap="round"/>
-  <path d="M20 90C36 74 48 74 64 89s29 17 44-4" fill="none" stroke="${brand.palette.secondary}" stroke-width="5" stroke-linecap="round" opacity=".82"/>
-  <circle cx="98" cy="39" r="10" fill="${brand.palette.accent}"/>
-  <text x="64" y="112" fill="${brand.palette.dark}" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800" text-anchor="middle">${escapeXml(brand.shortName)}</text>
+  ${iconGeometry(brand, "icon")}
 </svg>
 `;
 }
 
 function horizontalSvg(brand) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 132" role="img" aria-labelledby="${brand.id}-horizontal-title">
+  const textX = 136;
+  const width = textX + estTextWidth(brand.id, 40) + 24;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} 132" role="img" aria-labelledby="${brand.id}-horizontal-title">
   <title id="${brand.id}-horizontal-title">${escapeXml(brand.name)}</title>
-  <rect width="520" height="132" rx="22" fill="${brand.palette.surface}"/>
-  <g transform="translate(24 18)">
-    <rect width="96" height="96" rx="20" fill="${brand.palette.primary}" opacity=".12"/>
-    <path d="M14 58C25 28 37 28 49 54s24 26 40-15" fill="none" stroke="${brand.palette.primary}" stroke-width="8" stroke-linecap="round"/>
-    <path d="M14 72C29 58 39 59 53 72s25 14 37-2" fill="none" stroke="${brand.palette.secondary}" stroke-width="5" stroke-linecap="round"/>
-    <circle cx="78" cy="28" r="8" fill="${brand.palette.accent}"/>
-  </g>
-  <text x="146" y="61" fill="${brand.palette.dark}" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="800">${escapeXml(brand.name)}</text>
-  <text x="146" y="92" fill="#475569" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="600">${escapeXml(brand.role)}</text>
+  <g transform="translate(18 18) scale(0.311427)">${iconGeometry(brand, "horizontal")}</g>
+  <text x="${textX}" y="73" font-family="${DISPLAY_FONT}" font-size="40" font-weight="700" letter-spacing="-0.5">${wordmarkTspans(brand)}</text>
+  <text x="${textX}" y="99" font-family="'Inter', system-ui, sans-serif" font-size="15" font-weight="600" fill="#64748b">${escapeXml(brand.role)}</text>
 </svg>
 `;
 }
@@ -83,15 +120,9 @@ function horizontalSvg(brand) {
 function stackedSvg(brand) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 236" role="img" aria-labelledby="${brand.id}-stacked-title">
   <title id="${brand.id}-stacked-title">${escapeXml(brand.name)}</title>
-  <rect width="280" height="236" rx="24" fill="${brand.palette.surface}"/>
-  <g transform="translate(80 26)">
-    <rect width="120" height="120" rx="28" fill="${brand.palette.primary}" opacity=".12"/>
-    <path d="M18 73C32 36 47 35 64 68s32 33 56-18" fill="none" stroke="${brand.palette.primary}" stroke-width="10" stroke-linecap="round"/>
-    <path d="M18 91C37 72 51 74 68 91s35 18 52-3" fill="none" stroke="${brand.palette.secondary}" stroke-width="6" stroke-linecap="round"/>
-    <circle cx="96" cy="38" r="10" fill="${brand.palette.accent}"/>
-  </g>
-  <text x="140" y="178" fill="${brand.palette.dark}" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800" text-anchor="middle">${escapeXml(brand.name)}</text>
-  <text x="140" y="205" fill="#475569" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="600" text-anchor="middle">${escapeXml(brand.role)}</text>
+  <g transform="translate(80 24) scale(0.389284)">${iconGeometry(brand, "stacked")}</g>
+  <text x="140" y="188" text-anchor="middle" font-family="${DISPLAY_FONT}" font-size="26" font-weight="700" letter-spacing="-0.4">${wordmarkTspans(brand)}</text>
+  <text x="140" y="212" text-anchor="middle" font-family="'Inter', system-ui, sans-serif" font-size="13" font-weight="600" fill="#64748b">${escapeXml(brand.role)}</text>
 </svg>
 `;
 }

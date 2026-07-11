@@ -8,6 +8,7 @@
 export type Nirs4allStyleAssetId =
   | "default-theme"
   | "dataset-builder"
+  | "viz-charts"
   | "quality-lab-theme"
   | "spectra-motion";
 
@@ -35,6 +36,13 @@ export const NIRS4ALL_STYLE_ASSETS = [
     path: "assets/datasetBuilder.css",
     packageExport: "nirs4all-ui/assets/datasetBuilder.css",
     description: "Default multimodal DatasetBuilder wizard layout and role-mapping utility classes.",
+  },
+  {
+    id: "viz-charts",
+    kind: "css",
+    path: "assets/viz.css",
+    packageExport: "nirs4all-ui/assets/viz.css",
+    description: "Default axis, gridline, connector, and text styling for the reusable viz scientific charts.",
   },
   {
     id: "quality-lab-theme",

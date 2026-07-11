@@ -45,6 +45,10 @@
       "types": "./dist/components/index.d.ts",
       "import": "./dist/components/index.js"
     },
+    "./viz": {
+      "types": "./dist/viz/index.d.ts",
+      "import": "./dist/viz/index.js"
+    },
     "./brand": {
       "types": "./dist/brand/index.d.ts",
       "import": "./dist/brand/index.js"

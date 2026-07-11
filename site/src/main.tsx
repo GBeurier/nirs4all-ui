@@ -2,8 +2,10 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { App } from "./App.js";
-import "./styles.css";
+import "../../assets/theme.css";
+import "../../assets/viz.css";
 import "../../assets/datasetBuilder.css";
+import "./styles.css";
 
 createRoot(document.getElementById("root") as HTMLElement).render(
   <StrictMode>

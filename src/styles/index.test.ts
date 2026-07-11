@@ -18,9 +18,12 @@ describe("nirs4all-ui/styles", () => {
     expect(NIRS4ALL_STYLE_ASSETS.map((asset) => asset.id)).toEqual([
       "default-theme",
       "dataset-builder",
+      "viz-charts",
       "quality-lab-theme",
       "spectra-motion",
     ]);
+    expect(getNirs4allStyleAsset("viz-charts").packageExport)
+      .toBe("nirs4all-ui/assets/viz.css");
     expect(getNirs4allStyleAsset("default-theme").packageExport)
       .toBe("nirs4all-ui/assets/styles/nirs4all-default.css");
     expect(getNirs4allStyleAsset("dataset-builder").packageExport)
@@ -33,6 +36,7 @@ describe("nirs4all-ui/styles", () => {
     const markers = {
       "default-theme": "--n4-color-primary",
       "dataset-builder": ".dsb",
+      "viz-charts": ".n4viz",
       "quality-lab-theme": "--success",
       "spectra-motion": "<svg",
     } as const;

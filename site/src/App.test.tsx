@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import * as componentExports from "../../src/components/index.js";
+import * as vizExports from "../../src/viz/index.js";
 import * as datasetBuilderExports from "../../src/datasetBuilder/index.js";
 import * as labExports from "../../src/lab/index.js";
 import { NIRS4ALL_STYLE_ASSETS } from "../../src/styles/index.js";
@@ -13,6 +14,7 @@ import packageJson from "../../package.json" with { type: "json" };
 import { TOP_LEVEL_VISUAL_ASSETS, VISUAL_ASSET_GROUPS } from "../vite.config.js";
 import { App } from "./App.js";
 import { CANONICAL_SITE_URL, PUBLICATION_ASSETS } from "./showcaseMetadata.js";
+import { SHOWCASE_ENTRIES } from "./showcaseData.js";
 
 const directory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(directory, "..", "..");
@@ -22,19 +24,20 @@ function readRepositoryFile(relativePath: string): string {
 }
 
 describe("GitHub Pages showcase", () => {
-  it("renders every public component export and publication asset", () => {
+  it("showcases every public export and every showcased component", () => {
     const markup = renderToStaticMarkup(<App />);
 
-    for (const component of Object.keys(componentExports)) {
-      expect(markup).toContain(component);
+    for (const domain of [componentExports, vizExports, datasetBuilderExports, labExports]) {
+      for (const exported of Object.keys(domain)) {
+        expect(markup).toContain(exported);
+      }
     }
 
-    for (const exported of Object.keys(datasetBuilderExports)) {
-      expect(markup).toContain(exported);
-    }
-
-    for (const exported of Object.keys(labExports)) {
-      expect(markup).toContain(exported);
+    // every showcase entry renders its name, subpath, and props interface
+    for (const entry of SHOWCASE_ENTRIES) {
+      expect(markup).toContain(entry.name);
+      expect(markup).toContain(entry.propsInterface);
+      expect(markup).toContain(entry.entry);
     }
 
     for (const propsInterface of [
@@ -43,38 +46,52 @@ describe("GitHub Pages showcase", () => {
       "RuntimeResultStatusBadgeProps",
       "RuntimeDiagnosticListProps",
       "MetricValueBadgeProps",
+      "SpectraPlotProps",
+      "ConfusionMatrixProps",
     ]) {
       expect(markup).toContain(propsInterface);
     }
 
-    expect(markup).toContain("nirs4all-ui/dataset");
-    expect(markup).toContain("nirs4all-ui/score");
-    expect(markup).toContain("nirs4all-ui/runtime");
-    expect(markup).toContain("nirs4all-ui/brand");
-    expect(markup).toContain("nirs4all-ui/styles");
-    expect(markup).toContain("nirs4all-ui/lab");
-    expect(markup).toContain("nirs4all-ui/datasetBuilder");
+    for (const subpath of [
+      "nirs4all-ui/viz",
+      "nirs4all-ui/components",
+      "nirs4all-ui/lab",
+      "nirs4all-ui/datasetBuilder",
+      "nirs4all-ui/dataset",
+      "nirs4all-ui/runtime",
+      "nirs4all-ui/score",
+      "nirs4all-ui/brand",
+      "nirs4all-ui/styles",
+    ]) {
+      expect(markup).toContain(subpath);
+    }
+
+    expect(markup).toContain("component showroom");
     expect(markup).toContain(`v${packageJson.version}`);
     expect(markup).toContain("buildDatasetPreview");
     expect(markup).toContain("RUNTIME_RESULT_STATUS_DISPLAY");
     expect(markup).toContain("ALL_SCORE_METRICS");
-    expect(markup).toContain("Custom Host Integration");
-    expect(markup).toContain("nirs4all-core");
-    expect(markup).toContain("nirs4all-providers");
-    expect(markup).toContain("nirs4all-quality");
-    expect(markup).toContain("custom app host");
-    expect(markup).toContain("Consumer import surface");
-    expect(markup).toContain("nirs4all-ui/assets/brand/icon.svg");
-    expect(markup).toContain("assets/brands/nirs4all-core/horizontal.svg");
-    expect(markup).toContain("assets/brands/nirs4all-providers/horizontal.svg");
-    expect(markup).toContain("assets/brands/nirs4all-ui/horizontal.svg");
-    expect(markup).toContain("assets/brands/nirs4all-quality/horizontal.svg");
     expect(markup).toContain("generateNirs4allBrandSvg");
     expect(markup).toContain("NIRS4ALL_DEFAULT_THEME");
-    expect(markup).toContain("assets/styles/nirs4all-default.css");
-    expect(markup).toContain("assets/datasetBuilder.css");
-    expect(markup).toContain("assets/theme.css");
-    expect(markup).toContain("assets/motion/nirs-spectra.svg");
+
+    for (const brandName of ["nirs4all", "nirs4all-core", "nirs4all-ui", "nirs4all-providers", "nirs4all-quality"]) {
+      expect(markup).toContain(brandName);
+    }
+
+    for (const asset of [
+      "assets/brands/nirs4all/icon.svg",
+      "assets/brands/nirs4all-core/horizontal.svg",
+      "assets/brands/nirs4all-ui/horizontal.svg",
+      "assets/brands/nirs4all-providers/horizontal.svg",
+      "assets/brands/nirs4all-quality/horizontal.svg",
+      "assets/styles/nirs4all-default.css",
+      "assets/viz.css",
+      "assets/datasetBuilder.css",
+      "assets/theme.css",
+      "assets/motion/nirs-spectra.svg",
+    ]) {
+      expect(markup).toContain(asset);
+    }
 
     for (const asset of PUBLICATION_ASSETS) {
       expect(markup).toContain(asset.name);
@@ -82,7 +99,6 @@ describe("GitHub Pages showcase", () => {
     }
 
     expect(markup).toContain(CANONICAL_SITE_URL);
-    expect(markup).toContain("site/public/logo.svg mirrors assets/brand/horizontal.svg");
   });
 
   it("keeps publication metadata and mirrored brand assets coherent", () => {
@@ -102,8 +118,12 @@ describe("GitHub Pages showcase", () => {
       .toBe(readRepositoryFile("assets/brand/icon.svg"));
     expect(readRepositoryFile("assets/brands/README.md"))
       .toContain("NIRS4ALL reusable brand assets");
+    expect(readRepositoryFile("assets/brands/nirs4all/icon.svg"))
+      .toContain("#058E96");
     expect(readRepositoryFile("assets/styles/nirs4all-default.css"))
       .toContain("--n4-color-primary");
+    expect(readRepositoryFile("assets/viz.css"))
+      .toContain(".n4viz");
     expect(readRepositoryFile("assets/datasetBuilder.css"))
       .toContain(".dsb");
     expect(readRepositoryFile("assets/theme.css"))
