@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
 
 import {
+  BiasVarianceBars,
   BoxPlot,
   ConfusionMatrix,
   FeatureImportanceBar,
+  FoldStabilityLines,
   Histogram,
   PcaScatter,
   PipelineFlow,
@@ -13,16 +15,22 @@ import {
   ScoreSummary,
   ShapBeeswarm,
   SpectraPlot,
+  WaterfallChart,
   type BeeswarmFeature,
   type PcaPoint,
   type PredictionPoint,
 } from "../../src/viz/index.js";
 import {
   DatasetPreviewCard,
+  DatasetResultCard,
   MetricValueBadge,
+  PerClassTable,
+  PredictionCard,
+  RankingsTable,
   RuntimeDiagnosticList,
   RuntimeEngineBadge,
   RuntimeResultStatusBadge,
+  ScoreCardTree,
 } from "../../src/components/index.js";
 import {
   DecisionBadge,
@@ -158,6 +166,28 @@ const BOX_GROUPS = ["Raw", "SNV", "MSC", "SG1"].map((label, g) => ({
   values: Array.from({ length: 30 }, () => Number((0.7 + g * 0.03 + (rand() - 0.5) * (0.24 - g * 0.03)).toFixed(3))),
 }));
 
+const WATERFALL_CONTRIBUTIONS = [
+  { label: "1930 nm (O–H)", value: 1.82 },
+  { label: "1450 nm (O–H)", value: -0.94 },
+  { label: "2100 nm (protein)", value: 0.71 },
+  { label: "2320 nm (C–H)", value: -0.43 },
+  { label: "1210 nm (C–H)", value: 0.35 },
+  { label: "1690 nm", value: -0.21 },
+];
+
+const FOLD_SERIES = ["SNV → PLS", "MSC → PLS", "Raw → Ridge"].map((label, s) => ({
+  id: `chain-${s}`,
+  label,
+  scores: [0, 1, 2, 3, 4].map((f) => Number((0.9 - s * 0.028 + Math.sin(f + s) * 0.02).toFixed(3))),
+}));
+
+const BIAS_VARIANCE = [
+  { label: "PLS", biasSquared: 0.041, variance: 0.028 },
+  { label: "Ridge", biasSquared: 0.062, variance: 0.019 },
+  { label: "SVR", biasSquared: 0.033, variance: 0.052 },
+  { label: "RF", biasSquared: 0.021, variance: 0.081 },
+];
+
 // --- Pipeline + scores -----------------------------------------------------
 const PIPELINE_NODES = [
   { id: "ds", label: "Corn NIR", type: "data" as const, detail: "120 samples · 256 λ", status: "done" as const },
@@ -244,12 +274,68 @@ export interface ShowcaseEntry {
   render: () => ReactNode;
 }
 
+const PER_CLASS = CONFUSION_LABELS.map((label, i) => {
+  const tp = CONFUSION_MATRIX[i]?.[i] ?? 0;
+  const actual = (CONFUSION_MATRIX[i] ?? []).reduce((s, v) => s + v, 0);
+  const predicted = CONFUSION_MATRIX.reduce((s, row) => s + (row[i] ?? 0), 0);
+  const precision = predicted ? tp / predicted : 0;
+  const recall = actual ? tp / actual : 0;
+  const f1 = precision + recall ? (2 * precision * recall) / (precision + recall) : 0;
+  return {
+    label,
+    precision: Number(precision.toFixed(3)),
+    recall: Number(recall.toFixed(3)),
+    f1: Number(f1.toFixed(3)),
+    support: actual,
+  };
+});
+
+const SCORE_TREE_NODES = [
+  {
+    id: "refit",
+    label: "Refit (full train)",
+    kind: "refit",
+    metrics: [
+      { label: "R²", value: "0.932", tone: "positive" as const },
+      { label: "RMSE", value: "0.327", tone: "positive" as const },
+    ],
+    children: [
+      {
+        id: "cv",
+        label: "5-fold CV",
+        kind: "cross-val",
+        metrics: [
+          { label: "R²", value: "0.911", tone: "neutral" as const },
+          { label: "RMSE", value: "0.361", tone: "neutral" as const },
+        ],
+        children: [1, 2, 3, 4, 5].map((f) => ({
+          id: `fold-${f}`,
+          label: `Fold ${f}`,
+          kind: "fold",
+          metrics: [
+            { label: "R²", value: (0.9 + f * 0.004).toFixed(3), tone: "neutral" as const },
+            { label: "RMSE", value: (0.38 - f * 0.006).toFixed(3), tone: "neutral" as const },
+          ],
+        })),
+      },
+    ],
+  },
+];
+
+const RANKING_ROWS = [
+  { rank: 1, name: "SNV → SG1 → PLS", score: "0.932", detail: "8 components", highlight: true },
+  { rank: 2, name: "MSC → PLS", score: "0.921", detail: "10 components" },
+  { rank: 3, name: "SNV → Ridge", score: "0.908", detail: "α=0.5" },
+  { rank: 4, name: "Raw → RandomForest", score: "0.874", detail: "300 trees" },
+];
+
 export const SHOWCASE_CATEGORIES = [
   "Spectra & datasets",
   "Model diagnostics",
   "Classification",
   "Explainability",
   "Pipeline & scores",
+  "Results & scores",
   "Runtime & status",
   "Quality / Lab",
 ] as const;
@@ -859,5 +945,229 @@ export const SHOWCASE_ENTRIES: readonly ShowcaseEntry[] = [
         />
       </div>
     ),
+  },
+  {
+    id: "prediction-card",
+    name: "PredictionCard",
+    category: "Results & scores",
+    entry: "nirs4all-ui/components",
+    propsInterface: "PredictionCardProps",
+    mirrors: "Studio Predictions · prediction-id card",
+    summary:
+      "A single prediction's identity card: sample id, predicted value + unit, conformal interval, and metadata rows, with a slot for host badges.",
+    hostOwned: ["prediction source", "value formatting", "badges / actions", "routing"],
+    importLine: 'import { PredictionCard } from "nirs4all-ui/components";',
+    code: `<PredictionCard
+  sampleId="S-00412" predicted={13.42} unit="%" interval="± 0.42" targetLabel="Protein"
+  meta={[{ label: "Model", value: "SNV → PLS" }, { label: "Engine", value: "dag-ml" }]}
+/>`,
+    render: () => (
+      <PredictionCard
+        sampleId="S-00412"
+        predicted={13.42}
+        unit="%"
+        interval="± 0.42"
+        targetLabel="Protein"
+        meta={[
+          { label: "Model", value: "SNV → PLS" },
+          { label: "Engine", value: "dag-ml" },
+          { label: "Fold", value: "refit" },
+        ]}
+        className="surface-panel pred-card"
+        headerClassName="pred-card-head"
+        sampleIdClassName="pred-card-id"
+        targetClassName="pred-card-target"
+        valueClassName="pred-card-value"
+        unitClassName="pred-card-unit"
+        intervalClassName="pred-card-interval"
+        metaListClassName="pred-card-meta"
+        metaRowClassName="pred-card-meta-row"
+        metaLabelClassName="pred-card-meta-label"
+        metaValueClassName="pred-card-meta-value"
+      >
+        <span className="decision-badge tone-success">
+          <ToneDot tone="success" /> Reliable
+        </span>
+      </PredictionCard>
+    ),
+  },
+  {
+    id: "dataset-result-card",
+    name: "DatasetResultCard",
+    category: "Results & scores",
+    entry: "nirs4all-ui/components",
+    propsInterface: "DatasetResultCardProps",
+    mirrors: "Studio DatasetCard · datasetResultCardData",
+    summary:
+      "A dataset result-summary tile: task, best score, winning model, sample/feature counts, tags, and status — the card in the datasets grid.",
+    hostOwned: ["result loading", "routing", "tag rendering", "status source"],
+    importLine: 'import { DatasetResultCard } from "nirs4all-ui/components";',
+    code: `<DatasetResultCard
+  title="Corn NIR" taskLabel="Regression" model="SNV → PLS"
+  bestScore={{ metric: "R²", value: "0.932" }} sampleCount={120} featureCount={256}
+  tags={["NIR", "moisture"]} status="scored"
+/>`,
+    render: () => (
+      <DatasetResultCard
+        title="Corn NIR calibration"
+        description="Moisture + protein reference spectra."
+        taskLabel="Regression"
+        bestScore={{ metric: "R²", value: "0.932" }}
+        model="SNV → SG1 → PLS"
+        sampleCount={120}
+        featureCount={256}
+        tags={["NIR", "moisture", "protein"]}
+        status="scored"
+        className="surface-panel result-card"
+        headerClassName="result-card-head"
+        titleClassName="result-card-title"
+        descriptionClassName="result-card-desc"
+        taskClassName="result-card-task"
+        scoreClassName="result-card-score"
+        modelClassName="result-card-model"
+        statListClassName="result-card-stats"
+        statClassName="result-card-stat"
+        statLabelClassName="result-card-stat-label"
+        statValueClassName="result-card-stat-value"
+        tagListClassName="result-card-tags"
+        tagClassName="result-card-tag"
+        statusClassName="result-card-status"
+      />
+    ),
+  },
+  {
+    id: "score-card-tree",
+    name: "ScoreCardTree",
+    category: "Results & scores",
+    entry: "nirs4all-ui/components",
+    propsInterface: "ScoreCardTreeProps",
+    mirrors: "Studio ScoreCardTree (Refit → CV → folds)",
+    summary:
+      "The expandable model score tree — Refit → cross-validation → per-fold cards, each with tone-colored metric chips. Collapsibility uses native <details>.",
+    hostOwned: ["score payload", "metric selection", "expansion policy"],
+    importLine: 'import { ScoreCardTree } from "nirs4all-ui/components";',
+    code: `<ScoreCardTree nodes={[
+  { id: "refit", label: "Refit", metrics: [{ label: "R²", value: "0.932" }],
+    children: [{ id: "cv", label: "5-fold CV", metrics: [...], children: folds }] },
+]} />`,
+    render: () => (
+      <ScoreCardTree
+        nodes={SCORE_TREE_NODES}
+        className="score-tree"
+        nodeClassName="score-tree-node"
+        summaryClassName="score-tree-summary"
+        labelClassName="score-tree-label"
+        kindClassName="score-tree-kind"
+        metricsClassName="score-tree-metrics"
+        metricClassName="score-tree-metric"
+        metricLabelClassName="score-tree-metric-label"
+        metricValueClassName="score-tree-metric-value"
+        childrenClassName="score-tree-children"
+      />
+    ),
+  },
+  {
+    id: "rankings-table",
+    name: "RankingsTable",
+    category: "Results & scores",
+    entry: "nirs4all-ui/components",
+    propsInterface: "RankingsTableProps",
+    mirrors: "Studio Inspector RankingsTable",
+    summary: "A model/pipeline leaderboard ranked by the primary metric, with the winner highlighted.",
+    hostOwned: ["ranking source", "metric choice", "sort", "row selection"],
+    importLine: 'import { RankingsTable } from "nirs4all-ui/components";',
+    code: `<RankingsTable rows={ranked} metricLabel="R²"
+  headers={{ rank: "#", name: "Pipeline", detail: "Config" }} />`,
+    render: () => (
+      <RankingsTable
+        rows={RANKING_ROWS}
+        metricLabel="R²"
+        headers={{ rank: "#", name: "Pipeline", detail: "Config" }}
+        className="rankings"
+        theadClassName="rankings-head"
+        rowClassName="rankings-row"
+        highlightRowClassName="rankings-row-top"
+        cellClassName="rankings-cell"
+        rankClassName="rankings-rank"
+        nameClassName="rankings-name"
+        scoreClassName="rankings-score"
+      />
+    ),
+  },
+  {
+    id: "per-class-table",
+    name: "PerClassTable",
+    category: "Classification",
+    entry: "nirs4all-ui/components",
+    propsInterface: "PerClassTableProps",
+    mirrors: "Studio / Web per-class metrics table",
+    summary: "Per-class precision / recall / F1 / support — the companion table to a confusion matrix.",
+    hostOwned: ["metric computation", "class labels", "value formatting"],
+    importLine: 'import { PerClassTable } from "nirs4all-ui/components";',
+    code: `<PerClassTable rows={perClass}
+  headers={{ class: "Class", precision: "Precision", recall: "Recall", f1: "F1", support: "n" }} />`,
+    render: () => (
+      <PerClassTable
+        rows={PER_CLASS}
+        headers={{ class: "Class", precision: "Precision", recall: "Recall", f1: "F1", support: "n" }}
+        className="perclass"
+        theadClassName="perclass-head"
+        rowClassName="perclass-row"
+        cellClassName="perclass-cell"
+        labelCellClassName="perclass-label"
+      />
+    ),
+  },
+  {
+    id: "waterfall-chart",
+    name: "WaterfallChart",
+    category: "Explainability",
+    entry: "nirs4all-ui/viz",
+    propsInterface: "WaterfallChartProps",
+    mirrors: "Studio VariableImportance WaterfallChart",
+    summary:
+      "Per-sample SHAP waterfall — from the base value to the prediction, each wavelength region pushes the estimate up (green) or down (rose).",
+    hostOwned: ["SHAP computation", "base/prediction values", "top-N", "sample stepper"],
+    importLine: 'import { WaterfallChart } from "nirs4all-ui/viz";',
+    code: `<WaterfallChart
+  baseValue={12.4}
+  contributions={explanation.features.map((f) => ({ label: f.region, value: f.shap }))}
+  predicted={13.75}
+/>`,
+    render: () => (
+      <WaterfallChart baseValue={12.4} contributions={WATERFALL_CONTRIBUTIONS} predicted={13.7} width={420} />
+    ),
+  },
+  {
+    id: "fold-stability",
+    name: "FoldStabilityLines",
+    category: "Model diagnostics",
+    entry: "nirs4all-ui/viz",
+    propsInterface: "FoldStabilityLinesProps",
+    mirrors: "Studio Inspector FoldStabilitySvg",
+    summary:
+      "Per-fold score lines — one faint line per model chain across CV folds, with an emphasized mean line and a min/max stability band.",
+    hostOwned: ["fold scores", "chain selection", "mean toggle"],
+    importLine: 'import { FoldStabilityLines } from "nirs4all-ui/viz";',
+    code: `<FoldStabilityLines
+  series={chains.map((c) => ({ id: c.id, label: c.name, scores: c.foldScores }))}
+  yLabel="R²"
+/>`,
+    render: () => <FoldStabilityLines series={FOLD_SERIES} yLabel="R²" width={440} height={250} />,
+  },
+  {
+    id: "bias-variance",
+    name: "BiasVarianceBars",
+    category: "Model diagnostics",
+    entry: "nirs4all-ui/viz",
+    propsInterface: "BiasVarianceBarsProps",
+    mirrors: "Studio Inspector BiasVarianceBarChart",
+    summary: "Stacked bias² / variance decomposition per model — the error-budget comparison view.",
+    hostOwned: ["decomposition computation", "model grouping", "colors"],
+    importLine: 'import { BiasVarianceBars } from "nirs4all-ui/viz";',
+    code: `<BiasVarianceBars
+  entries={models.map((m) => ({ label: m.name, biasSquared: m.bias2, variance: m.var }))}
+/>`,
+    render: () => <BiasVarianceBars entries={BIAS_VARIANCE} width={400} height={240} />,
   },
 ];

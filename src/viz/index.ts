@@ -28,10 +28,13 @@ export * from "./ResidualPlot.js";
 export * from "./ConfusionMatrix.js";
 export * from "./BoxPlot.js";
 export * from "./ScoreHeatmap.js";
+export * from "./FoldStabilityLines.js";
+export * from "./BiasVarianceBars.js";
 
 // --- explainability ---
 export * from "./FeatureImportanceBar.js";
 export * from "./ShapBeeswarm.js";
+export * from "./WaterfallChart.js";
 
 // --- pipeline + scores ---
 export * from "./PipelineFlow.js";
