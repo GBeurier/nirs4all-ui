@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -9,8 +9,10 @@ import {
   NIRS4ALL_BRANDS,
   getNirs4allBrandAssetPath,
   getNirs4allBrandDefinition,
+  getNirs4allBrandRasterPath,
   isNirs4allBrandId,
   listNirs4allBrands,
+  type Nirs4allBrandRaster,
   type Nirs4allBrandVariant,
 } from "./index.js";
 
@@ -40,6 +42,7 @@ const EXPECTED_IDS = [
 ];
 
 const VARIANTS: readonly Nirs4allBrandVariant[] = ["icon", "horizontal", "horizontal-dark", "stacked", "stacked-dark"];
+const RASTERS: readonly Nirs4allBrandRaster[] = ["favicon", "icon-32", "icon-180", "icon-256", "icon-512", "og"];
 
 function generatorAccents(): Map<string, string> {
   const source = readFileSync(generatorPath, "utf8");
@@ -71,6 +74,11 @@ describe("nirs4all-ui/brand", () => {
       }
       const icon = readFileSync(resolve(repositoryRoot, getNirs4allBrandAssetPath(brand, "icon")), "utf8");
       expect(icon.toLowerCase()).toContain(brand.accent.toLowerCase());
+
+      for (const raster of RASTERS) {
+        const rasterPath = getNirs4allBrandRasterPath(brand, raster);
+        expect(statSync(resolve(repositoryRoot, rasterPath)).size).toBeGreaterThan(0);
+      }
     }
   });
 

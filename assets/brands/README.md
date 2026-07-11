@@ -1,12 +1,14 @@
 # NIRS4ALL reusable brand assets
 
 The shared, canonical brand kit for the whole NIRS4ALL ecosystem. `nirs4all-ui`
-is the single home; each project's real mark (icon + horizontal/stacked + dark
-variants) is vendored verbatim here so apps and docs consume one source instead
-of copying their own.
+is the single home; each project's real mark is vendored verbatim here so apps
+and docs consume one source instead of copying their own.
 
-Re-import from the flagship master with `npm run brand:generate`, verify with
-`npm run brand:check`. Keep the ids in sync with `src/brand/index.ts`.
+Per project: `icon.svg`, `horizontal.svg`/`stacked.svg` (+ `-dark`), the icon
+raster set (`icon-32/180/256/512.png`), `favicon.ico`, and the `og.png` social
+card. Re-import from the flagship master with `npm run brand:generate`, verify
+with `npm run brand:check`, and distribute to sibling repos with
+`npm run brand:sync`. Keep the ids in sync with `src/brand/index.ts`.
 
 Brands:
 - `nirs4all` (#058E96)

@@ -4,11 +4,12 @@
 //
 // The real, designer-made marks are NOT generated: each ecosystem project has a
 // distinct SVG (colored squircle tile + white NIRS spectrum + peak dot + a
-// project wordmark). `nirs4all-ui` is the single home for the shared kit, so the
-// marks are vendored verbatim under `assets/brands/<id>/` from the flagship
-// (`nirs4all-org`). Keep this in sync with the manifest in `src/brand/index.ts`.
+// project wordmark) plus its raster set (icon PNGs, favicon.ico, og card).
+// `nirs4all-ui` is the single home for the shared kit, so the marks are vendored
+// verbatim under `assets/brands/<id>/` from the flagship (`nirs4all-org`). Keep
+// this in sync with the manifest in `src/brand/index.ts`.
 //
-//   node scripts/generate-brand-assets.mjs           # import the marks from the org master (dev)
+//   node scripts/generate-brand-assets.mjs           # import the kit from the org master (dev)
 //   node scripts/generate-brand-assets.mjs --check   # verify the vendored kit (CI); no org needed
 
 import { access, copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
@@ -21,7 +22,11 @@ const brandsRoot = path.join(repositoryRoot, "assets", "brands");
 const ORG = "/home/delete/nirs4all/nirs4all-org/assets/brand";
 const QUALI = path.join(repositoryRoot, "assets", "brand", "quali");
 
-const VARIANTS = ["icon", "horizontal", "horizontal-dark", "stacked", "stacked-dark"];
+const SVGS = ["icon", "horizontal", "horizontal-dark", "stacked", "stacked-dark"].map((v) => `${v}.svg`);
+// present for every project — verified by --check
+const REQUIRED_RASTERS = ["favicon.ico", "icon-32.png", "icon-180.png", "icon-256.png", "icon-512.png", "og.png"];
+// present for most projects — imported when available, not required
+const OPTIONAL_RASTERS = ["horizontal.png", "stacked.png"];
 
 // id → accent (the squircle tile color, present in icon.svg) + source dir to import from.
 const brands = [
@@ -50,24 +55,38 @@ function generatedReadme() {
   return `# NIRS4ALL reusable brand assets
 
 The shared, canonical brand kit for the whole NIRS4ALL ecosystem. \`nirs4all-ui\`
-is the single home; each project's real mark (icon + horizontal/stacked + dark
-variants) is vendored verbatim here so apps and docs consume one source instead
-of copying their own.
+is the single home; each project's real mark is vendored verbatim here so apps
+and docs consume one source instead of copying their own.
 
-Re-import from the flagship master with \`npm run brand:generate\`, verify with
-\`npm run brand:check\`. Keep the ids in sync with \`src/brand/index.ts\`.
+Per project: \`icon.svg\`, \`horizontal.svg\`/\`stacked.svg\` (+ \`-dark\`), the icon
+raster set (\`icon-32/180/256/512.png\`), \`favicon.ico\`, and the \`og.png\` social
+card. Re-import from the flagship master with \`npm run brand:generate\`, verify
+with \`npm run brand:check\`, and distribute to sibling repos with
+\`npm run brand:sync\`. Keep the ids in sync with \`src/brand/index.ts\`.
 
 Brands:
 ${brands.map((brand) => `- \`${brand.id}\` (${brand.accent})`).join("\n")}
 `;
 }
 
+async function copyIfPresent(from, to) {
+  try {
+    await copyFile(from, to);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function importAssets() {
   for (const brand of brands) {
     const directory = path.join(brandsRoot, brand.id);
     await mkdir(directory, { recursive: true });
-    for (const variant of VARIANTS) {
-      await copyFile(path.join(brand.source, `${variant}.svg`), path.join(directory, `${variant}.svg`));
+    for (const svg of SVGS) {
+      await copyFile(path.join(brand.source, svg), path.join(directory, svg));
+    }
+    for (const raster of [...REQUIRED_RASTERS, ...OPTIONAL_RASTERS]) {
+      await copyIfPresent(path.join(brand.source, raster), path.join(directory, raster));
     }
   }
   await writeFile(path.join(brandsRoot, "README.md"), generatedReadme());
@@ -76,19 +95,28 @@ async function importAssets() {
 
 async function checkAssets() {
   const problems = [];
+  const rel = (p) => path.relative(repositoryRoot, p);
   for (const brand of brands) {
     const directory = path.join(brandsRoot, brand.id);
-    for (const variant of VARIANTS) {
-      const assetPath = path.join(directory, `${variant}.svg`);
+    for (const svg of SVGS) {
+      const assetPath = path.join(directory, svg);
       try {
-        await access(assetPath, constants.R_OK);
-        const svg = await readFile(assetPath, "utf8");
-        if (!svg.includes("<svg")) problems.push(`${path.relative(repositoryRoot, assetPath)}: not an SVG`);
-        if (variant === "icon" && !svg.toLowerCase().includes(brand.accent.toLowerCase())) {
-          problems.push(`${path.relative(repositoryRoot, assetPath)}: missing accent ${brand.accent}`);
+        const content = await readFile(assetPath, "utf8");
+        if (!content.includes("<svg")) problems.push(`${rel(assetPath)}: not an SVG`);
+        if (svg === "icon.svg" && !content.toLowerCase().includes(brand.accent.toLowerCase())) {
+          problems.push(`${rel(assetPath)}: missing accent ${brand.accent}`);
         }
       } catch {
-        problems.push(`${path.relative(repositoryRoot, assetPath)}: missing`);
+        problems.push(`${rel(assetPath)}: missing`);
+      }
+    }
+    for (const raster of REQUIRED_RASTERS) {
+      const assetPath = path.join(directory, raster);
+      try {
+        await access(assetPath, constants.R_OK);
+        if ((await readFile(assetPath)).length === 0) problems.push(`${rel(assetPath)}: empty`);
+      } catch {
+        problems.push(`${rel(assetPath)}: missing`);
       }
     }
   }
@@ -104,7 +132,7 @@ async function checkAssets() {
     console.error(`Brand kit is out of sync:\n${problems.join("\n")}`);
     return false;
   }
-  console.log(`✓ verified ${brands.length} ecosystem brands (${brands.length * VARIANTS.length} SVGs)`);
+  console.log(`✓ verified ${brands.length} ecosystem brands (SVG + raster kit)`);
   return true;
 }
 

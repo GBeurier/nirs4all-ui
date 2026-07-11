@@ -189,14 +189,31 @@ the single home the `gen-brand.mjs` header comment always intended
 (its own wordmark + accent tile); the shared red `#E9362D` and teal `#058E96` are
 constant.
 
-**Follow-ups (not done here — the "stop dispersing" work):**
-- [ ] Vendor/generate the raster set per project (`icon-32/180/256/512.png`,
-      `favicon.ico`, `horizontal/stacked.png`, `og.png`) — needs `@resvg/resvg-js`
-      + `png-to-ico` devDeps, mirroring `nirs4all-quality/app/scripts/gen-brand.mjs`.
-- [ ] De-duplicate: every sibling project currently carries its own byte-identical
-      `assets/brand/` copy. Point them at `nirs4all-ui`'s kit and delete the local
-      copies (cross-repo; do per project, like the component rewire above).
-- [ ] Fold the recolor+rasterize generator (today in `nirs4all-quality/app/scripts/
-      gen-brand.mjs`) into `nirs4all-ui` so the whole brand pipeline lives in one place.
-- [ ] Master source of the vector marks is `nirs4all-org/assets/brand/`; if the
-      design changes there, re-run `npm run brand:generate` in `nirs4all-ui`.
+**Also done (raster kit + distribution tooling):**
+- Vendored the full raster set for all 19 projects — `icon-32/180/256/512.png`,
+  `favicon.ico`, `og.png` (+ `horizontal/stacked.png` where the master has them):
+  245 files total. Exposed via `getNirs4allBrandRasterPath` + `Nirs4allBrandRaster`
+  in the manifest; `brand:check` verifies the required rasters.
+- `scripts/sync-ecosystem-brands.mjs` (`npm run brand:sync`): drift-check by
+  default (read-only), `--write` distributes ui's kit into each sibling repo's
+  `assets/brand/`. This is the de-dup mechanism — one authored source + sync.
+
+**Open — needs a canonical decision before distributing (`brand:sync --write`):**
+- The drift check proved the ecosystem is NOT uniformly consistent. The `nirs4all`
+  flagship repo carries a NEWER horizontal mark (gradient wordmark, viewBox
+  976×266) than the org master ui vendored (flat, 889×312), and ~6 repos have a
+  divergent `og.png`. There is no single clean master yet. **Decide the canonical
+  version per drifted asset** (recommendation: adopt the newest — the repo's
+  gradient horizontal for `nirs4all` — and reconcile the `og` cards), re-vendor it
+  into ui, then `brand:sync --write` to make every repo a mirror.
+- After that: sibling repos should only ever sync from ui, never author locally.
+  (Non-JS repos — Rust, static, Python — can't npm-consume, so a synced physical
+  copy stays; the single source is the *authoring point* + `brand:sync`, not
+  physical removal.)
+
+**Superseded — not folded in, by design:**
+- The recolor+rasterize generator (`nirs4all-quality/app/scripts/gen-brand.mjs`)
+  is NOT folded into ui: the per-project marks are DISTINCT (each its own
+  wordmark), not recolors of one master, so they are vendored, not generated. The
+  only pure-recolor variant (quali) is already vendored. That script stays a one-off
+  for minting a brand-new recolored variant (needs `@resvg/resvg-js` + `png-to-ico`).

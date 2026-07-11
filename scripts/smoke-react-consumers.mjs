@@ -107,7 +107,7 @@ async function writeConsumerProject(consumerDir, label) {
 import { renderToString } from "react-dom/server";
 	import { brand, components, dataset, datasetBuilder, lab, runtime, score, styles } from "nirs4all-ui";
 	import {
-	  generateNirs4allBrandSvg,
+	  getNirs4allBrandAssetPath,
 	  type Nirs4allBrandDefinition,
 	} from "nirs4all-ui/brand";
 	import {
@@ -153,7 +153,7 @@ import {
 	const formatted: string = formatMetricValue(0.91234, metric?.key);
 	const rootFormatted: string = score.formatMetricValue(0.12345, "rmse");
 	const uiBrand: Nirs4allBrandDefinition = brand.getNirs4allBrandDefinition("nirs4all-ui");
-	const brandSvg: string = generateNirs4allBrandSvg(uiBrand, { variant: "icon" });
+	const brandSvg: string = getNirs4allBrandAssetPath(uiBrand, "icon");
 	const styleAsset: Nirs4allStyleAsset = getNirs4allStyleAsset("default-theme");
 	const builderStyleAsset: Nirs4allStyleAsset = getNirs4allStyleAsset("dataset-builder");
 	const labStyleAsset: Nirs4allStyleAsset = getNirs4allStyleAsset("quality-lab-theme");
@@ -257,7 +257,7 @@ renderToString(createElement("section", null, datasetCard, metricBadge, rootData
     `import React from "react";
 import { renderToString } from "react-dom/server";
 import { brand, components, dataset, datasetBuilder, lab, runtime, score, styles } from "nirs4all-ui";
-import { generateNirs4allBrandSvg, getNirs4allBrandDefinition } from "nirs4all-ui/brand";
+import { getNirs4allBrandAssetPath, getNirs4allBrandDefinition } from "nirs4all-ui/brand";
 import { DatasetPreviewCard, MetricValueBadge, RuntimeResultStatusBadge } from "nirs4all-ui/components";
 import { buildDatasetPreview } from "nirs4all-ui/dataset";
 import { buildExportConfig } from "nirs4all-ui/datasetBuilder";
@@ -273,9 +273,9 @@ function assert(condition, message) {
 assert(score.canonicalMetricKey("r2-score") === "r2", "root score namespace import failed");
 assert(canonicalMetricKey("r2_score") === "r2", "score subpath import failed");
 assert(dataset.buildDatasetPreview({ name: "Root dataset" })?.title === "Root dataset", "root dataset namespace import failed");
-assert(brand.getNirs4allBrandDefinition("nirs4all-core").shortName === "n4o", "root brand namespace import failed");
-assert(getNirs4allBrandDefinition("nirs4all-ui").role === "Reusable visual system", "brand subpath import failed");
-assert(generateNirs4allBrandSvg("nirs4all-ui", { variant: "icon" }).includes("nirs4all-ui"), "brand generator failed");
+assert(brand.getNirs4allBrandDefinition("nirs4all-core").accent === "#E9362D", "root brand namespace import failed");
+assert(getNirs4allBrandDefinition("nirs4all-ui").role === "Shared visual system", "brand subpath import failed");
+assert(getNirs4allBrandAssetPath("nirs4all-ui", "icon") === "assets/brands/nirs4all-ui/icon.svg", "brand asset path failed");
 assert(styles.getNirs4allStyleAsset("default-theme").path.endsWith("nirs4all-default.css"), "root styles namespace import failed");
 assert(styles.getNirs4allStyleAsset("quality-lab-theme").path.endsWith("theme.css"), "root lab theme asset import failed");
 assert(getNirs4allStyleAsset("spectra-motion").path.endsWith("nirs-spectra.svg"), "styles subpath import failed");

@@ -40,6 +40,24 @@ export type Nirs4allBrandVariant =
   | "stacked"
   | "stacked-dark";
 
+/** Raster assets shipped alongside the SVG marks for every brand. */
+export type Nirs4allBrandRaster =
+  | "favicon"
+  | "icon-32"
+  | "icon-180"
+  | "icon-256"
+  | "icon-512"
+  | "og";
+
+const RASTER_FILES: Record<Nirs4allBrandRaster, string> = {
+  favicon: "favicon.ico",
+  "icon-32": "icon-32.png",
+  "icon-180": "icon-180.png",
+  "icon-256": "icon-256.png",
+  "icon-512": "icon-512.png",
+  og: "og.png",
+};
+
 export interface Nirs4allBrandPalette {
   /** the brand's tile accent color */
   primary: string;
@@ -112,11 +130,20 @@ export function listNirs4allBrands(): readonly Nirs4allBrandDefinition[] {
   return NIRS4ALL_BRANDS;
 }
 
-/** Package-relative path to a vendored brand asset, e.g. `assets/brands/nirs4all-studio/horizontal.svg`. */
+/** Package-relative path to a vendored SVG mark, e.g. `assets/brands/nirs4all-studio/horizontal.svg`. */
 export function getNirs4allBrandAssetPath(
   brand: Nirs4allBrandId | Nirs4allBrandDefinition,
   variant: Nirs4allBrandVariant,
 ): string {
   const id = typeof brand === "string" ? brand : brand.id;
   return `assets/brands/${id}/${variant}.svg`;
+}
+
+/** Package-relative path to a vendored raster asset, e.g. `assets/brands/nirs4all-studio/favicon.ico`. */
+export function getNirs4allBrandRasterPath(
+  brand: Nirs4allBrandId | Nirs4allBrandDefinition,
+  raster: Nirs4allBrandRaster,
+): string {
+  const id = typeof brand === "string" ? brand : brand.id;
+  return `assets/brands/${id}/${RASTER_FILES[raster]}`;
 }
