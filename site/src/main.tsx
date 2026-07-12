@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App.js";
 import "../../assets/theme.css";
 import "../../assets/viz.css";
+import "../../assets/dag.css";
 import "../../assets/datasetBuilder.css";
 import "./styles.css";
 

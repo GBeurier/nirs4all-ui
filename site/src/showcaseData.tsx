@@ -44,6 +44,7 @@ import {
 } from "../../src/lab/index.js";
 import { buildDatasetPreview } from "../../src/dataset/index.js";
 import { normalizeRuntimeDiagnostics } from "../../src/runtime/index.js";
+import type { DagEdge, DagGraph, DagNode, DagNodeStatus } from "../../src/dag/index.js";
 
 // ---------------------------------------------------------------------------
 // Deterministic fake data (seeded so the static render is stable).
@@ -1171,3 +1172,79 @@ export const SHOWCASE_ENTRIES: readonly ShowcaseEntry[] = [
     render: () => <BiasVarianceBars entries={BIAS_VARIANCE} width={400} height={240} />,
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Demo compiled DAG for the graph-explorer section (deterministic, ~150 nodes,
+// nested family → chain clusters so collapse/expand is visible).
+// ---------------------------------------------------------------------------
+
+const DEMO_FAMILIES = ["A", "B", "C", "D", "E"];
+const DEMO_BRANCHES_PER_FAMILY = 6;
+const DEMO_ALGOS = ["PLS", "Ridge", "RandomForest", "SVR", "XGBoost", "MLP"];
+
+function demoStatus(idx: number): DagNodeStatus {
+  if (idx % 17 === 5) return "failed";
+  if (idx % 11 === 3) return "running";
+  if (idx % 9 === 8) return "idle";
+  return "done";
+}
+
+function buildDemoDag(): DagGraph {
+  const nodes: DagNode[] = [
+    { id: "data:x", kind: "adapter", label: "raw spectra", detail: "NirToTabular", status: "done" },
+    { id: "split:cv", kind: "split", label: "5-fold CV", detail: "GroupKFold", status: "done" },
+    {
+      id: "gen:grid",
+      kind: "generator",
+      label: "variant grid",
+      detail: "cartesian",
+      status: "done",
+      variants: DEMO_FAMILIES.length * DEMO_BRANCHES_PER_FAMILY,
+    },
+  ];
+  const edges: DagEdge[] = [
+    { source: "data:x", target: "split:cv", kind: "data" },
+    { source: "split:cv", target: "gen:grid", kind: "data" },
+  ];
+
+  let idx = 0;
+  for (let f = 0; f < DEMO_FAMILIES.length; f += 1) {
+    const family = `family ${DEMO_FAMILIES[f]}`;
+    for (let b = 0; b < DEMO_BRANCHES_PER_FAMILY; b += 1) {
+      const chain = `chain ${idx}`;
+      const group = [family, chain];
+      const algo = DEMO_ALGOS[idx % DEMO_ALGOS.length] as string;
+      const snv = `f${f}.c${idx}.pre:snv`;
+      const sg = `f${f}.c${idx}.pre:sg`;
+      const model = `f${f}.c${idx}.model:${algo.toLowerCase()}`;
+      const status = demoStatus(idx);
+      const r2 = Number((0.7 + ((idx * 37) % 25) / 100).toFixed(3));
+      nodes.push(
+        { id: snv, kind: "transform", label: "SNV", group, status },
+        { id: sg, kind: "transform", label: "SG(2,1)", group, status },
+        { id: model, kind: "model", label: algo, detail: `${algo} · fold-fit`, group, status, metric: r2 },
+      );
+      edges.push(
+        { source: "gen:grid", target: snv, kind: "data" },
+        { source: snv, target: sg, kind: "data" },
+        { source: sg, target: model, kind: "data" },
+        { source: model, target: "merge:stack", kind: "prediction", oof: true },
+      );
+      idx += 1;
+    }
+  }
+
+  nodes.push(
+    { id: "merge:stack", kind: "prediction_join", label: "stack (pred + X)", detail: "predictions_plus_original", status: "done" },
+    { id: "meta:ridge", kind: "model", label: "meta-learner", detail: "RidgeMetaStacker", status: "done", metric: 0.941 },
+    { id: "score:report", kind: "aggregator", label: "score report", detail: "R² / RMSE", status: "done" },
+  );
+  edges.push(
+    { source: "merge:stack", target: "meta:ridge", kind: "prediction" },
+    { source: "meta:ridge", target: "score:report", kind: "metric" },
+  );
+
+  return { name: "stacking-grid (compiled)", nodes, edges };
+}
+
+export const DEMO_DAG_GRAPH: DagGraph = buildDemoDag();

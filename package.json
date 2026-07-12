@@ -49,6 +49,10 @@
       "types": "./dist/viz/index.d.ts",
       "import": "./dist/viz/index.js"
     },
+    "./dag": {
+      "types": "./dist/dag/index.d.ts",
+      "import": "./dist/dag/index.js"
+    },
     "./brand": {
       "types": "./dist/brand/index.d.ts",
       "import": "./dist/brand/index.js"

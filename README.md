@@ -20,6 +20,7 @@ spectra motion asset.
 | `runtime` | `nirs4all-ui/runtime` | Runtime/result status display tokens, busy-state predicates, progress projection, engine metadata summaries, diagnostics, and native-result affordances. |
 | `dataset` | `nirs4all-ui/dataset` | Dataset preview contracts, counts, split summaries, spectral ranges, task labels, badges, and stats. |
 | `components` | `nirs4all-ui/components` | Stateless React components that render shared runtime, diagnostic, and metric affordances. |
+| `dag` | `nirs4all-ui/dag` | Interactive compiled-DAG explorer (layered layout, pan/zoom, culling/LOD, collapsible clusters) plus the pure engine and a `fromCompiledGraph` adapter for a serialized DAG-ML graph/plan. |
 | `lab` | `nirs4all-ui/lab` | Quality/lab decision, sample lifecycle, health, model report, worklist, and budget display contracts plus presentational components. |
 | `datasetBuilder` | `nirs4all-ui/datasetBuilder` | Multisource dataset-builder wizard components and pure dataset-config helpers. |
 | `brand` | `nirs4all-ui/brand` | Ecosystem brand definitions, stable asset paths, palettes, and deterministic SVG generators. |
@@ -29,7 +30,7 @@ spectra motion asset.
 The root export also exposes namespace barrels:
 
 ```ts
-import { brand, dataset, datasetBuilder, lab, runtime, score, styles } from "nirs4all-ui";
+import { brand, dag, dataset, datasetBuilder, lab, runtime, score, styles } from "nirs4all-ui";
 ```
 
 Prefer domain imports when a consumer only needs one area:
@@ -39,6 +40,7 @@ import { canonicalMetricKey, formatMetricValue } from "nirs4all-ui/score";
 import { buildDatasetPreview } from "nirs4all-ui/dataset";
 import { buildRuntimeResultStatusView } from "nirs4all-ui/runtime";
 import { DatasetBuilder } from "nirs4all-ui/datasetBuilder";
+import { DagGraphView, fromCompiledGraph } from "nirs4all-ui/dag";
 import { DecisionBadge } from "nirs4all-ui/lab";
 import { generateNirs4allBrandSvg } from "nirs4all-ui/brand";
 import { getNirs4allStyleAsset } from "nirs4all-ui/styles";

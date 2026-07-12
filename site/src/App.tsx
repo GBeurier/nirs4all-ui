@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import * as componentsExports from "../../src/components/index.js";
 import * as vizExports from "../../src/viz/index.js";
+import * as dagExports from "../../src/dag/index.js";
 import * as labExports from "../../src/lab/index.js";
 import * as datasetBuilderExports from "../../src/datasetBuilder/index.js";
 import * as scoreExports from "../../src/score/index.js";
@@ -14,14 +15,16 @@ import { NIRS4ALL_BRANDS, getNirs4allBrandAssetPath } from "../../src/brand/inde
 import { NIRS4ALL_CSS_TOKENS, NIRS4ALL_STYLE_ASSETS, getNirs4allCssVariable } from "../../src/styles/index.js";
 import { DatasetBuilder } from "../../src/datasetBuilder/index.js";
 import type { DatasetSource } from "../../src/datasetBuilder/index.js";
+import { DagGraphView } from "../../src/dag/index.js";
 import packageJson from "../../package.json" with { type: "json" };
 import { CANONICAL_SITE_URL, PUBLICATION_ASSETS } from "./showcaseMetadata.js";
-import { SHOWCASE_CATEGORIES, SHOWCASE_ENTRIES, type ShowcaseEntry } from "./showcaseData.js";
+import { DEMO_DAG_GRAPH, SHOWCASE_CATEGORIES, SHOWCASE_ENTRIES, type ShowcaseEntry } from "./showcaseData.js";
 
 const packageVersion = packageJson.version;
 
 const EXPORT_SURFACE = [
   { entry: "nirs4all-ui/viz", title: "Scientific charts", symbols: Object.keys(vizExports) },
+  { entry: "nirs4all-ui/dag", title: "Compiled-graph explorer", symbols: Object.keys(dagExports) },
   { entry: "nirs4all-ui/components", title: "Presentational components", symbols: Object.keys(componentsExports) },
   { entry: "nirs4all-ui/lab", title: "Quality / lab UI", symbols: Object.keys(labExports) },
   { entry: "nirs4all-ui/datasetBuilder", title: "Dataset builder", symbols: Object.keys(datasetBuilderExports) },
@@ -40,6 +43,7 @@ const ASSET_REFERENCES = [
   "assets/brands/nirs4all-quality/horizontal.svg",
   "assets/styles/nirs4all-default.css",
   "assets/viz.css",
+  "assets/dag.css",
   "assets/datasetBuilder.css",
   "assets/theme.css",
   "assets/motion/nirs-spectra.svg",
@@ -244,6 +248,7 @@ export function App() {
         <nav aria-label="Sections">
           <a href="#showroom">Showroom</a>
           <a href="#builder">Builder</a>
+          <a href="#graph">Graph</a>
           <a href="#brand">Brand</a>
           <a href="#surface">API</a>
           <a className="topbar-repo" href="https://github.com/GBeurier/nirs4all-ui">GitHub</a>
@@ -328,6 +333,30 @@ export function App() {
         variant="paper"
       >
         <DatasetBuilder defaultSources={datasetBuilderSources} defaultDatasetName="demo_wheat_2025" />
+      </Section>
+
+      <Section
+        id="graph"
+        kicker="dag · compiled-graph explorer"
+        title={<>The interactive <em className="n4-gradient-text">compiled-DAG</em> explorer</>}
+        lead={
+          <>
+            A dedicated viewer for a <em>compiled</em> DAG-ML graph (or any bound variant), readable from a handful of
+            nodes to several thousand: layered layout, pan / zoom, viewport culling and level-of-detail, plus a
+            collapsible <code>family → chain</code> cluster hierarchy. Drag to pan, scroll to zoom, click a cluster to
+            expand it or a node to inspect it. Adapt a real compiled graph with <code>fromCompiledGraph()</code>; ships
+            with <code>nirs4all-ui/assets/dag.css</code>.
+          </>
+        }
+        variant="paper"
+      >
+        <DagGraphView
+          graph={DEMO_DAG_GRAPH}
+          width={1120}
+          height={560}
+          initialCollapseDepth={0}
+          title="stacking-grid · compiled plan"
+        />
       </Section>
 
       <Section
