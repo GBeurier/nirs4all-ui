@@ -283,16 +283,22 @@ export function DagGraphView({
     [zoomAt],
   );
 
-  // event delegation: one handler drives thousands of node / frame targets
-  const suppressClick = useRef(false);
-  const onContentClick = useCallback(
-    (e: ReactMouseEvent<SVGGElement>) => {
-      if (suppressClick.current) {
-        suppressClick.current = false;
+  // Resolve the interactive element under a screen point. Done via
+  // elementFromPoint (not the click target) because the stage sets pointer
+  // capture for panning, which retargets the browser `click` event to the
+  // <svg> itself — so a delegated onClick never sees the node.
+  const hitTarget = useCallback((clientX: number, clientY: number): Element | null => {
+    if (typeof document === "undefined") return null;
+    return document.elementFromPoint(clientX, clientY)?.closest("[data-collapse-group],[data-node-id]") ?? null;
+  }, []);
+
+  const activate = useCallback(
+    (el: Element | null) => {
+      if (!el) {
+        setSelected(null);
+        onSelectNode?.(null);
         return;
       }
-      const el = (e.target as Element).closest("[data-collapse-group],[data-node-id]");
-      if (!el) return;
       const collapseId = el.getAttribute("data-collapse-group");
       if (collapseId) {
         collapseGroup(collapseId);
@@ -318,9 +324,12 @@ export function DagGraphView({
 
   const onStagePointerDown = useCallback((e: ReactPointerEvent<SVGSVGElement>) => {
     if (e.button !== 0) return;
-    suppressClick.current = false;
     drag.current = { x: e.clientX, y: e.clientY, moved: false };
-    e.currentTarget.setPointerCapture?.(e.pointerId);
+    try {
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+    } catch {
+      /* no active pointer to capture (e.g. synthetic events) — panning still works */
+    }
   }, []);
 
   const onStagePointerMove = useCallback((e: ReactPointerEvent<SVGSVGElement>) => {
@@ -338,18 +347,16 @@ export function DagGraphView({
     (e: ReactPointerEvent<SVGSVGElement>) => {
       const d = drag.current;
       drag.current = null;
-      e.currentTarget.releasePointerCapture?.(e.pointerId);
-      if (d?.moved) {
-        // a pan just ended — swallow the click the browser will fire next
-        suppressClick.current = true;
-        return;
+      try {
+        e.currentTarget.releasePointerCapture?.(e.pointerId);
+      } catch {
+        /* pointer was never captured */
       }
-      if (d && !(e.target as Element).closest("[data-node-id],[data-collapse-group]")) {
-        setSelected(null);
-        onSelectNode?.(null);
-      }
+      // A pan (moved) is never a click; a stationary press is a click — hit-test
+      // the real element under the pointer and expand/collapse/select it.
+      if (d && !d.moved) activate(hitTarget(e.clientX, e.clientY));
     },
-    [onSelectNode],
+    [activate, hitTarget],
   );
 
   // adjacency of the effective graph, for hover / selection emphasis
@@ -494,7 +501,6 @@ export function DagGraphView({
           onPointerDown={onStagePointerDown}
           onPointerMove={onStagePointerMove}
           onPointerUp={onStagePointerUp}
-          onPointerLeave={onStagePointerUp}
         >
           <defs>
             <marker id="n4dag-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -510,7 +516,6 @@ export function DagGraphView({
 
           <g
             transform={contentTransform}
-            onClick={onContentClick}
             onMouseOver={onContentOver}
             onMouseLeave={() => setHovered(null)}
           >
