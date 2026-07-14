@@ -19,9 +19,12 @@ describe("nirs4all-ui/styles", () => {
       "default-theme",
       "dataset-builder",
       "viz-charts",
+      "conformal-tree",
       "quality-lab-theme",
       "spectra-motion",
     ]);
+    expect(getNirs4allStyleAsset("conformal-tree").packageExport)
+      .toBe("nirs4all-ui/assets/conformal.css");
     expect(getNirs4allStyleAsset("viz-charts").packageExport)
       .toBe("nirs4all-ui/assets/viz.css");
     expect(getNirs4allStyleAsset("default-theme").packageExport)
@@ -37,6 +40,7 @@ describe("nirs4all-ui/styles", () => {
       "default-theme": "--n4-color-primary",
       "dataset-builder": ".dsb",
       "viz-charts": ".n4viz",
+      "conformal-tree": ".n4conf-tree",
       "quality-lab-theme": "--success",
       "spectra-motion": "<svg",
     } as const;

@@ -25,6 +25,7 @@ export * from "./PcaScatter.js";
 // --- regression + classification diagnostics ---
 export * from "./PredictionScatter.js";
 export * from "./ResidualPlot.js";
+export * from "./ConformalIntervalStrip.js";
 export * from "./ConfusionMatrix.js";
 export * from "./BoxPlot.js";
 export * from "./ScoreHeatmap.js";

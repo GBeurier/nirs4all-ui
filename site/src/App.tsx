@@ -45,6 +45,7 @@ const ASSET_REFERENCES = [
   "assets/viz.css",
   "assets/dag.css",
   "assets/datasetBuilder.css",
+  "assets/conformal.css",
   "assets/theme.css",
   "assets/motion/nirs-spectra.svg",
 ] as const;

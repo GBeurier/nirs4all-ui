@@ -37,6 +37,22 @@
       "types": "./dist/runtime/index.d.ts",
       "import": "./dist/runtime/index.js"
     },
+    "./conformal": {
+      "types": "./dist/conformal/index.d.ts",
+      "import": "./dist/conformal/index.js"
+    },
+    "./robustness": {
+      "types": "./dist/robustness/index.d.ts",
+      "import": "./dist/robustness/index.js"
+    },
+    "./keywordRegistry": {
+      "types": "./dist/keywordRegistry/index.d.ts",
+      "import": "./dist/keywordRegistry/index.js"
+    },
+    "./tuning": {
+      "types": "./dist/tuning/index.d.ts",
+      "import": "./dist/tuning/index.js"
+    },
     "./dataset": {
       "types": "./dist/dataset/index.d.ts",
       "import": "./dist/dataset/index.js"

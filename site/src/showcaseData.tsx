@@ -9,6 +9,7 @@ import {
   Histogram,
   PcaScatter,
   PipelineFlow,
+  ConformalIntervalStrip,
   PredictionScatter,
   ResidualPlot,
   ScoreHeatmap,
@@ -31,7 +32,14 @@ import {
   RuntimeEngineBadge,
   RuntimeResultStatusBadge,
   ScoreCardTree,
+  ConformalPredictionTree,
 } from "../../src/components/index.js";
+import type { ConformalStripSample } from "../../src/viz/index.js";
+import type {
+  ConformalGuaranteeView,
+  ConformalIntervalSummaryRow,
+  ConformalPredictionRow,
+} from "../../src/conformal/index.js";
 import {
   DecisionBadge,
   DecisionCard,
@@ -331,9 +339,87 @@ const RANKING_ROWS = [
   { rank: 4, name: "Raw → RandomForest", score: "0.874", detail: "300 trees" },
 ];
 
+// --- conformal prediction fixtures (seeded → deterministic static render) ---
+
+const CONFORMAL_STRIP_SAMPLES: ConformalStripSample[] = (() => {
+  const rng = mulberry32(0xc0ffee);
+  const halfByCoverage: Record<number, number> = { 0.5: 0.55, 0.8: 1.0, 0.95: 1.55 };
+  return Array.from({ length: 44 }, (_, i) => {
+    const prediction = 12 + 9 * Math.sin(i / 7) + i * 0.18;
+    const scale = 0.7 + 1.5 * Math.abs(Math.sin(i / 5)); // heteroscedastic uncertainty
+    const bands = [0.5, 0.8, 0.95].map((coverage) => {
+      const half = scale * (halfByCoverage[coverage] as number);
+      return { coverage, lower: prediction - half, upper: prediction + half };
+    });
+    const outlier = rng() < 0.11 ? (rng() < 0.5 ? -1 : 1) * scale * 2.2 : 0;
+    const actual = prediction + (rng() - 0.5) * 2 * scale * 1.25 + outlier;
+    return { prediction, bands, actual, label: `s${i}` };
+  });
+})();
+
+function confRow(index: number, yPred: number, half: readonly [number, number, number]): ConformalPredictionRow {
+  const mk = (coverage: number, h: number) => ({
+    coverage,
+    coverageLabel: `${coverage * 100}%`,
+    lower: yPred - h,
+    lowerLabel: (yPred - h).toFixed(2),
+    upper: yPred + h,
+    upperLabel: (yPred + h).toFixed(2),
+    width: 2 * h,
+    widthLabel: (2 * h).toFixed(2),
+  });
+  return {
+    index,
+    sampleId: `cal-${index}`,
+    yPred,
+    yPredLabel: yPred.toFixed(2),
+    intervals: [mk(0.5, half[0]), mk(0.8, half[1]), mk(0.95, half[2])],
+  };
+}
+
+const CONFORMAL_TREE_ROWS: ConformalPredictionRow[] = [
+  confRow(0, 21.4, [0.6, 1.1, 1.7]),
+  confRow(1, 24.1, [0.55, 1.0, 1.6]),
+  confRow(2, 27.8, [0.7, 1.2, 1.85]),
+  confRow(3, 30.2, [0.62, 1.15, 1.72]),
+  confRow(4, 33.6, [0.6, 1.05, 1.66]),
+  confRow(5, 36.9, [0.72, 1.25, 1.9]),
+  confRow(6, 40.1, [0.65, 1.18, 1.78]),
+  confRow(7, 43.5, [0.68, 1.2, 1.82]),
+];
+
+// actual offsets → land samples in each conformance tier (target = 80%):
+// tightest 50% ⊂ 80% (target) ⊂ 95%; violation escapes 95%.
+const CONFORMAL_TREE_ACTUALS = [21.7, 23.8, 27.9, 31.1, 32.7, 38.3, 38.8, 46.0];
+
+const CONFORMAL_SUMMARIES: ConformalIntervalSummaryRow[] = [
+  { coverage: 0.5, coverageLabel: "50%", meanWidth: 1.29, meanWidthLabel: "1.29", nSamples: 8, qhat: 0.64, qhatLabel: "0.64" },
+  { coverage: 0.8, coverageLabel: "80%", meanWidth: 2.29, meanWidthLabel: "2.29", nSamples: 8, qhat: 1.14, qhatLabel: "1.14" },
+  { coverage: 0.95, coverageLabel: "95%", meanWidth: 3.55, meanWidthLabel: "3.55", nSamples: 8, qhat: 1.78, qhatLabel: "1.78" },
+];
+
+const CONFORMAL_GUARANTEE: ConformalGuaranteeView = {
+  calibrationReplayLabel: "dataset predictor via workspace",
+  calibrationReplaySource: null,
+  coverageLabel: "50%, 80%, 95%",
+  effectiveEngine: "dag-ml",
+  invalidationReasons: [],
+  label: "Active conformal guarantee",
+  limitations: [],
+  method: "split_conformal",
+  requestedEngine: "dag-ml",
+  scope: "frozen graph",
+  status: "active",
+  tone: "success",
+  tuningCalibrationLabel: "tuning winner",
+  tuningCalibrationSource: null,
+  unit: "g/kg",
+};
+
 export const SHOWCASE_CATEGORIES = [
   "Spectra & datasets",
   "Model diagnostics",
+  "Conformal & uncertainty",
   "Classification",
   "Explainability",
   "Pipeline & scores",
@@ -477,6 +563,64 @@ export const SHOWCASE_ENTRIES: readonly ShowcaseEntry[] = [
   sigmaBand
 />`,
     render: () => <ResidualPlot points={PREDICTIONS} width={420} height={260} />,
+  },
+  {
+    id: "conformal-interval-strip",
+    name: "ConformalIntervalStrip",
+    category: "Conformal & uncertainty",
+    entry: "nirs4all-ui/viz",
+    propsInterface: "ConformalIntervalStripProps",
+    mirrors: "Studio Inspector conformal band chart · Web calibrated-prediction view",
+    summary:
+      "The whole calibrated test set as one nested-interval envelope: concentric coverage bands (widest palest, tightest darkest) around each ŷ, with ground truth dropped in as covered/missed so empirical coverage and heteroscedastic uncertainty read together.",
+    hostOwned: ["calibration replay", "coverage selection", "sort mode", "ground-truth join"],
+    importLine: 'import { ConformalIntervalStrip, conformalStripSamplesFromRows } from "nirs4all-ui/viz";',
+    code: `<ConformalIntervalStrip
+  samples={conformalStripSamplesFromRows(rows, actuals)}
+  targetCoverage={0.95}
+  sort="prediction"
+  unit="g/kg"
+/>`,
+    render: () => (
+      <ConformalIntervalStrip
+        samples={CONFORMAL_STRIP_SAMPLES}
+        targetCoverage={0.95}
+        sort="prediction"
+        unit="g/kg"
+        width={560}
+        height={300}
+      />
+    ),
+  },
+  {
+    id: "conformal-prediction-tree",
+    name: "ConformalPredictionTree",
+    category: "Conformal & uncertainty",
+    entry: "nirs4all-ui/components",
+    propsInterface: "ConformalPredictionTreeProps",
+    mirrors: "Studio results conformance drill-down (guarantee → tier → sample → coverage)",
+    summary:
+      "Predictions as a nested conformance tree: samples grouped by where the truth lands inside the nested intervals (core → within → widened → violation), each opening to a per-sample nesting glyph and its per-coverage interval rows with q̂ and covered/missed.",
+    hostOwned: ["prediction rows", "ground-truth join", "target coverage", "grouping mode"],
+    importLine: 'import { ConformalPredictionTree } from "nirs4all-ui/components";',
+    code: `<ConformalPredictionTree
+  rows={createConformalPredictionRows(artifact)}
+  actuals={yTrue}
+  summaries={createConformalIntervalSummaryRows(artifact)}
+  guarantee={createConformalGuaranteeViewForArtifact(artifact)}
+  targetCoverage={0.8}
+  unit="g/kg"
+/>`,
+    render: () => (
+      <ConformalPredictionTree
+        rows={CONFORMAL_TREE_ROWS}
+        actuals={CONFORMAL_TREE_ACTUALS}
+        summaries={CONFORMAL_SUMMARIES}
+        guarantee={CONFORMAL_GUARANTEE}
+        targetCoverage={0.8}
+        unit="g/kg"
+      />
+    ),
   },
   {
     id: "box-plot",
