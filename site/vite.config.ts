@@ -8,7 +8,7 @@ const configDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(configDirectory, "..");
 
 export const VISUAL_ASSET_GROUPS = ["brands", "styles", "motion"] as const;
-export const TOP_LEVEL_VISUAL_ASSETS = ["dag.css", "datasetBuilder.css", "theme.css", "viz.css"] as const;
+export const TOP_LEVEL_VISUAL_ASSETS = ["conformal.css", "dag.css", "datasetBuilder.css", "theme.css", "viz.css"] as const;
 
 function copyVisualAssets(): Plugin {
   let outputDirectory = "";
