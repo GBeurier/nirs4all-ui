@@ -114,6 +114,35 @@
   filter: drop-shadow(0 1px 2px rgba(13, 148, 136, 0.35));
 }
 
+/* conformal interval strip */
+.n4viz-conf-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  fill: var(--n4-color-text, #0f172a);
+}
+.n4viz-conf-readout {
+  font-family: var(--n4-font-mono, "JetBrains Mono", monospace);
+  font-size: 10.5px;
+  font-weight: 700;
+  fill: var(--n4-color-muted, #64748b);
+}
+.n4viz-conf-empty {
+  font-size: 12px;
+  fill: var(--n4-color-muted, #94a3b8);
+}
+.n4viz-conf-band {
+  transition: opacity 120ms ease;
+}
+/* outline the guarantee (target) band so it reads out of the nested stack */
+.n4viz-conf-band--target {
+  stroke: color-mix(in srgb, var(--n4-color-text, #0f172a) 26%, transparent);
+  stroke-width: 1;
+}
+.n4viz-conf-point {
+  stroke-linecap: round;
+}
+
 /* standalone dark fallback (when design tokens are not loaded) */
 :root[data-theme="dark"] .n4viz,
 .n4-theme-dark .n4viz {
