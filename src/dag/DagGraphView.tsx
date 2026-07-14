@@ -20,7 +20,9 @@ import {
 import { ancestorGroupIds, buildHierarchy } from "./hierarchy.js";
 import { layoutDag, type DagLayout, type DagLayoutEdge, type DagLayoutFrame, type DagLayoutNode } from "./layout.js";
 import { resolveLabels, type DagViewLabels } from "./locale.js";
-import { dagCategory, type DagCategory, type DagDirection, type DagGraph, type DagNode } from "./types.js";
+import { GROUP_NODE_PREFIX } from "./collapse.js";
+import { describeShapeDelta, formatShape, shapeChange, SHAPE_CHANGE_STYLE } from "./shape.js";
+import { dagCategory, type DagCategory, type DagDirection, type DagGraph, type DagNode, type DagShape } from "./types.js";
 
 export interface DagGraphViewProps {
   /** Compiled graph in view-model form (see `fromCompiledGraph`). */
@@ -42,6 +44,8 @@ export interface DagGraphViewProps {
   showMinimap?: boolean;
   showLegend?: boolean;
   showInspector?: boolean;
+  /** Start with dataset-shape annotations on (when the graph carries shapes). Default true. */
+  showShapes?: boolean;
   labels?: Partial<DagViewLabels>;
 }
 
@@ -114,6 +118,7 @@ export function DagGraphView({
   showMinimap = true,
   showLegend = true,
   showInspector = true,
+  showShapes = true,
   labels: labelsProp,
 }: DagGraphViewProps) {
   const labels = resolveLabels(labelsProp);
@@ -121,6 +126,8 @@ export function DagGraphView({
   const drag = useRef<{ x: number; y: number; moved: boolean } | null>(null);
 
   const [direction, setDirection] = useState<DagDirection>(directionProp);
+  const [shapesOn, setShapesOn] = useState<boolean>(showShapes);
+  const hasShapes = useMemo(() => graph.nodes.some((n) => n.io != null), [graph.nodes]);
 
   const hierarchy = useMemo(() => buildHierarchy(graph), [graph]);
   const initial = useMemo(
@@ -468,6 +475,17 @@ export function DagGraphView({
         <button className="n4dag__btn n4dag__btn--text" type="button" onClick={() => applyDepth(hierarchy.maxDepth + 1)} title={labels.expandAll}>
           {labels.expandAll}
         </button>
+        {hasShapes ? (
+          <button
+            className={cx("n4dag__btn", "n4dag__btn--text", shapesOn && "n4dag__btn--on")}
+            type="button"
+            aria-pressed={shapesOn}
+            onClick={() => setShapesOn((v) => !v)}
+            title={labels.shapes}
+          >
+            {labels.shapes}
+          </button>
+        ) : null}
         <button
           className="n4dag__btn n4dag__btn--text"
           type="button"
@@ -550,6 +568,17 @@ export function DagGraphView({
               })}
             </g>
 
+            {/* shape labels on edges leaving a collapsed cluster (the shape it emits) */}
+            {shapesOn && lod === 2 ? (
+              <g className="n4dag__edge-shapes">
+                {visEdges.map((e) =>
+                  e.edge.shape && e.edge.source.startsWith(GROUP_NODE_PREFIX) && !(dim && !(emphasizedEdges?.has(e.edge.id) ?? false)) ? (
+                    <EdgeShapeLabel key={`es-${e.edge.id}`} mx={(e.sx + e.tx) / 2} my={(e.sy + e.ty) / 2} shape={e.edge.shape} />
+                  ) : null,
+                )}
+              </g>
+            ) : null}
+
             {/* nodes */}
             <g className="n4dag__nodes">
               {visNodes.map((ln) => (
@@ -559,6 +588,7 @@ export function DagGraphView({
                   direction={direction}
                   lod={lod}
                   colors={colors}
+                  shapesOn={shapesOn}
                   selected={selected === ln.node.id}
                   hovered={hovered === ln.node.id}
                   matched={matches?.has(ln.node.id) ?? false}
@@ -598,7 +628,7 @@ export function DagGraphView({
             >
               ×
             </button>
-            <NodeInspector node={selectedNode} colors={colors} />
+            <NodeInspector node={selectedNode} colors={colors} labels={labels} />
           </aside>
         ) : null}
       </div>
@@ -612,11 +642,25 @@ function edgeStroke(edge: EffEdge, emphasized: boolean): string {
   return "currentColor";
 }
 
+function EdgeShapeLabel({ mx, my, shape }: { mx: number; my: number; shape: DagShape }) {
+  const text = formatShape(shape);
+  const wpx = text.length * 6.1 + 12;
+  return (
+    <g className="n4dag__edge-shape" transform={`translate(${round(mx)} ${round(my)})`}>
+      <rect className="n4dag__edge-shape-bg" x={round(-wpx / 2)} y={-8} width={round(wpx)} height={16} rx={5} />
+      <text className="n4dag__edge-shape-text" x={0} y={4} textAnchor="middle">
+        {text}
+      </text>
+    </g>
+  );
+}
+
 interface NodeMarkProps {
   ln: DagLayoutNode;
   direction: DagDirection;
   lod: 0 | 1 | 2;
   colors: Partial<Record<DagCategory, string>> | undefined;
+  shapesOn: boolean;
   selected: boolean;
   hovered: boolean;
   matched: boolean;
@@ -624,9 +668,13 @@ interface NodeMarkProps {
   labels: DagViewLabels;
 }
 
-function NodeMark({ ln, direction, lod, colors, selected, hovered, matched, dimmed, labels }: NodeMarkProps) {
+function NodeMark({ ln, direction, lod, colors, shapesOn, selected, hovered, matched, dimmed, labels }: NodeMarkProps) {
   const { node, x, y, w, h } = ln;
   const color = categoryColor(node.category, colors);
+  const shape = !node.isGroup && shapesOn ? node.outShape : undefined;
+  const change = shape ? shapeChange(node.inShapes ?? [], shape) : "none";
+  const changeStyle = SHAPE_CHANGE_STYLE[change];
+  const hasSub = node.isGroup || !!node.detail || !!shape;
   const active = selected || hovered || matched;
 
   const dataAttrs: Record<string, string> = { "data-node-id": node.id };
@@ -691,7 +739,7 @@ function NodeMark({ ln, direction, lod, colors, selected, hovered, matched, dimm
         <rect className="n4dag__node-accent" x={x + 8} y={y} width={w - 16} height={4} rx={2} fill={color} />
       )}
 
-      <text className="n4dag__node-label" x={x + 14} y={node.isGroup || node.detail ? y + h / 2 - 3 : y + h / 2 + 4}>
+      <text className="n4dag__node-label" x={x + 14} y={hasSub ? y + h / 2 - 3 : y + h / 2 + 4}>
         {truncate(node.label, direction === "LR" ? 22 : 20)}
       </text>
 
@@ -700,7 +748,12 @@ function NodeMark({ ln, direction, lod, colors, selected, hovered, matched, dimm
           {node.childCount} {labels.contains}
         </text>
       ) : null}
-      {lod === 2 && !node.isGroup && node.detail ? (
+      {lod === 2 && !node.isGroup && shape ? (
+        <text className="n4dag__node-shape" x={x + 14} y={y + h / 2 + 12} fill={changeStyle.tone || undefined}>
+          {changeStyle.glyph ? `${changeStyle.glyph} ` : ""}
+          {truncate(formatShape(shape), direction === "LR" ? 22 : 20)}
+        </text>
+      ) : lod === 2 && !node.isGroup && node.detail ? (
         <text className="n4dag__node-sub" x={x + 14} y={y + h / 2 + 12}>
           {truncate(node.detail, direction === "LR" ? 24 : 22)}
         </text>
@@ -710,6 +763,18 @@ function NodeMark({ ln, direction, lod, colors, selected, hovered, matched, dimm
         <text className="n4dag__node-expand" x={x + w - 12} y={y + 16} textAnchor="end">
           +
         </text>
+      ) : null}
+
+      {shape && change !== "none" ? (
+        <circle
+          className="n4dag__node-port"
+          cx={direction === "LR" ? x + w : x + w / 2}
+          cy={direction === "LR" ? y + h / 2 : y + h}
+          r={3.5}
+          fill={changeStyle.tone}
+        >
+          <title>{formatShape(shape)}</title>
+        </circle>
       ) : null}
 
       {lod === 2 && node.status ? <circle className="n4dag__node-status" data-status={node.status} cx={x + w - 12} cy={y + 12} r={4} /> : null}
@@ -793,15 +858,44 @@ function Minimap({ layout, transform, width, height, colors, onRecenter }: Minim
   );
 }
 
-function NodeInspector({ node, colors }: { node: DagNode; colors: Partial<Record<DagCategory, string>> | undefined }) {
+function ShapeRow({ tag, shape, out }: { tag: string; shape: DagShape; out?: boolean }) {
+  return (
+    <div className={cx("n4dag__io-row", out && "n4dag__io-row--out")}>
+      <span className="n4dag__io-tag">{tag}</span>
+      <span className="n4dag__io-shape n4dag__mono">{formatShape(shape)}</span>
+      {shape.representation && shape.representation !== "prediction" ? <span className="n4dag__io-rep">{shape.representation}</span> : null}
+      {shape.note ? <span className="n4dag__io-note">{shape.note}</span> : null}
+      {shape.sources && shape.sources.length > 1 ? (
+        <span className="n4dag__io-sources">{shape.sources.map((s) => `${s.name} (${s.features ?? "?"})`).join(" · ")}</span>
+      ) : null}
+    </div>
+  );
+}
+
+function NodeInspector({ node, colors, labels }: { node: DagNode; colors: Partial<Record<DagCategory, string>> | undefined; labels: DagViewLabels }) {
   const color = categoryColor(dagCategory(node.kind), colors);
   const metaEntries = node.meta ? Object.entries(node.meta).slice(0, 12) : [];
+  const io = node.io;
+  const inputs = io?.in ?? [];
+  const delta = io?.out ? describeShapeDelta(inputs, io.out) : null;
   return (
     <div className="n4dag__inspector-body">
       <div className="n4dag__inspector-head">
         <span className="n4dag__inspector-dot" style={{ background: color }} />
         <span className="n4dag__inspector-title">{node.label ?? node.id}</span>
       </div>
+
+      {io && (inputs.length > 0 || io.out) ? (
+        <div className="n4dag__io">
+          <div className="n4dag__io-title">{labels.shape}</div>
+          {inputs.map((s, i) => (
+            <ShapeRow key={`in-${i}`} tag={inputs.length > 1 ? `${labels.shapeIn} ${i + 1}` : labels.shapeIn} shape={s} />
+          ))}
+          {io.out ? <ShapeRow tag={labels.shapeOut} shape={io.out} out /> : null}
+          {delta ? <div className="n4dag__io-delta">{delta}</div> : null}
+        </div>
+      ) : null}
+
       <dl className="n4dag__inspector-dl">
         <div>
           <dt>id</dt>

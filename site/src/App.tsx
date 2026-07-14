@@ -343,9 +343,13 @@ export function App() {
           <>
             A dedicated viewer for a <em>compiled</em> DAG-ML graph (or any bound variant), readable from a handful of
             nodes to several thousand: layered layout, pan / zoom, viewport culling and level-of-detail, plus a
-            collapsible <code>family → chain</code> cluster hierarchy. Drag to pan, scroll to zoom, click a cluster to
-            expand it or a node to inspect it. Adapt a real compiled graph with <code>fromCompiledGraph()</code>; ships
-            with <code>nirs4all-ui/assets/dag.css</code>.
+            collapsible <code>family → chain</code> cluster hierarchy. With <code>Shapes</code> on, feed it a (multimodal)
+            dataset and every node shows the shape arriving and leaving — <code>240×2048</code> spectra + <code>240×12</code>{" "}
+            metadata join to <code>240×2060 ·2src</code>, augmentation blows rows up <code>×3</code>, models emit{" "}
+            <code>ŷ</code> predictions — so the pipeline's complexity is legible at a glance (see{" "}
+            <code>deriveShapes()</code>). Drag to pan, scroll to zoom, click a cluster to expand it or a node to inspect
+            it. Adapt a real compiled graph with <code>fromCompiledGraph()</code>; ships with{" "}
+            <code>nirs4all-ui/assets/dag.css</code>.
           </>
         }
         variant="paper"

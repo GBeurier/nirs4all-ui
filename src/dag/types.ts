@@ -35,6 +35,48 @@ export type DagCategory =
   | "group"
   | "unknown";
 
+/** One source of a (possibly multimodal) dataset shape. */
+export interface DagSourceShape {
+  name: string;
+  /** Feature/column count contributed by this source. */
+  features?: number;
+  /** e.g. `"spectra"`, `"metadata"`. */
+  kind?: string;
+}
+
+/**
+ * The shape of a dataset flowing on a wire — enough to convey pipeline
+ * complexity (how many samples/features, how many sources, what it becomes).
+ * Every field is optional so a host can annotate as much as it knows; symbolic
+ * (representation / partition only) and concrete (numbers) both render.
+ */
+export interface DagShape {
+  /** Row count (samples / observations). */
+  samples?: number;
+  /** Total feature/column count across all sources. */
+  features?: number;
+  /** Multimodal breakdown; length > 1 ⇒ multi-source. */
+  sources?: readonly DagSourceShape[];
+  /** Target / prediction column count. */
+  targets?: number;
+  /** Rows context, e.g. `"train"`, `"fold_train"`, `"all"`. */
+  partition?: string;
+  /** Data representation, e.g. `"spectra"`, `"tabular_numeric"`, `"prediction"`. */
+  representation?: string;
+  /** Verbatim label shown instead of the derived compact string. */
+  label?: string;
+  /** Short annotation, e.g. `"×3 augmented"`, `"+ metadata"`. */
+  note?: string;
+}
+
+/** Input/output dataset shapes for a node (what arrives and what leaves). */
+export interface DagNodeIO {
+  /** Shape(s) arriving — one per incoming data dependency. */
+  in?: readonly DagShape[];
+  /** Shape leaving the node (what it emits downstream). */
+  out?: DagShape;
+}
+
 /** One node in a compiled graph. `id` must be unique within the graph. */
 export interface DagNode {
   id: string;
@@ -55,6 +97,11 @@ export interface DagNode {
   variants?: number;
   /** Optional scalar surfaced in the node card and inspector. */
   metric?: number;
+  /**
+   * Dataset shapes entering / leaving this node. Host-provided (from a
+   * materialized dag-ml plan) or filled by {@link file://./shape.ts deriveShapes}.
+   */
+  io?: DagNodeIO;
   /** Free passthrough shown in the inspector panel. */
   meta?: Readonly<Record<string, unknown>>;
 }

@@ -23,6 +23,20 @@ export * from "./types.js";
 // --- palette + adapter ---
 export * from "./colors.js";
 export * from "./fromCompiledGraph.js";
+
+// --- dataset-shape annotations ---
+export {
+  deriveShapes,
+  formatShape,
+  formatCount,
+  shapeChange,
+  describeShapeDelta,
+  SHAPE_CHANGE_STYLE,
+  type ShapeChangeKind,
+  type ShapeRule,
+  type ShapeRuleContext,
+  type DeriveShapesOptions,
+} from "./shape.js";
 export { DEFAULT_DAG_LABELS, resolveLabels, type DagViewLabels } from "./locale.js";
 
 // --- pure engine (reusable by hosts / tests) ---

@@ -9,7 +9,7 @@
  * clusters the user has chosen to open. Pure + testable — no layout, no React.
  */
 
-import { dagCategory, type DagCategory, type DagEdgeKind, type DagGraph } from "./types.js";
+import { dagCategory, type DagCategory, type DagEdgeKind, type DagGraph, type DagShape } from "./types.js";
 import type { DagHierarchy } from "./hierarchy.js";
 
 /** Prefix distinguishing a collapsed-group super-node id from a real node id. */
@@ -31,6 +31,10 @@ export interface EffNode {
   childCount?: number;
   /** Super-nodes only: the collapsed group id (drop `GROUP_NODE_PREFIX`). */
   groupId?: string;
+  /** Real nodes only: dataset shape leaving this node. */
+  outShape?: DagShape;
+  /** Real nodes only: dataset shapes arriving at this node. */
+  inShapes?: readonly DagShape[];
 }
 
 export interface EffEdge {
@@ -41,6 +45,8 @@ export interface EffEdge {
   oof: boolean;
   /** Number of underlying edges merged into this one. */
   weight: number;
+  /** Shape flowing on the wire (the source node's output shape). */
+  shape?: DagShape;
 }
 
 export interface EffectiveGraph {
@@ -113,6 +119,9 @@ export function computeEffectiveGraph(
   const superNodes = new Map<string, EffNode>();
   // dominant-category vote per collapsed group
   const groupCats = new Map<string, Map<DagCategory, number>>();
+  // original node id → shape leaving it (for edge labels + node chips)
+  const outShapeById = new Map<string, DagShape>();
+  for (const node of graph.nodes) if (node.io?.out) outShapeById.set(node.id, node.io.out);
 
   for (const node of graph.nodes) {
     const r = representativeOf(hierarchy, node.id, collapsed);
@@ -133,6 +142,8 @@ export function computeEffectiveGraph(
       if (node.status !== undefined) eff.status = node.status;
       if (node.variants !== undefined) eff.variants = node.variants;
       if (node.metric !== undefined) eff.metric = node.metric;
+      if (node.io?.out !== undefined) eff.outShape = node.io.out;
+      if (node.io?.in !== undefined) eff.inShapes = node.io.in;
       nodes.push(eff);
     } else {
       const votes = groupCats.get(r.collapsedGroupId) ?? new Map<DagCategory, number>();
@@ -178,6 +189,8 @@ export function computeEffectiveGraph(
     }
     const eff: EffEdge = { id: key, source: s, target: t, oof: edge.oof === true, weight: 1 };
     if (edge.kind !== undefined) eff.kind = edge.kind;
+    const shape = outShapeById.get(edge.source);
+    if (shape !== undefined) eff.shape = shape;
     edgeMap.set(key, eff);
   }
 

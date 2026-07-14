@@ -44,7 +44,8 @@ import {
 } from "../../src/lab/index.js";
 import { buildDatasetPreview } from "../../src/dataset/index.js";
 import { normalizeRuntimeDiagnostics } from "../../src/runtime/index.js";
-import type { DagEdge, DagGraph, DagNode, DagNodeStatus } from "../../src/dag/index.js";
+import { deriveShapes } from "../../src/dag/index.js";
+import type { DagEdge, DagGraph, DagNode, DagNodeStatus, DagShape } from "../../src/dag/index.js";
 
 // ---------------------------------------------------------------------------
 // Deterministic fake data (seeded so the static render is stable).
@@ -1189,9 +1190,17 @@ function demoStatus(idx: number): DagNodeStatus {
   return "done";
 }
 
+// Two multimodal data sources entering the pipeline (spectra + reference table).
+const DEMO_ENTRIES: Record<string, DagShape> = {
+  "src:nir": { samples: 240, features: 2048, representation: "spectra", sources: [{ name: "NIR", features: 2048, kind: "spectra" }] },
+  "src:meta": { samples: 240, features: 12, representation: "tabular_numeric", sources: [{ name: "metadata", features: 12, kind: "metadata" }] },
+};
+
 function buildDemoDag(): DagGraph {
   const nodes: DagNode[] = [
-    { id: "data:x", kind: "adapter", label: "raw spectra", detail: "NirToTabular", status: "done" },
+    { id: "src:nir", kind: "adapter", label: "NIR spectra", detail: "OpusReader", status: "done" },
+    { id: "src:meta", kind: "adapter", label: "metadata", detail: "CsvReader", status: "done" },
+    { id: "join:sources", kind: "source_join", label: "join sources", detail: "align by sample_id", status: "done" },
     { id: "split:cv", kind: "split", label: "5-fold CV", detail: "GroupKFold", status: "done" },
     {
       id: "gen:grid",
@@ -1203,7 +1212,9 @@ function buildDemoDag(): DagGraph {
     },
   ];
   const edges: DagEdge[] = [
-    { source: "data:x", target: "split:cv", kind: "data" },
+    { source: "src:nir", target: "join:sources", kind: "data" },
+    { source: "src:meta", target: "join:sources", kind: "data" },
+    { source: "join:sources", target: "split:cv", kind: "data" },
     { source: "split:cv", target: "gen:grid", kind: "data" },
   ];
 
@@ -1215,18 +1226,21 @@ function buildDemoDag(): DagGraph {
       const group = [family, chain];
       const algo = DEMO_ALGOS[idx % DEMO_ALGOS.length] as string;
       const snv = `f${f}.c${idx}.pre:snv`;
+      const aug = `f${f}.c${idx}.aug:noise`;
       const sg = `f${f}.c${idx}.pre:sg`;
       const model = `f${f}.c${idx}.model:${algo.toLowerCase()}`;
       const status = demoStatus(idx);
       const r2 = Number((0.7 + ((idx * 37) % 25) / 100).toFixed(3));
       nodes.push(
         { id: snv, kind: "transform", label: "SNV", group, status },
+        { id: aug, kind: "augmentation", label: "noise ×3", group, status, meta: { factor: 3, scope: "train_only" } },
         { id: sg, kind: "transform", label: "SG(2,1)", group, status },
-        { id: model, kind: "model", label: algo, detail: `${algo} · fold-fit`, group, status, metric: r2 },
+        { id: model, kind: "model", label: algo, group, status, metric: r2, meta: { targets: 1 } },
       );
       edges.push(
         { source: "gen:grid", target: snv, kind: "data" },
-        { source: snv, target: sg, kind: "data" },
+        { source: snv, target: aug, kind: "data" },
+        { source: aug, target: sg, kind: "data" },
         { source: sg, target: model, kind: "data" },
         { source: model, target: "merge:stack", kind: "prediction", oof: true },
       );
@@ -1235,8 +1249,8 @@ function buildDemoDag(): DagGraph {
   }
 
   nodes.push(
-    { id: "merge:stack", kind: "prediction_join", label: "stack (pred + X)", detail: "predictions_plus_original", status: "done" },
-    { id: "meta:ridge", kind: "model", label: "meta-learner", detail: "RidgeMetaStacker", status: "done", metric: 0.941 },
+    { id: "merge:stack", kind: "prediction_join", label: "stack preds", detail: "predictions_plus_original", status: "done" },
+    { id: "meta:ridge", kind: "model", label: "meta-learner", detail: "RidgeMetaStacker", status: "done", metric: 0.941, meta: { targets: 1 } },
     { id: "score:report", kind: "aggregator", label: "score report", detail: "R² / RMSE", status: "done" },
   );
   edges.push(
@@ -1247,4 +1261,5 @@ function buildDemoDag(): DagGraph {
   return { name: "stacking-grid (compiled)", nodes, edges };
 }
 
-export const DEMO_DAG_GRAPH: DagGraph = buildDemoDag();
+// Annotate every node with the dataset shape flowing in / out.
+export const DEMO_DAG_GRAPH: DagGraph = deriveShapes(buildDemoDag(), { entries: DEMO_ENTRIES });

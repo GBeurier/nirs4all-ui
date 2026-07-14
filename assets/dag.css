@@ -84,6 +84,11 @@
   font-weight: 600;
   border: 1px solid var(--n4dag-border);
 }
+.n4dag__btn--on {
+  background: color-mix(in srgb, var(--n4-color-primary, #0d9488) 16%, transparent);
+  border-color: color-mix(in srgb, var(--n4-color-primary, #0d9488) 45%, transparent);
+  color: var(--n4-color-primary, #0d9488);
+}
 .n4dag__search-input {
   appearance: none;
   height: 26px;
@@ -216,6 +221,30 @@
   fill: var(--n4dag-text);
   pointer-events: none;
 }
+.n4dag__node-shape {
+  font-family: var(--n4-font-mono, "JetBrains Mono", monospace);
+  font-size: 9.5px;
+  font-weight: 600;
+  fill: var(--n4dag-muted);
+  pointer-events: none;
+}
+.n4dag__node-port {
+  stroke: var(--n4dag-node-bg, #ffffff);
+  stroke-width: 1.5;
+}
+
+/* ---- shape labels on edges (data leaving a collapsed cluster) ---- */
+.n4dag__edge-shape-bg {
+  fill: color-mix(in srgb, var(--n4dag-surface) 90%, transparent);
+  stroke: var(--n4dag-border);
+  stroke-width: 1;
+}
+.n4dag__edge-shape-text {
+  font-family: var(--n4-font-mono, "JetBrains Mono", monospace);
+  font-size: 9px;
+  font-weight: 600;
+  fill: var(--n4dag-muted);
+}
 .n4dag__node-status[data-status="running"] { fill: #d97706; }
 .n4dag__node-status[data-status="done"] { fill: #10b981; }
 .n4dag__node-status[data-status="failed"] { fill: #e11d48; }
@@ -313,6 +342,66 @@
   font-size: 12.5px;
   font-weight: 700;
   overflow-wrap: anywhere;
+}
+
+/* ---- inspector: dataset-shape in → out ---- */
+.n4dag__io {
+  margin: 0 0 10px;
+  padding: 8px 9px;
+  border: 1px solid var(--n4dag-border);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--n4dag-muted) 5%, transparent);
+  display: grid;
+  gap: 4px;
+}
+.n4dag__io-title {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--n4dag-muted);
+}
+.n4dag__io-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.n4dag__io-tag {
+  min-width: 24px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--n4dag-muted);
+}
+.n4dag__io-row--out .n4dag__io-tag,
+.n4dag__io-row--out .n4dag__io-shape {
+  color: var(--n4-color-primary, #0d9488);
+}
+.n4dag__io-shape {
+  font-size: 12px;
+  font-weight: 700;
+}
+.n4dag__io-rep,
+.n4dag__io-sources {
+  font-size: 9.5px;
+  color: var(--n4dag-muted);
+}
+.n4dag__io-note {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 0 5px;
+  border-radius: 999px;
+  color: var(--n4-color-primary, #0d9488);
+  background: color-mix(in srgb, var(--n4-color-primary, #0d9488) 12%, transparent);
+}
+.n4dag__io-delta {
+  font-family: var(--n4-font-mono, "JetBrains Mono", monospace);
+  font-size: 10px;
+  color: var(--n4dag-text);
+  padding-top: 2px;
+  border-top: 1px dashed var(--n4dag-border);
 }
 .n4dag__inspector-dl {
   margin: 0;

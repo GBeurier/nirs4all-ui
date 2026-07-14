@@ -22,6 +22,10 @@ export interface DagViewLabels {
   emptyGraph: string;
   group: string;
   contains: string;
+  shapes: string;
+  shape: string;
+  shapeIn: string;
+  shapeOut: string;
 }
 
 export const DEFAULT_DAG_LABELS: DagViewLabels = {
@@ -41,6 +45,10 @@ export const DEFAULT_DAG_LABELS: DagViewLabels = {
   emptyGraph: "Empty graph",
   group: "Cluster",
   contains: "leaf nodes",
+  shapes: "Shapes",
+  shape: "Shape",
+  shapeIn: "in",
+  shapeOut: "out",
 };
 
 export function resolveLabels(overrides?: Partial<DagViewLabels>): DagViewLabels {

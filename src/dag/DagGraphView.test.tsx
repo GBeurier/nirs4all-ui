@@ -48,4 +48,23 @@ describe("DagGraphView", () => {
     // the `stack` cluster is collapsed → a super-node stands in for b, c, d
     expect(markup).toContain("n4dag__node--group");
   });
+
+  it("renders dataset-shape annotations and the Shapes toggle when the graph carries shapes", () => {
+    const shaped: DagGraph = {
+      nodes: [
+        { id: "a", kind: "adapter", label: "spectra", io: { out: { samples: 240, features: 2048 } } },
+        { id: "b", kind: "transform", label: "SNV", io: { in: [{ samples: 240, features: 2048 }], out: { samples: 240, features: 2048 } } },
+      ],
+      edges: [{ source: "a", target: "b", kind: "data" }],
+    };
+    const markup = renderToStaticMarkup(<DagGraphView graph={shaped} width={640} height={360} />);
+    expect(markup).toContain("Shapes");
+    expect(markup).toContain("n4dag__node-shape");
+    expect(markup).toContain("240×2048");
+  });
+
+  it("omits the Shapes toggle when no shapes are present", () => {
+    const markup = renderToStaticMarkup(<DagGraphView graph={sampleGraph()} width={640} height={360} />);
+    expect(markup).not.toContain(">Shapes<");
+  });
 });
