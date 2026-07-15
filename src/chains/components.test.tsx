@@ -87,17 +87,18 @@ describe("ChainScoreBeeswarm", () => {
 });
 
 describe("ChainNodeOrbit", () => {
-  it("renders the focus center, neighbour wedges, breadcrumb and legend", () => {
-    const markup = renderToStaticMarkup(<ChainNodeOrbit analysis={analysis} defaultFocusToken="snv" />);
+  it("renders the focus center, sunburst wedges, breadcrumb and flow legend", () => {
+    const markup = renderToStaticMarkup(<ChainNodeOrbit analysis={analysis} defaultFocusToken="snv" depth={2} />);
     expect(markup).toContain("n4chains-orbit");
     expect(markup).toContain("n4chains-wedge");
     expect(markup).toContain("n4chains-orbit-center");
-    expect(markup).toContain("wedge = shared chains");
+    expect(markup).toContain("before");
+    expect(markup).toContain("after");
   });
 
   it("renders an empty state for an unknown focus", () => {
     const markup = renderToStaticMarkup(<ChainNodeOrbit analysis={analysis} defaultFocusToken="nope" />);
-    expect(markup).toContain("No node to orbit");
+    expect(markup).toContain("No node to explore");
   });
 });
 

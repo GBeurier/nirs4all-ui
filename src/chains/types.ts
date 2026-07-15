@@ -197,7 +197,40 @@ export interface NeighborLink {
   delta: number;
 }
 
-/** A focus node and its co-occurring neighbours — the radial-navigator model. */
+/** One node in the directional flow tree (a sunburst wedge with children). */
+export interface FlowNode {
+  token: string;
+  label: string;
+  role: ChainStepRole;
+  /** Chains matching the ordered path focus → … → this node. */
+  count: number;
+  stat: Stat;
+  /** `stat.median − baseline`. */
+  delta: number;
+  /** The next step(s) after this node, nested one ring further out. */
+  children: readonly FlowNode[];
+}
+
+/**
+ * Directional flow around a focus node — the multi-ring sunburst model:
+ * predecessors (what leads in, one inner ring) and a successor tree (what
+ * follows, expanded outward `depth` rings).
+ */
+export interface NodeFlow {
+  token: string;
+  label: string;
+  role: ChainStepRole;
+  /** Goodness of every chain containing the focus. */
+  self: Stat;
+  /** Nodes occurring before the focus — the inner ring. */
+  predecessors: readonly NeighborLink[];
+  /** Ordered continuation after the focus — the outer sunburst. */
+  successors: readonly FlowNode[];
+  baseline: number;
+  goodnessExtent: { min: number; max: number };
+}
+
+/** A focus node and its co-occurring neighbours — the single-ring model. */
 export interface NodeNeighborhood {
   token: string;
   label: string;

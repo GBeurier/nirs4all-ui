@@ -2,20 +2,22 @@ import { useMemo, useState } from "react";
 
 import { round } from "../viz/geometry.js";
 import { cx } from "./_cx.js";
-import { nodeNeighbors } from "./analysis.js";
+import { nodeFlow } from "./analysis.js";
 import { effectColor, effectTextColor, roleColor } from "./colors.js";
-import type { ChainEffectAnalysis, ChainStepRole, NeighborLink } from "./types.js";
+import type { ChainEffectAnalysis, ChainStepRole, FlowNode, NeighborLink } from "./types.js";
 import { CHAIN_LENS_LABELS, CHAIN_ROLE_LABELS } from "./types.js";
 
 export interface ChainNodeOrbitProps {
   analysis: ChainEffectAnalysis;
   /** Starting focus node; defaults to the highest-coverage node (the hub). */
   defaultFocusToken?: string;
-  /** Neighbour roles to orbit. Default: every role present. */
-  roles?: readonly ChainStepRole[];
-  /** Keep the top-N neighbours by shared-chain count. Default `9`. */
-  maxNeighbors?: number;
-  /** Minimum shared chains for a neighbour wedge. Default `2`. */
+  /** Step roles to include. Default: every role present. */
+  roles?: readonly ChainStepRole[] | undefined;
+  /** Outward successor rings (1–3). Default `2`. */
+  depth?: number;
+  /** Keep the top-N children per node. Default `6`. */
+  maxPerLevel?: number;
+  /** Minimum chains for a wedge. Default `2`. */
   minCount?: number;
   size?: number;
   /** Notified whenever the focus changes (navigation). */
@@ -26,24 +28,31 @@ export interface ChainNodeOrbitProps {
 }
 
 const TAU = Math.PI * 2;
+const START = -Math.PI / 2;
+
+interface Wedge {
+  key: string;
+  token: string;
+  label: string;
+  role: ChainStepRole;
+  median: number;
+  count: number;
+  ring: number;
+  a0: number;
+  a1: number;
+  kind: "pred" | "succ";
+}
 
 function fmt(value: number): string {
   if (!Number.isFinite(value)) return "—";
-  if (Math.abs(value) >= 100) return value.toFixed(0);
   if (Math.abs(value) >= 1) return value.toFixed(2);
   return value.toFixed(2);
-}
-
-function fmtDelta(value: number): string {
-  if (!Number.isFinite(value)) return "—";
-  return `${value >= 0 ? "+" : "−"}${fmt(Math.abs(value))}`;
 }
 
 function polar(cx0: number, cy0: number, r: number, angle: number): [number, number] {
   return [cx0 + r * Math.cos(angle), cy0 + r * Math.sin(angle)];
 }
 
-/** Donut segment path between two radii and two angles (clockwise). */
 function annularSector(cx0: number, cy0: number, rInner: number, rOuter: number, a0: number, a1: number): string {
   const large = a1 - a0 > Math.PI ? 1 : 0;
   const [x0o, y0o] = polar(cx0, cy0, rOuter, a0);
@@ -59,23 +68,31 @@ function annularSector(cx0: number, cy0: number, rInner: number, rOuter: number,
   ].join(" ");
 }
 
+function treeDepth(nodes: readonly FlowNode[]): number {
+  let depth = 0;
+  for (const node of nodes) depth = Math.max(depth, 1 + treeDepth(node.children));
+  return depth;
+}
+
 /**
- * Radial node navigator — a foldable "orbit" view. A focus node sits at the
- * centre; every node that shares a chain with it orbits as a wedge, its arc
- * sized by the number of shared chains and colored by the goodness of those
- * shared chains (teal = better combo, amber = worse). Click a wedge to re-centre
- * on that node and unfold *its* neighbourhood; the breadcrumb walks back. Lets
- * you traverse the pipeline-node graph node by node. Local UI state only.
+ * Radial flow navigator — a foldable, multi-ring sunburst. A focus node sits at
+ * the centre; an inner ring shows the nodes that *precede* it, and 2–3 outer
+ * rings show the *real ordered continuations* that follow (each ring one step
+ * further down the pipeline), so a whole bounded chain is legible at a glance —
+ * no clicking into meaningless infinity. Wedges are sized by chain count and
+ * colored by the combined effect (teal = better, amber = worse). Click any
+ * wedge to re-centre on that node; the breadcrumb walks back. Local UI state only.
  */
 export function ChainNodeOrbit({
   analysis,
   defaultFocusToken,
   roles,
-  maxNeighbors = 9,
+  depth = 2,
+  maxPerLevel = 6,
   minCount = 2,
   size = 460,
   onFocusChange,
-  title = "Node orbit",
+  title = "Node flow",
   className,
   roleColors,
 }: ChainNodeOrbitProps) {
@@ -83,12 +100,13 @@ export function ChainNodeOrbit({
   const [path, setPath] = useState<string[]>(hub ? [hub] : []);
   const focusToken = path[path.length - 1] ?? hub;
 
-  const neighborhood = useMemo(
-    () => (focusToken ? nodeNeighbors(analysis, focusToken, { roles, maxNeighbors, minCount }) : null),
-    [analysis, focusToken, roles, maxNeighbors, minCount],
+  const flow = useMemo(
+    () => (focusToken ? nodeFlow(analysis, focusToken, { roles, depth, maxPerLevel, minCount }) : null),
+    [analysis, focusToken, roles, depth, maxPerLevel, minCount],
   );
 
   const navigate = (token: string) => {
+    if (token === focusToken) return;
     setPath((prev) => [...prev, token]);
     onFocusChange?.(token);
   };
@@ -103,57 +121,118 @@ export function ChainNodeOrbit({
     if (path.length > 1) jumpTo(path.length - 2);
   };
 
-  if (!neighborhood) {
+  if (!flow) {
     return (
       <div className={cx("n4chains-orbit", className)} style={{ width: size }}>
-        <div className="n4chains-empty">No node to orbit.</div>
+        <div className="n4chains-empty">No node to explore.</div>
       </div>
     );
   }
 
   const cx0 = size / 2;
   const cy0 = size / 2;
-  const rCenter = Math.round(size * 0.11);
-  const rInner = rCenter + 10;
-  const rOuter = Math.round(size / 2 - 46);
+  const rCenter = Math.round(size * 0.115);
+  const rMax = size / 2 - 50;
+  const innerStart = rCenter + 8;
+  const ringGap = 3;
+
+  const hasPred = flow.predecessors.length > 0;
+  const succDepth = treeDepth(flow.successors);
+  const totalRings = (hasPred ? 1 : 0) + succDepth;
+  const succBase = hasPred ? 1 : 0;
+  const ringW = totalRings > 0 ? (rMax - innerStart - ringGap * (totalRings - 1)) / totalRings : 0;
+  const ringRadii = (ring: number): [number, number] => {
+    const rIn = innerStart + ring * (ringW + ringGap);
+    return [rIn, rIn + ringW];
+  };
+
   const halfRange =
     Math.max(
-      Math.abs(neighborhood.goodnessExtent.max - neighborhood.baseline),
-      Math.abs(neighborhood.baseline - neighborhood.goodnessExtent.min),
+      Math.abs(flow.goodnessExtent.max - flow.baseline),
+      Math.abs(flow.baseline - flow.goodnessExtent.min),
     ) || 1;
 
-  const slices: Array<{ link: NeighborLink | null; weight: number }> = neighborhood.neighbors.map((link) => ({
-    link,
-    weight: link.count,
-  }));
-  if (neighborhood.otherCount > 0) slices.push({ link: null, weight: neighborhood.otherWeight });
-  const total = slices.reduce((sum, slice) => sum + slice.weight, 0);
-  const pad = slices.length > 1 ? 0.018 : 0;
-  const available = TAU - pad * slices.length;
+  const wedges: Wedge[] = [];
+  // inner predecessor ring
+  if (hasPred) {
+    const total = flow.predecessors.reduce((sum, link) => sum + link.count, 0);
+    const pad = flow.predecessors.length > 1 ? 0.02 : 0;
+    const avail = TAU - pad * flow.predecessors.length;
+    let cursor = START + pad / 2;
+    flow.predecessors.forEach((link: NeighborLink) => {
+      const sweep = total > 0 ? (link.count / total) * avail : avail / flow.predecessors.length;
+      wedges.push({
+        key: `pred-${link.token}`,
+        token: link.token,
+        label: link.label,
+        role: link.role,
+        median: link.stat.median,
+        count: link.count,
+        ring: 0,
+        a0: cursor,
+        a1: cursor + sweep,
+        kind: "pred",
+      });
+      cursor += sweep + pad;
+    });
+  }
+  // outward successor sunburst
+  const layoutSucc = (nodes: readonly FlowNode[], a0: number, a1: number, level: number) => {
+    const total = nodes.reduce((sum, node) => sum + node.count, 0);
+    const pad = nodes.length > 1 ? 0.014 : 0;
+    const avail = a1 - a0 - pad * nodes.length;
+    let cursor = a0 + pad / 2;
+    for (const node of nodes) {
+      const sweep = total > 0 ? (node.count / total) * avail : avail / nodes.length;
+      const na0 = cursor;
+      const na1 = cursor + sweep;
+      cursor = na1 + pad;
+      wedges.push({
+        key: `succ-${level}-${node.token}-${round(na0)}`,
+        token: node.token,
+        label: node.label,
+        role: node.role,
+        median: node.stat.median,
+        count: node.count,
+        ring: succBase + level,
+        a0: na0,
+        a1: na1,
+        kind: "succ",
+      });
+      if (node.children.length > 0) layoutSucc(node.children, na0, na1, level + 1);
+    }
+  };
+  layoutSucc(flow.successors, START, START + TAU, 0);
 
-  let cursor = -Math.PI / 2 + pad / 2;
-  const wedges = slices.map((slice, index) => {
-    const sweep = total > 0 ? (slice.weight / total) * available : available / slices.length;
-    const a0 = cursor;
-    const a1 = cursor + sweep;
-    cursor = a1 + pad;
-    return { slice, a0, a1, mid: (a0 + a1) / 2, sweep, index };
-  });
+  // bounded breadcrumb: home … last-3
+  const crumbIndices: Array<number | "gap"> =
+    path.length <= 5
+      ? path.map((_, index) => index)
+      : [0, "gap", path.length - 3, path.length - 2, path.length - 1];
 
   return (
     <div className={cx("n4chains-orbit", className)} style={{ width: size }}>
       <header className="n4chains-orbit-head">
         <nav className="n4chains-orbit-crumbs" aria-label="Navigation path">
-          {path.map((token, index) => {
-            const ref = analysis.tokens.find((entry) => entry.token === token);
-            const isLast = index === path.length - 1;
+          {crumbIndices.map((entry, i) => {
+            if (entry === "gap") {
+              return (
+                <span key={`gap-${i}`} className="n4chains-crumb-wrap">
+                  <span className="n4chains-crumb-sep">›</span>
+                  <span className="n4chains-crumb-ellipsis">…</span>
+                </span>
+              );
+            }
+            const token = path[entry]!;
+            const ref = analysis.tokens.find((item) => item.token === token);
+            const isLast = entry === path.length - 1;
             return (
-              <span key={`${token}-${index}`} className="n4chains-crumb-wrap">
-                {index > 0 ? <span className="n4chains-crumb-sep">›</span> : null}
+              <span key={`${token}-${entry}`} className="n4chains-crumb-wrap">
+                {i > 0 ? <span className="n4chains-crumb-sep">›</span> : null}
                 <button
                   type="button"
                   className={cx("n4chains-crumb", isLast && "is-current")}
-                  onClick={() => jumpTo(index)}
+                  onClick={() => jumpTo(entry)}
                   disabled={isLast}
                 >
                   {ref?.label ?? token}
@@ -172,68 +251,50 @@ export function ChainNodeOrbit({
         aria-label={title}
         preserveAspectRatio="xMidYMid meet"
       >
-        <title>{`${neighborhood.label} — ${neighborhood.neighbors.length} connected nodes`}</title>
+        <title>{`${flow.label} — flow (${flow.predecessors.length} in, ${succDepth} level(s) out)`}</title>
 
-        {wedges.map(({ slice, a0, a1, mid, sweep, index }) => {
-          const isOther = slice.link === null;
-          const median = isOther ? neighborhood.baseline : slice.link!.stat.median;
-          const fill = isOther ? "var(--n4-color-border, #e2e8f0)" : effectColor(median, neighborhood.baseline, halfRange);
-          const [lx, ly] = polar(cx0, cy0, rOuter + 15, mid);
-          const anchor = Math.cos(mid) > 0.2 ? "start" : Math.cos(mid) < -0.2 ? "end" : "middle";
-          const [vx, vy] = polar(cx0, cy0, (rInner + rOuter) / 2, mid);
-          const interactive = !isOther;
+        {wedges.map((wedge) => {
+          const [rIn, rOut] = ringRadii(wedge.ring);
+          const mid = (wedge.a0 + wedge.a1) / 2;
+          const rMid = (rIn + rOut) / 2;
+          const arcLen = (wedge.a1 - wedge.a0) * rMid;
+          const [lx, ly] = polar(cx0, cy0, rMid, mid);
+          let deg = (mid * 180) / Math.PI + 90;
+          deg = ((deg % 360) + 360) % 360;
+          if (deg > 90 && deg < 270) deg -= 180;
+          const showLabel = arcLen > 34 && ringW >= 15;
           return (
             <g
-              key={isOther ? "others" : slice.link!.token}
-              className={cx("n4chains-wedge", interactive && "is-interactive", isOther && "is-other")}
-              data-role={isOther ? "other" : slice.link!.role}
-              onClick={interactive ? () => navigate(slice.link!.token) : undefined}
-              tabIndex={interactive ? 0 : undefined}
-              role={interactive ? "button" : undefined}
-              onKeyDown={
-                interactive
-                  ? (event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        navigate(slice.link!.token);
-                      }
-                    }
-                  : undefined
-              }
+              key={wedge.key}
+              className={cx("n4chains-wedge", "is-interactive", wedge.kind === "pred" && "is-pred")}
+              data-role={wedge.role}
+              onClick={() => navigate(wedge.token)}
+              tabIndex={0}
+              role="button"
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  navigate(wedge.token);
+                }
+              }}
             >
-              {!isOther ? (
-                <title>{`${neighborhood.label} + ${slice.link!.label} — median ${fmt(median)}, ${slice.link!.count} shared chains`}</title>
-              ) : (
-                <title>{`${neighborhood.otherCount} more connected nodes`}</title>
-              )}
-              <path className="n4chains-wedge-arc" d={annularSector(cx0, cy0, rInner, rOuter, a0, a1)} fill={fill} />
-              {sweep > 0.34 && !isOther ? (
+              <title>{`${wedge.kind === "pred" ? "before" : "after"} · ${wedge.label} — median ${fmt(wedge.median)}, ${wedge.count} chains`}</title>
+              <path
+                className="n4chains-wedge-arc"
+                d={annularSector(cx0, cy0, rIn, rOut, wedge.a0, wedge.a1)}
+                fill={effectColor(wedge.median, flow.baseline, halfRange)}
+              />
+              {showLabel ? (
                 <text
-                  className="n4chains-wedge-value"
-                  x={round(vx)}
-                  y={round(vy + 3)}
+                  className="n4chains-wedge-label"
+                  x={round(lx)}
+                  y={round(ly + 3)}
                   textAnchor="middle"
-                  fill={effectTextColor(median, neighborhood.baseline, halfRange)}
+                  transform={`rotate(${round(deg)} ${round(lx)} ${round(ly)})`}
+                  fill={effectTextColor(wedge.median, flow.baseline, halfRange)}
                 >
-                  {fmt(median)}
+                  {wedge.label}
                 </text>
-              ) : null}
-              <text
-                className={cx("n4chains-wedge-label", isOther && "is-other")}
-                x={round(lx)}
-                y={round(ly + 3)}
-                textAnchor={anchor}
-              >
-                {isOther ? `+${neighborhood.otherCount}` : slice.link!.label}
-              </text>
-              {!isOther ? (
-                <circle
-                  className="n4chains-wedge-dot"
-                  cx={round(anchor === "start" ? lx - 8 : anchor === "end" ? lx + 8 : lx)}
-                  cy={round(anchor === "middle" ? ly - 10 : ly)}
-                  r={3}
-                  fill={roleColor(slice.link!.role, roleColors)}
-                />
               ) : null}
             </g>
           );
@@ -244,44 +305,54 @@ export function ChainNodeOrbit({
           cx={cx0}
           cy={cy0}
           r={rCenter}
-          fill={effectColor(neighborhood.self.median, neighborhood.baseline, halfRange)}
+          fill={effectColor(flow.self.median, flow.baseline, halfRange)}
           onClick={path.length > 1 ? back : undefined}
           tabIndex={path.length > 1 ? 0 : undefined}
           role={path.length > 1 ? "button" : undefined}
+          onKeyDown={
+            path.length > 1
+              ? (event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    back();
+                  }
+                }
+              : undefined
+          }
         >
-          <title>{path.length > 1 ? "Back to previous node" : neighborhood.label}</title>
+          <title>{path.length > 1 ? "Back to previous node" : flow.label}</title>
         </circle>
         <text
           className="n4chains-center-label"
           x={cx0}
           y={cy0 - 2}
           textAnchor="middle"
-          fill={effectTextColor(neighborhood.self.median, neighborhood.baseline, halfRange)}
+          fill={effectTextColor(flow.self.median, flow.baseline, halfRange)}
         >
-          {neighborhood.label}
+          {flow.label}
         </text>
         <text
           className="n4chains-center-value"
           x={cx0}
           y={cy0 + 12}
           textAnchor="middle"
-          fill={effectTextColor(neighborhood.self.median, neighborhood.baseline, halfRange)}
+          fill={effectTextColor(flow.self.median, flow.baseline, halfRange)}
         >
-          {fmt(neighborhood.self.median)}
+          {fmt(flow.self.median)}
         </text>
       </svg>
 
       <footer className="n4chains-orbit-foot">
         <span className="n4chains-orbit-role">
-          <span className="n4chains-chip-dom" style={{ background: roleColor(neighborhood.role, roleColors) }} />
-          {CHAIN_ROLE_LABELS[neighborhood.role]}
+          <span className="n4chains-chip-dom" style={{ background: roleColor(flow.role, roleColors) }} />
+          {CHAIN_ROLE_LABELS[flow.role]}
         </span>
+        <span className="n4chains-orbit-flow">← before · after →</span>
         <span className="n4chains-orbit-legend" aria-hidden="true">
           <span style={{ color: "#0f766e" }}>better</span>
           <span className="n4chains-orbit-ramp" />
           <span style={{ color: "#b45309" }}>worse</span>
         </span>
-        <span className="n4chains-orbit-note">wedge = shared chains</span>
       </footer>
     </div>
   );

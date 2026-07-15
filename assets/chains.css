@@ -466,6 +466,7 @@
 }
 .n4chains-crumb:hover:not(:disabled) { color: var(--n4-color-primary-hover, #0f766e); background: color-mix(in srgb, var(--n4-color-primary, #0d9488) 8%, transparent); }
 .n4chains-crumb.is-current { color: var(--n4-color-text, #0f172a); font-weight: 700; cursor: default; }
+.n4chains-crumb-ellipsis { color: var(--n4-color-muted, #94a3b8); font-size: 12px; padding: 0 2px; }
 .n4chains-orbit-caption {
   font-size: 9.5px;
   font-weight: 600;
@@ -529,6 +530,8 @@
   color: var(--n4-color-muted, #64748b);
 }
 .n4chains-orbit-role { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; color: var(--n4-color-text, #0f172a); }
+.n4chains-orbit-flow { font-size: 9.5px; font-weight: 600; letter-spacing: 0.02em; color: var(--n4-color-muted, #94a3b8); }
+.n4chains-wedge.is-pred .n4chains-wedge-arc { stroke-dasharray: none; }
 .n4chains-orbit-legend { display: inline-flex; align-items: center; gap: 6px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
 .n4chains-orbit-ramp {
   display: inline-block;

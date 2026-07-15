@@ -37,11 +37,13 @@ export {
   sequenceMatrix,
   tokenContexts,
   nodeNeighbors,
+  nodeFlow,
   type BuildAnalysisMeta,
   type PositionMatrixOptions,
   type SequenceMatrixOptions,
   type TokenContextsOptions,
   type NodeNeighborsOptions,
+  type NodeFlowOptions,
 } from "./analysis.js";
 
 // --- serialized dag-ml artifact seam ---

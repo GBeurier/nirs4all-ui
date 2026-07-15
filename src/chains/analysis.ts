@@ -18,7 +18,9 @@ import type {
   ChainStepRole,
   ChainTokenRef,
   ContextRow,
+  FlowNode,
   NeighborLink,
+  NodeFlow,
   NodeNeighborhood,
   PositionBucket,
   PositionMatrix,
@@ -417,6 +419,120 @@ export function nodeNeighbors(
     neighbors: kept,
     otherCount: folded.length,
     otherWeight,
+    baseline: analysis.baseline,
+    goodnessExtent: analysis.goodnessExtent,
+  };
+}
+
+// --- directional flow (sunburst) -------------------------------------------
+
+export interface NodeFlowOptions {
+  /** Step roles to include. Default: every role present. */
+  roles?: readonly ChainStepRole[] | undefined;
+  /** Minimum chains for a wedge to appear. Default `1`. */
+  minCount?: number;
+  /** Outward successor levels (1–3). Default `2`. */
+  depth?: number;
+  /** Keep the top-N children per node; the rest drop. Default `6`. */
+  maxPerLevel?: number;
+  /** Cap the inner predecessor ring. Default `6`. */
+  maxPredecessors?: number;
+}
+
+interface TrieNode {
+  token: string;
+  values: number[];
+  children: Map<string, TrieNode>;
+}
+
+/**
+ * Directional flow around a focus node: the predecessors that lead into it (one
+ * inner ring) and the *real ordered continuations* that follow it, expanded as
+ * a bounded successor tree (each path `focus → a → b` is an actual chain
+ * sub-sequence that occurred, weighted by its chain count). Drives the
+ * multi-ring {@link ChainNodeOrbit} sunburst; returns `null` for an unknown
+ * focus.
+ */
+export function nodeFlow(analysis: ChainEffectAnalysis, focusToken: string, options: NodeFlowOptions = {}): NodeFlow | null {
+  const focus = analysis.tokens.find((token) => token.token === focusToken);
+  if (!focus) return null;
+
+  const roleSet = options.roles ? new Set(options.roles) : null;
+  const minCount = Math.max(1, Math.trunc(options.minCount ?? 1));
+  const depth = Math.min(3, Math.max(1, Math.trunc(options.depth ?? 2)));
+  const maxPerLevel = Math.max(1, Math.trunc(options.maxPerLevel ?? 6));
+  const maxPredecessors = Math.max(1, Math.trunc(options.maxPredecessors ?? 6));
+  const byToken = new Map(analysis.tokens.map((token) => [token.token, token]));
+
+  const selfValues: number[] = [];
+  const predValues = new Map<string, number[]>();
+  const root: TrieNode = { token: "", values: [], children: new Map() };
+
+  for (const point of analysis.points) {
+    const focusIndex = point.orderedTokens.findIndex((entry) => entry.token === focusToken);
+    if (focusIndex < 0) continue;
+    selfValues.push(point.goodness);
+
+    for (let i = 0; i < focusIndex; i += 1) {
+      const entry = point.orderedTokens[i]!;
+      if (roleSet && !roleSet.has(entry.role)) continue;
+      const bucket = predValues.get(entry.token);
+      if (bucket) bucket.push(point.goodness);
+      else predValues.set(entry.token, [point.goodness]);
+    }
+
+    let node = root;
+    let level = 0;
+    for (let i = focusIndex + 1; i < point.orderedTokens.length && level < depth; i += 1) {
+      const entry = point.orderedTokens[i]!;
+      if (roleSet && !roleSet.has(entry.role)) continue;
+      let child = node.children.get(entry.token);
+      if (!child) {
+        child = { token: entry.token, values: [], children: new Map() };
+        node.children.set(entry.token, child);
+      }
+      child.values.push(point.goodness);
+      node = child;
+      level += 1;
+    }
+  }
+
+  const linkFrom = (token: string, values: number[]): NeighborLink => {
+    const ref = byToken.get(token);
+    const summary = stat(values);
+    return {
+      token,
+      label: ref?.label ?? token,
+      role: ref?.role ?? "other",
+      count: values.length,
+      stat: summary,
+      delta: summary.median - analysis.baseline,
+    };
+  };
+
+  const predecessors = [...predValues.entries()]
+    .map(([token, values]) => linkFrom(token, values))
+    .filter((link) => link.count >= minCount)
+    .sort((a, b) => b.count - a.count || b.stat.median - a.stat.median)
+    .slice(0, maxPredecessors);
+
+  const convert = (trie: TrieNode): FlowNode[] =>
+    [...trie.children.values()]
+      .filter((child) => child.values.length >= minCount)
+      .sort((a, b) => b.values.length - a.values.length)
+      .slice(0, maxPerLevel)
+      .map((child) => {
+        const link = linkFrom(child.token, child.values);
+        return { ...link, children: convert(child) };
+      });
+
+  return {
+    token: focus.token,
+    label: focus.label,
+    role: focus.role,
+    self: stat(selfValues),
+    predecessors,
+    successors: convert(root),
     baseline: analysis.baseline,
     goodnessExtent: analysis.goodnessExtent,
   };
