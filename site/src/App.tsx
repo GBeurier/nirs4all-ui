@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import * as componentsExports from "../../src/components/index.js";
 import * as vizExports from "../../src/viz/index.js";
 import * as dagExports from "../../src/dag/index.js";
+import * as chainsExports from "../../src/chains/index.js";
 import * as labExports from "../../src/lab/index.js";
 import * as datasetBuilderExports from "../../src/datasetBuilder/index.js";
 import * as scoreExports from "../../src/score/index.js";
@@ -16,15 +17,24 @@ import { NIRS4ALL_CSS_TOKENS, NIRS4ALL_STYLE_ASSETS, getNirs4allCssVariable } fr
 import { DatasetBuilder } from "../../src/datasetBuilder/index.js";
 import type { DatasetSource } from "../../src/datasetBuilder/index.js";
 import { DagGraphView } from "../../src/dag/index.js";
+import { ChainExplorer } from "../../src/chains/index.js";
 import packageJson from "../../package.json" with { type: "json" };
 import { CANONICAL_SITE_URL, PUBLICATION_ASSETS } from "./showcaseMetadata.js";
-import { DEMO_DAG_GRAPH, SHOWCASE_CATEGORIES, SHOWCASE_ENTRIES, type ShowcaseEntry } from "./showcaseData.js";
+import {
+  CHAIN_CORPUS,
+  CHAIN_METRIC,
+  DEMO_DAG_GRAPH,
+  SHOWCASE_CATEGORIES,
+  SHOWCASE_ENTRIES,
+  type ShowcaseEntry,
+} from "./showcaseData.js";
 
 const packageVersion = packageJson.version;
 
 const EXPORT_SURFACE = [
   { entry: "nirs4all-ui/viz", title: "Scientific charts", symbols: Object.keys(vizExports) },
   { entry: "nirs4all-ui/dag", title: "Compiled-graph explorer", symbols: Object.keys(dagExports) },
+  { entry: "nirs4all-ui/chains", title: "Chain-effect explorer", symbols: Object.keys(chainsExports) },
   { entry: "nirs4all-ui/components", title: "Presentational components", symbols: Object.keys(componentsExports) },
   { entry: "nirs4all-ui/lab", title: "Quality / lab UI", symbols: Object.keys(labExports) },
   { entry: "nirs4all-ui/datasetBuilder", title: "Dataset builder", symbols: Object.keys(datasetBuilderExports) },
@@ -44,6 +54,7 @@ const ASSET_REFERENCES = [
   "assets/styles/nirs4all-default.css",
   "assets/viz.css",
   "assets/dag.css",
+  "assets/chains.css",
   "assets/datasetBuilder.css",
   "assets/conformal.css",
   "assets/theme.css",
@@ -250,6 +261,7 @@ export function App() {
           <a href="#showroom">Showroom</a>
           <a href="#builder">Builder</a>
           <a href="#graph">Graph</a>
+          <a href="#chains">Chains</a>
           <a href="#brand">Brand</a>
           <a href="#surface">API</a>
           <a className="topbar-repo" href="https://github.com/GBeurier/nirs4all-ui">GitHub</a>
@@ -362,6 +374,28 @@ export function App() {
           initialCollapseDepth={0}
           title="stacking-grid · compiled plan"
         />
+      </Section>
+
+      <Section
+        id="chains"
+        kicker="chains · effect explorer"
+        title={<>The <em className="n4-gradient-text">chain-effect</em> explorer</>}
+        lead={
+          <>
+            Analyze <em>hundreds</em> of scored pipelines in one component to isolate the influence of each node.
+            Scores are made comparable across heterogeneous datasets by per-dataset normalization (rank / z), so you can
+            ask: is <code>SavGol</code> better than <code>MSC</code>? Is a step better early, mid, or late in the chain?
+            Is <code>MSC</code> better <em>after</em> <code>SNV</code>? Pick a lens, filter by source / dataset / role,
+            and click a node to isolate its with/without distribution shift, its position profile, the predecessor ×
+            successor order matrix, and its best contexts. The <em>authoritative</em> analysis is a `dag-ml` coordination
+            concern surfaced through <code>parseChainEffectAnalysis()</code>; this demo renders the descriptive{" "}
+            <code>fromScoredChains()</code> adapter over ~{CHAIN_CORPUS.length} synthetic chains. Ships with{" "}
+            <code>nirs4all-ui/assets/chains.css</code>.
+          </>
+        }
+        variant="paper"
+      >
+        <ChainExplorer chains={CHAIN_CORPUS} metric={CHAIN_METRIC} width={1160} title="Preprocessing & model influence · nRMSE" />
       </Section>
 
       <Section

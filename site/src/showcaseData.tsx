@@ -34,6 +34,19 @@ import {
   ScoreCardTree,
   ConformalPredictionTree,
 } from "../../src/components/index.js";
+import {
+  ChainExplorer,
+  ChainScoreBeeswarm,
+  NodeEffectForest,
+  PositionEffectHeatmap,
+  SequenceEffectHeatmap,
+  fromScoredChains,
+  positionMatrix,
+  sequenceMatrix,
+  type ChainMetric,
+  type ChainStep,
+  type ScoredChain,
+} from "../../src/chains/index.js";
 import type { ConformalStripSample } from "../../src/viz/index.js";
 import type {
   ConformalGuaranteeView,
@@ -416,6 +429,121 @@ const CONFORMAL_GUARANTEE: ConformalGuaranteeView = {
   unit: "g/kg",
 };
 
+// --- chain-effect explorer fixtures (seeded → deterministic static render) ---
+//
+// A synthetic corpus of ~300 scored pipelines across 4 datasets and 3 sources,
+// with *injected* effects so the explorer visibly recovers them: SNV beats MSC,
+// SavGol helps, MSC is better *after* SNV, derivatives are better *late*, PLS
+// beats tree models, and fusion beats single-modality. nRMSE, lower is better.
+
+export const CHAIN_METRIC: ChainMetric = { key: "nrmse", label: "nRMSE", lowerIsBetter: true };
+
+const PREPROC: Record<string, { label: string; effect: number }> = {
+  snv: { label: "SNV", effect: -0.030 },
+  msc: { label: "MSC", effect: -0.015 },
+  sg1: { label: "SavGol-1", effect: -0.025 },
+  sg2: { label: "SavGol-2", effect: -0.020 },
+  detrend: { label: "Detrend", effect: -0.010 },
+  deriv1: { label: "Deriv-1", effect: -0.018 },
+  deriv2: { label: "Deriv-2", effect: -0.012 },
+  minmax: { label: "MinMax", effect: 0.000 },
+};
+
+const MODELS: Record<string, { label: string; effect: number }> = {
+  pls: { label: "PLS", effect: -0.022 },
+  ridge: { label: "Ridge", effect: -0.015 },
+  rf: { label: "RandomForest", effect: 0.010 },
+  xgb: { label: "XGBoost", effect: 0.004 },
+  mlp: { label: "MLP", effect: 0.020 },
+};
+
+const SPLITS: Record<string, { label: string; effect: number }> = {
+  split_kfold: { label: "KFold", effect: 0.0 },
+  split_repeated: { label: "Rep-KFold", effect: -0.004 },
+  split_shuffle: { label: "Shuffle", effect: 0.004 },
+};
+
+const CHAIN_DATASETS: Record<string, number> = {
+  wheat_protein: 0.10,
+  soil_carbon: 0.29,
+  forage_ndf: 0.18,
+  corn_moisture: 0.08,
+};
+
+const CHAIN_SOURCES: Record<string, number> = { fusion: -0.010, nir: 0.0, mir: 0.012 };
+
+const PRE_SEQUENCES: string[][] = [
+  ["snv"],
+  ["msc"],
+  ["sg1"],
+  ["sg2"],
+  ["detrend"],
+  ["deriv1"],
+  ["minmax"],
+  ["snv", "sg1"],
+  ["snv", "msc"],
+  ["msc", "snv"],
+  ["snv", "deriv1"],
+  ["msc", "sg1"],
+  ["detrend", "snv"],
+  ["minmax", "sg1"],
+  ["sg1", "deriv1"],
+  ["snv", "sg1", "deriv1"],
+  ["msc", "detrend", "deriv2"],
+  ["snv", "minmax", "sg2"],
+];
+
+function buildChainCorpus(): ScoredChain[] {
+  const rng = mulberry32(0x0d9488);
+  const chains: ScoredChain[] = [];
+  const datasetNames = Object.keys(CHAIN_DATASETS);
+  const sourceNames = Object.keys(CHAIN_SOURCES);
+  const modelNames = Object.keys(MODELS);
+  const splitNames = Object.keys(SPLITS);
+  let counter = 0;
+
+  for (const dataset of datasetNames) {
+    for (const source of sourceNames) {
+      for (const seq of PRE_SEQUENCES) {
+        for (const model of modelNames) {
+          if (rng() > 0.32) continue; // sample the grid down to ~300 chains
+          counter += 1;
+          const split = splitNames[Math.floor(rng() * splitNames.length)] ?? "split_kfold";
+
+          let score = CHAIN_DATASETS[dataset]! + CHAIN_SOURCES[source]! + SPLITS[split]!.effect + MODELS[model]!.effect;
+          seq.forEach((token, index) => {
+            score += PREPROC[token]!.effect;
+            // position effects: SNV better early, derivatives better late
+            const isLast = index === seq.length - 1;
+            if (token === "snv" && index === 0) score -= 0.008;
+            if ((token === "deriv1" || token === "deriv2") && isLast) score -= 0.010;
+          });
+          // order interaction: MSC after SNV is better; SNV after MSC is worse
+          const iSnv = seq.indexOf("snv");
+          const iMsc = seq.indexOf("msc");
+          if (iSnv >= 0 && iMsc >= 0) score += iSnv < iMsc ? -0.012 : 0.006;
+
+          score += (rng() - 0.5) * 0.022; // heteroscedastic-ish noise
+          score = Math.max(0.02, score);
+
+          const steps: ChainStep[] = [
+            { token: split, label: SPLITS[split]!.label, role: "split" },
+            ...seq.map((token) => ({ token, label: PREPROC[token]!.label, role: "preprocess" as const })),
+            { token: model, label: MODELS[model]!.label, role: "model" },
+          ];
+          chains.push({ id: `chain_${counter}`, steps, score, dataset, source });
+        }
+      }
+    }
+  }
+  return chains;
+}
+
+export const CHAIN_CORPUS: ScoredChain[] = buildChainCorpus();
+const CHAIN_ANALYSIS = fromScoredChains(CHAIN_CORPUS, { metric: CHAIN_METRIC, lens: "rankByDataset" });
+const CHAIN_POSITION = positionMatrix(CHAIN_ANALYSIS, { mode: "phase", minCount: 4 });
+const CHAIN_SEQUENCE = sequenceMatrix(CHAIN_ANALYSIS, { minCount: 4, maxTokens: 6 });
+
 export const SHOWCASE_CATEGORIES = [
   "Spectra & datasets",
   "Model diagnostics",
@@ -423,6 +551,7 @@ export const SHOWCASE_CATEGORIES = [
   "Classification",
   "Explainability",
   "Pipeline & scores",
+  "Chain analysis",
   "Results & scores",
   "Runtime & status",
   "Quality / Lab",
@@ -750,6 +879,77 @@ export const SHOWCASE_ENTRIES: readonly ShowcaseEntry[] = [
   columns={3}
 />`,
     render: () => <ScoreSummary stats={SCORE_STATS} columns={3} title="Run scores" />,
+  },
+  {
+    id: "node-effect-forest",
+    name: "NodeEffectForest",
+    category: "Chain analysis",
+    entry: "nirs4all-ui/chains",
+    propsInterface: "NodeEffectForestProps",
+    mirrors: "dag-ml ChainEffectAnalysis artifact (planned)",
+    summary:
+      "Forest / caterpillar plot ranking every pipeline node by its influence — a median dot colored by effect vs the corpus baseline (cool = better, warm = worse), an IQR bar, and Δ-vs-without. Clickable, so it doubles as the node selector.",
+    hostOwned: ["scored-chain corpus", "metric & direction", "authoritative normalization (dag-ml)"],
+    importLine: 'import { NodeEffectForest, fromScoredChains } from "nirs4all-ui/chains";',
+    code: `const analysis = fromScoredChains(chains, { metric, lens: "rankByDataset" });
+<NodeEffectForest analysis={analysis} onSelectToken={setToken} />`,
+    render: () => <NodeEffectForest analysis={CHAIN_ANALYSIS} maxRows={8} width={460} title="Node influence (rank-normalized)" />,
+  },
+  {
+    id: "position-effect-heatmap",
+    name: "PositionEffectHeatmap",
+    category: "Chain analysis",
+    entry: "nirs4all-ui/chains",
+    propsInterface: "PositionEffectHeatmapProps",
+    mirrors: "dag-ml ChainEffectAnalysis artifact (planned)",
+    summary:
+      "Node × position heatmap — is a step better early, mid, or late (1st vs 2nd)? Each cell is the median goodness of chains with that node in that position bucket, on a diverging ramp pivoted at the baseline, count-gated so noise drops out.",
+    hostOwned: ["position mode (phase / absolute)", "min-count gate", "transform-stack roles"],
+    importLine: 'import { PositionEffectHeatmap, positionMatrix } from "nirs4all-ui/chains";',
+    code: `<PositionEffectHeatmap matrix={positionMatrix(analysis, { mode: "phase" })} />`,
+    render: () => <PositionEffectHeatmap matrix={CHAIN_POSITION} width={460} title="Effect by position" />,
+  },
+  {
+    id: "sequence-effect-heatmap",
+    name: "SequenceEffectHeatmap",
+    category: "Chain analysis",
+    entry: "nirs4all-ui/chains",
+    propsInterface: "SequenceEffectHeatmapProps",
+    mirrors: "dag-ml ChainEffectAnalysis artifact (planned)",
+    summary:
+      "Predecessor × successor order matrix — answers 'is MSC better after SNV?'. Read a cell as row → column: the median goodness of chains where the row node precedes the column node, diverging around the baseline.",
+    hostOwned: ["adjacent vs anywhere-before", "min-count gate", "token subset"],
+    importLine: 'import { SequenceEffectHeatmap, sequenceMatrix } from "nirs4all-ui/chains";',
+    code: `<SequenceEffectHeatmap matrix={sequenceMatrix(analysis, { maxTokens: 6 })} />`,
+    render: () => <SequenceEffectHeatmap matrix={CHAIN_SEQUENCE} width={440} title="Effect by order" />,
+  },
+  {
+    id: "chain-score-beeswarm",
+    name: "ChainScoreBeeswarm",
+    category: "Chain analysis",
+    entry: "nirs4all-ui/chains",
+    propsInterface: "ChainScoreBeeswarmProps",
+    mirrors: "dag-ml ChainEffectAnalysis artifact (planned)",
+    summary:
+      "Two-lane distribution comparison — every chain is a dot on a shared goodness axis, split into a with-node lane and a without lane, each with a median line and IQR band. Shows the whole distribution shift, not just the point estimate.",
+    hostOwned: ["focus node", "subsample cap", "lane colors"],
+    importLine: 'import { ChainScoreBeeswarm } from "nirs4all-ui/chains";',
+    code: `<ChainScoreBeeswarm analysis={analysis} focusToken="snv" />`,
+    render: () => <ChainScoreBeeswarm analysis={CHAIN_ANALYSIS} focusToken="snv" width={460} height={210} />,
+  },
+  {
+    id: "chain-explorer",
+    name: "ChainExplorer",
+    category: "Chain analysis",
+    entry: "nirs4all-ui/chains",
+    propsInterface: "ChainExplorerProps",
+    mirrors: "dag-ml ChainEffectAnalysis artifact (planned)",
+    summary:
+      "The flagship — analyze hundreds of scored chains in one component. Pick a normalization lens, filter by source / dataset / role, and click a node to isolate its distribution shift, position profile, order matrix, and best contexts. Local UI state only.",
+    hostOwned: ["scored-chain corpus (or parsed dag-ml artifact)", "metric", "role/source/dataset universe"],
+    importLine: 'import { ChainExplorer } from "nirs4all-ui/chains";',
+    code: `<ChainExplorer chains={chains} metric={{ key: "nrmse", label: "nRMSE", lowerIsBetter: true }} />`,
+    render: () => <ChainExplorer chains={CHAIN_CORPUS} metric={CHAIN_METRIC} width={560} />,
   },
   {
     id: "metric-value-badge",
