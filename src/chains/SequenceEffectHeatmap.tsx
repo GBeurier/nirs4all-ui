@@ -203,10 +203,10 @@ export function SequenceEffectHeatmap({
           />
         );
       })}
-      <text className="n4chains-legend-cap" x={round(legendX + legendW / 2)} y={gridTop - 4} textAnchor="middle">
+      <text className="n4chains-legend-cap" x={round(legendX + legendW / 2)} y={gridTop - 4} textAnchor="middle" fill="#0f766e">
         better
       </text>
-      <text className="n4chains-legend-cap" x={round(legendX + legendW / 2)} y={gridBottom + 12} textAnchor="middle">
+      <text className="n4chains-legend-cap" x={round(legendX + legendW / 2)} y={gridBottom + 12} textAnchor="middle" fill="#b45309">
         worse
       </text>
     </svg>

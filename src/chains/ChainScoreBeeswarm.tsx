@@ -157,7 +157,7 @@ export function ChainScoreBeeswarm({
                 className="n4chains-dot"
                 cx={round(xScale(point.goodness))}
                 cy={round(laneMid - dotBand / 2 + jitter(point.id) * dotBand)}
-                r={2.4}
+                r={2.2}
                 fill={lane.color}
               />
             ))}
