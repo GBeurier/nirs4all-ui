@@ -18,6 +18,8 @@ import type {
   ChainStepRole,
   ChainTokenRef,
   ContextRow,
+  NeighborLink,
+  NodeNeighborhood,
   PositionBucket,
   PositionMatrix,
   PositionMode,
@@ -341,4 +343,81 @@ export function tokenContexts(
   };
 
   return { token: focusToken, predecessors: build(predValues), successors: build(succValues) };
+}
+
+// --- neighbourhood (radial navigator) --------------------------------------
+
+export interface NodeNeighborsOptions {
+  /** Neighbour roles to include. Default: every role present. */
+  roles?: readonly ChainStepRole[] | undefined;
+  /** Minimum shared chains for a neighbour to appear. Default `1`. */
+  minCount?: number;
+  /** Keep the top-N neighbours by link weight; the rest fold into "others". Default `9`. */
+  maxNeighbors?: number;
+}
+
+/**
+ * Co-occurrence neighbourhood of a focus node: every token that shares a chain
+ * with it, weighted by the number of shared chains and scored by the goodness
+ * of those shared chains (the *combined* effect). Drives {@link ChainNodeOrbit}.
+ * Returns `null` when the focus token is unknown.
+ */
+export function nodeNeighbors(
+  analysis: ChainEffectAnalysis,
+  focusToken: string,
+  options: NodeNeighborsOptions = {},
+): NodeNeighborhood | null {
+  const focus = analysis.tokens.find((token) => token.token === focusToken);
+  if (!focus) return null;
+
+  const roleSet = options.roles ? new Set(options.roles) : null;
+  const minCount = Math.max(1, Math.trunc(options.minCount ?? 1));
+  const maxNeighbors = Math.max(1, Math.trunc(options.maxNeighbors ?? 9));
+
+  const selfValues: number[] = [];
+  const perNeighbor = new Map<string, number[]>();
+  for (const point of analysis.points) {
+    if (!point.tokens.includes(focusToken)) continue;
+    selfValues.push(point.goodness);
+    for (const ref of point.orderedTokens) {
+      if (ref.token === focusToken) continue;
+      if (roleSet && !roleSet.has(ref.role)) continue;
+      const bucket = perNeighbor.get(ref.token);
+      if (bucket) bucket.push(point.goodness);
+      else perNeighbor.set(ref.token, [point.goodness]);
+    }
+  }
+
+  const byToken = new Map(analysis.tokens.map((token) => [token.token, token]));
+  const links: NeighborLink[] = [];
+  for (const [token, values] of perNeighbor) {
+    if (values.length < minCount) continue;
+    const ref = byToken.get(token);
+    const summary = stat(values);
+    links.push({
+      token,
+      label: ref?.label ?? token,
+      role: ref?.role ?? "other",
+      count: values.length,
+      stat: summary,
+      delta: summary.median - analysis.baseline,
+    });
+  }
+  links.sort((a, b) => b.count - a.count || b.stat.median - a.stat.median);
+
+  const kept = links.slice(0, maxNeighbors);
+  const folded = links.slice(maxNeighbors);
+  const otherWeight = folded.reduce((sum, link) => sum + link.count, 0);
+
+  return {
+    token: focus.token,
+    label: focus.label,
+    role: focus.role,
+    self: stat(selfValues),
+    neighbors: kept,
+    otherCount: folded.length,
+    otherWeight,
+    baseline: analysis.baseline,
+    goodnessExtent: analysis.goodnessExtent,
+  };
 }

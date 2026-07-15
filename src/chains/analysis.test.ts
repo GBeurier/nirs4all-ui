@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildAnalysis, fromScoredChains, positionMatrix, sequenceMatrix, stat, tokenContexts } from "./analysis.js";
+import { buildAnalysis, fromScoredChains, nodeNeighbors, positionMatrix, sequenceMatrix, stat, tokenContexts } from "./analysis.js";
 import { computeChainPoints } from "./normalize.js";
 import type { ChainMetric, ScoredChain } from "./types.js";
 
@@ -112,6 +112,32 @@ describe("sequenceMatrix", () => {
     // SNV→MSC (row snv, col msc) has better goodness than MSC→SNV
     expect(matrix.cells[snvIdx]![mscIdx]!.median).toBeGreaterThan(matrix.cells[mscIdx]![snvIdx]!.median);
     expect(matrix.cells[snvIdx]![snvIdx]).toBeNull();
+  });
+});
+
+describe("nodeNeighbors", () => {
+  it("orbits the co-occurring nodes of a focus, scored by shared-chain goodness", () => {
+    const analysis = fromScoredChains(corpus(), { metric: NRMSE, lens: "rankByDataset" });
+    const orbit = nodeNeighbors(analysis, "snv", { minCount: 1 })!;
+    expect(orbit.token).toBe("snv");
+    const tokens = orbit.neighbors.map((n) => n.token);
+    expect(tokens).toContain("pls");
+    expect(tokens).toContain("rf");
+    expect(tokens).toContain("split_kfold");
+    const pls = orbit.neighbors.find((n) => n.token === "pls")!;
+    const rf = orbit.neighbors.find((n) => n.token === "rf")!;
+    // SNV+PLS chains beat SNV+RF chains
+    expect(pls.stat.median).toBeGreaterThan(rf.stat.median);
+    expect(orbit.self.n).toBeGreaterThan(0);
+    expect(nodeNeighbors(analysis, "does-not-exist")).toBeNull();
+  });
+
+  it("folds neighbours beyond the cap into an others tally", () => {
+    const analysis = fromScoredChains(corpus(), { metric: NRMSE, lens: "rankByDataset" });
+    const orbit = nodeNeighbors(analysis, "snv", { minCount: 1, maxNeighbors: 1 })!;
+    expect(orbit.neighbors.length).toBe(1);
+    expect(orbit.otherCount).toBeGreaterThan(0);
+    expect(orbit.otherWeight).toBeGreaterThan(0);
   });
 });
 

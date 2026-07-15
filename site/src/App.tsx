@@ -17,10 +17,11 @@ import { NIRS4ALL_CSS_TOKENS, NIRS4ALL_STYLE_ASSETS, getNirs4allCssVariable } fr
 import { DatasetBuilder } from "../../src/datasetBuilder/index.js";
 import type { DatasetSource } from "../../src/datasetBuilder/index.js";
 import { DagGraphView } from "../../src/dag/index.js";
-import { ChainExplorer } from "../../src/chains/index.js";
+import { ChainExplorer, ChainNodeOrbit } from "../../src/chains/index.js";
 import packageJson from "../../package.json" with { type: "json" };
 import { CANONICAL_SITE_URL, PUBLICATION_ASSETS } from "./showcaseMetadata.js";
 import {
+  CHAIN_ANALYSIS,
   CHAIN_CORPUS,
   CHAIN_METRIC,
   DEMO_DAG_GRAPH,
@@ -396,6 +397,9 @@ export function App() {
         variant="paper"
       >
         <ChainExplorer chains={CHAIN_CORPUS} metric={CHAIN_METRIC} width={1160} title="Preprocessing & model influence · nRMSE" />
+        <div style={{ marginTop: 32 }}>
+          <ChainNodeOrbit analysis={CHAIN_ANALYSIS} defaultFocusToken="snv" size={520} title="Node orbit · click a wedge to navigate" />
+        </div>
       </Section>
 
       <Section

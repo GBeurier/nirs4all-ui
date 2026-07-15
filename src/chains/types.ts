@@ -184,6 +184,36 @@ export interface TokenContexts {
   successors: readonly ContextRow[];
 }
 
+/** One co-occurring node linked to a focus node (an orbit wedge). */
+export interface NeighborLink {
+  token: string;
+  label: string;
+  role: ChainStepRole;
+  /** Chains containing both the focus and this token — the link weight. */
+  count: number;
+  /** Goodness distribution of those shared chains. */
+  stat: Stat;
+  /** `stat.median − baseline` (the combined effect). */
+  delta: number;
+}
+
+/** A focus node and its co-occurring neighbours — the radial-navigator model. */
+export interface NodeNeighborhood {
+  token: string;
+  label: string;
+  role: ChainStepRole;
+  /** Goodness of every chain containing the focus. */
+  self: Stat;
+  /** Neighbours sorted by link weight desc (capped by `maxNeighbors`). */
+  neighbors: readonly NeighborLink[];
+  /** Neighbour tokens folded out beyond the cap. */
+  otherCount: number;
+  /** Summed link weight of the folded neighbours (the "others" wedge span). */
+  otherWeight: number;
+  baseline: number;
+  goodnessExtent: { min: number; max: number };
+}
+
 /** Human-facing role labels for legends and chips. */
 export const CHAIN_ROLE_LABELS: Readonly<Record<ChainStepRole, string>> = {
   split: "Split / CV",
