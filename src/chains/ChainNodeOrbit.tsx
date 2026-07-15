@@ -4,6 +4,7 @@ import { round } from "../viz/geometry.js";
 import { cx } from "./_cx.js";
 import { nodeFlow } from "./analysis.js";
 import { effectColor, effectTextColor, roleColor } from "./colors.js";
+import { annularSector, labelRotation, polar, START, TAU, treeDepth } from "./radial.js";
 import type { ChainEffectAnalysis, ChainStepRole, FlowNode, NeighborLink } from "./types.js";
 import { CHAIN_LENS_LABELS, CHAIN_ROLE_LABELS } from "./types.js";
 
@@ -27,9 +28,6 @@ export interface ChainNodeOrbitProps {
   roleColors?: Partial<Record<ChainStepRole, string>> | undefined;
 }
 
-const TAU = Math.PI * 2;
-const START = -Math.PI / 2;
-
 interface Wedge {
   key: string;
   token: string;
@@ -45,33 +43,7 @@ interface Wedge {
 
 function fmt(value: number): string {
   if (!Number.isFinite(value)) return "—";
-  if (Math.abs(value) >= 1) return value.toFixed(2);
   return value.toFixed(2);
-}
-
-function polar(cx0: number, cy0: number, r: number, angle: number): [number, number] {
-  return [cx0 + r * Math.cos(angle), cy0 + r * Math.sin(angle)];
-}
-
-function annularSector(cx0: number, cy0: number, rInner: number, rOuter: number, a0: number, a1: number): string {
-  const large = a1 - a0 > Math.PI ? 1 : 0;
-  const [x0o, y0o] = polar(cx0, cy0, rOuter, a0);
-  const [x1o, y1o] = polar(cx0, cy0, rOuter, a1);
-  const [x1i, y1i] = polar(cx0, cy0, rInner, a1);
-  const [x0i, y0i] = polar(cx0, cy0, rInner, a0);
-  return [
-    `M${round(x0o)} ${round(y0o)}`,
-    `A${round(rOuter)} ${round(rOuter)} 0 ${large} 1 ${round(x1o)} ${round(y1o)}`,
-    `L${round(x1i)} ${round(y1i)}`,
-    `A${round(rInner)} ${round(rInner)} 0 ${large} 0 ${round(x0i)} ${round(y0i)}`,
-    "Z",
-  ].join(" ");
-}
-
-function treeDepth(nodes: readonly FlowNode[]): number {
-  let depth = 0;
-  for (const node of nodes) depth = Math.max(depth, 1 + treeDepth(node.children));
-  return depth;
 }
 
 /**
@@ -121,6 +93,11 @@ export function ChainNodeOrbit({
   };
   const back = () => {
     if (path.length > 1) jumpTo(path.length - 2);
+  };
+  const reset = () => {
+    if (path.length === 1 && path[0] === hub) return;
+    setPath([hub]);
+    onFocusChange?.(hub);
   };
 
   if (!flow) {
@@ -244,7 +221,14 @@ export function ChainNodeOrbit({
             );
           })}
         </nav>
-        <span className="n4chains-orbit-caption">{CHAIN_LENS_LABELS[analysis.lens]}</span>
+        <span className="n4chains-orbit-tools">
+          {path.length > 1 ? (
+            <button type="button" className="n4chains-orbit-reset" onClick={reset}>
+              ⟲ reset
+            </button>
+          ) : null}
+          <span className="n4chains-orbit-caption">{CHAIN_LENS_LABELS[analysis.lens]}</span>
+        </span>
       </header>
 
       <svg
@@ -262,9 +246,7 @@ export function ChainNodeOrbit({
           const rMid = (rIn + rOut) / 2;
           const arcLen = (wedge.a1 - wedge.a0) * rMid;
           const [lx, ly] = polar(cx0, cy0, rMid, mid);
-          let deg = (mid * 180) / Math.PI + 90;
-          deg = ((deg % 360) + 360) % 360;
-          if (deg > 90 && deg < 270) deg -= 180;
+          const deg = labelRotation(mid);
           const showLabel = arcLen > 34 && ringW >= 15;
           return (
             <g

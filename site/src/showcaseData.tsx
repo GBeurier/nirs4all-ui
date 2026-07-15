@@ -36,6 +36,7 @@ import {
 } from "../../src/components/index.js";
 import {
   ChainExplorer,
+  ChainNodeHub,
   ChainNodeOrbit,
   ChainScoreBeeswarm,
   NodeEffectForest,
@@ -951,6 +952,20 @@ export const SHOWCASE_ENTRIES: readonly ShowcaseEntry[] = [
     importLine: 'import { ChainNodeOrbit } from "nirs4all-ui/chains";',
     code: `<ChainNodeOrbit analysis={analysis} defaultFocusToken="snv" depth={2} />`,
     render: () => <ChainNodeOrbit analysis={CHAIN_ANALYSIS} defaultFocusToken="snv" size={440} depth={2} />,
+  },
+  {
+    id: "chain-node-hub",
+    name: "ChainNodeHub",
+    category: "Chain analysis",
+    entry: "nirs4all-ui/chains",
+    propsInterface: "ChainNodeHubProps",
+    mirrors: "dag-ml ChainEffectAnalysis artifact (planned)",
+    summary:
+      "The twin of ChainNodeOrbit with the focus on the SECOND ring: the centre is a pie (camembert) of every possible predecessor, a band around it is the focus node, and the outer rings are the ordered successors. Same path-rooted, loop-free navigation (click a slice to prepend, an outer wedge to append), plus a Reset.",
+    hostOwned: ["initial focus (hub)", "outward depth", "role scope"],
+    importLine: 'import { ChainNodeHub } from "nirs4all-ui/chains";',
+    code: `<ChainNodeHub analysis={analysis} defaultFocusToken="snv" depth={2} />`,
+    render: () => <ChainNodeHub analysis={CHAIN_ANALYSIS} defaultFocusToken="snv" size={440} depth={2} />,
   },
   {
     id: "chain-explorer",
