@@ -424,11 +424,128 @@
   color: var(--n4-color-muted, #94a3b8);
 }
 
+/* ============================ node orbit ============================ */
+.n4chains-orbit {
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 14px 16px 12px;
+  border-radius: var(--n4-radius, 12px);
+  border: 1px solid var(--n4-color-border, #e2e8f0);
+  background: var(--n4-color-surface, #ffffff);
+  color: var(--n4-color-text, #0f172a);
+  font-family: var(--n4-font-sans, "Inter", -apple-system, system-ui, sans-serif);
+}
+.n4chains-orbit-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.n4chains-orbit-crumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  min-width: 0;
+}
+.n4chains-crumb-wrap { display: inline-flex; align-items: center; gap: 2px; }
+.n4chains-crumb-sep { color: var(--n4-color-muted, #94a3b8); font-size: 12px; }
+.n4chains-crumb {
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--n4-color-muted, #64748b);
+}
+.n4chains-crumb:hover:not(:disabled) { color: var(--n4-color-primary-hover, #0f766e); background: color-mix(in srgb, var(--n4-color-primary, #0d9488) 8%, transparent); }
+.n4chains-crumb.is-current { color: var(--n4-color-text, #0f172a); font-weight: 700; cursor: default; }
+.n4chains-orbit-caption {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--n4-color-muted, #94a3b8);
+}
+.n4chains-orbit-svg { display: block; width: 100%; height: auto; }
+
+.n4chains-wedge-arc {
+  stroke: var(--n4-color-surface, #ffffff);
+  stroke-width: 2;
+  transition: stroke 120ms ease, stroke-opacity 120ms ease;
+}
+.n4chains-wedge.is-interactive { cursor: pointer; }
+.n4chains-wedge.is-interactive:hover .n4chains-wedge-arc {
+  stroke: color-mix(in srgb, var(--n4-color-text, #0f172a) 45%, transparent);
+}
+.n4chains-wedge.is-interactive:hover .n4chains-wedge-label { fill: var(--n4-color-text, #0f172a); font-weight: 650; }
+.n4chains-wedge:focus-visible { outline: none; }
+.n4chains-wedge:focus-visible .n4chains-wedge-arc { stroke: var(--n4-color-primary, #0d9488); stroke-width: 2.5; }
+.n4chains-wedge-value {
+  font-family: var(--n4-font-mono, "JetBrains Mono", monospace);
+  font-size: 10px;
+  font-weight: 500;
+  pointer-events: none;
+}
+.n4chains-wedge-label {
+  font-size: 10.5px;
+  font-weight: 500;
+  fill: var(--n4-color-text, #0f172a);
+  pointer-events: none;
+}
+.n4chains-wedge-label.is-other { fill: var(--n4-color-muted, #94a3b8); }
+.n4chains-wedge-dot { pointer-events: none; }
+
+.n4chains-orbit-center {
+  stroke: var(--n4-color-surface, #ffffff);
+  stroke-width: 2.5;
+  filter: drop-shadow(0 1px 3px rgba(15, 23, 42, 0.18));
+}
+.n4chains-orbit-center.is-interactive { cursor: pointer; }
+.n4chains-orbit-center.is-interactive:focus-visible { outline: none; stroke: var(--n4-color-primary, #0d9488); }
+.n4chains-center-label { font-size: 12px; font-weight: 700; pointer-events: none; }
+.n4chains-center-value {
+  font-family: var(--n4-font-mono, "JetBrains Mono", monospace);
+  font-size: 9.5px;
+  font-weight: 500;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.n4chains-orbit-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--n4-color-muted, #64748b);
+}
+.n4chains-orbit-role { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; color: var(--n4-color-text, #0f172a); }
+.n4chains-orbit-legend { display: inline-flex; align-items: center; gap: 6px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.n4chains-orbit-ramp {
+  display: inline-block;
+  width: 44px;
+  height: 7px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #0f766e, #ece9e2, #c2620e);
+}
+.n4chains-orbit-note { font-style: italic; color: var(--n4-color-muted, #94a3b8); }
+
 /* ---- dark fallback (when design tokens are not loaded) ---- */
 :root[data-theme="dark"] .n4chains,
 :root[data-theme="dark"] .n4chains-explorer,
+:root[data-theme="dark"] .n4chains-orbit,
 .n4-theme-dark .n4chains,
-.n4-theme-dark .n4chains-explorer {
+.n4-theme-dark .n4chains-explorer,
+.n4-theme-dark .n4chains-orbit {
   --n4-color-border: rgba(255, 255, 255, 0.14);
   --n4-color-muted: rgba(255, 255, 255, 0.62);
   --n4-color-text: rgba(255, 255, 255, 0.92);

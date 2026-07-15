@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { fromScoredChains, positionMatrix, sequenceMatrix } from "./analysis.js";
 import { ChainExplorer } from "./ChainExplorer.js";
+import { ChainNodeOrbit } from "./ChainNodeOrbit.js";
 import { ChainScoreBeeswarm } from "./ChainScoreBeeswarm.js";
 import { NodeEffectForest } from "./NodeEffectForest.js";
 import { PositionEffectHeatmap } from "./PositionEffectHeatmap.js";
@@ -82,6 +83,21 @@ describe("ChainScoreBeeswarm", () => {
     expect(markup).toContain("n4chains-beeswarm");
     expect(markup).toContain("With SNV");
     expect(markup).toContain("Without");
+  });
+});
+
+describe("ChainNodeOrbit", () => {
+  it("renders the focus center, neighbour wedges, breadcrumb and legend", () => {
+    const markup = renderToStaticMarkup(<ChainNodeOrbit analysis={analysis} defaultFocusToken="snv" />);
+    expect(markup).toContain("n4chains-orbit");
+    expect(markup).toContain("n4chains-wedge");
+    expect(markup).toContain("n4chains-orbit-center");
+    expect(markup).toContain("wedge = shared chains");
+  });
+
+  it("renders an empty state for an unknown focus", () => {
+    const markup = renderToStaticMarkup(<ChainNodeOrbit analysis={analysis} defaultFocusToken="nope" />);
+    expect(markup).toContain("No node to orbit");
   });
 });
 

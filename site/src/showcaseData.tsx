@@ -36,6 +36,7 @@ import {
 } from "../../src/components/index.js";
 import {
   ChainExplorer,
+  ChainNodeOrbit,
   ChainScoreBeeswarm,
   NodeEffectForest,
   PositionEffectHeatmap,
@@ -540,7 +541,7 @@ function buildChainCorpus(): ScoredChain[] {
 }
 
 export const CHAIN_CORPUS: ScoredChain[] = buildChainCorpus();
-const CHAIN_ANALYSIS = fromScoredChains(CHAIN_CORPUS, { metric: CHAIN_METRIC, lens: "rankByDataset" });
+export const CHAIN_ANALYSIS = fromScoredChains(CHAIN_CORPUS, { metric: CHAIN_METRIC, lens: "rankByDataset" });
 const CHAIN_POSITION = positionMatrix(CHAIN_ANALYSIS, { mode: "phase", minCount: 4 });
 const CHAIN_SEQUENCE = sequenceMatrix(CHAIN_ANALYSIS, { minCount: 4, maxTokens: 6 });
 
@@ -936,6 +937,20 @@ export const SHOWCASE_ENTRIES: readonly ShowcaseEntry[] = [
     importLine: 'import { ChainScoreBeeswarm } from "nirs4all-ui/chains";',
     code: `<ChainScoreBeeswarm analysis={analysis} focusToken="snv" />`,
     render: () => <ChainScoreBeeswarm analysis={CHAIN_ANALYSIS} focusToken="snv" width={460} height={210} />,
+  },
+  {
+    id: "chain-node-orbit",
+    name: "ChainNodeOrbit",
+    category: "Chain analysis",
+    entry: "nirs4all-ui/chains",
+    propsInterface: "ChainNodeOrbitProps",
+    mirrors: "dag-ml ChainEffectAnalysis artifact (planned)",
+    summary:
+      "A foldable radial navigator: a focus node at the centre, its co-occurring nodes orbiting as wedges sized by shared chains and colored by the combined effect (teal = better, amber = worse). Click a wedge to re-centre and unfold its neighbourhood; the breadcrumb walks back.",
+    hostOwned: ["initial focus (hub)", "neighbour cap", "role scope"],
+    importLine: 'import { ChainNodeOrbit } from "nirs4all-ui/chains";',
+    code: `<ChainNodeOrbit analysis={analysis} defaultFocusToken="snv" />`,
+    render: () => <ChainNodeOrbit analysis={CHAIN_ANALYSIS} defaultFocusToken="snv" size={440} />,
   },
   {
     id: "chain-explorer",

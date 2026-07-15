@@ -36,10 +36,12 @@ export {
   positionMatrix,
   sequenceMatrix,
   tokenContexts,
+  nodeNeighbors,
   type BuildAnalysisMeta,
   type PositionMatrixOptions,
   type SequenceMatrixOptions,
   type TokenContextsOptions,
+  type NodeNeighborsOptions,
 } from "./analysis.js";
 
 // --- serialized dag-ml artifact seam ---
@@ -62,5 +64,6 @@ export { PositionEffectHeatmap, type PositionEffectHeatmapProps } from "./Positi
 export { SequenceEffectHeatmap, type SequenceEffectHeatmapProps } from "./SequenceEffectHeatmap.js";
 export { ChainScoreBeeswarm, type ChainScoreBeeswarmProps } from "./ChainScoreBeeswarm.js";
 
-// --- the interactive explorer ---
+// --- the interactive explorers ---
 export { ChainExplorer, type ChainExplorerProps } from "./ChainExplorer.js";
+export { ChainNodeOrbit, type ChainNodeOrbitProps } from "./ChainNodeOrbit.js";
