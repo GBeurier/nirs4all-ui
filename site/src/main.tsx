@@ -5,6 +5,7 @@ import { App } from "./App.js";
 import "../../assets/theme.css";
 import "../../assets/viz.css";
 import "../../assets/dag.css";
+import "../../assets/chains.css";
 import "../../assets/datasetBuilder.css";
 import "../../assets/conformal.css";
 import "./styles.css";

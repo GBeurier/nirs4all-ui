@@ -13,8 +13,16 @@
  */
 
 import { clamp } from "../viz/geometry.js";
-import { divergingColor, N4_VIZ_COLORS } from "../viz/theme.js";
+import { N4_VIZ_COLORS, rampAt } from "../viz/theme.js";
 import type { ChainStepRole } from "./types.js";
+
+/**
+ * Chains-local diverging ramp: teal (better) → warm neutral → burnt amber
+ * (worse). Stays inside the nirs4all teal system (unlike the blue↔red SHAP
+ * ramp) and is a CVD-safe blue-green/orange pair; the neutral midpoint matches
+ * the warm surface, and every cell also prints its value (redundant encoding).
+ */
+const CHAIN_DIVERGING_STOPS = ["#0f766e", "#ece9e2", "#c2620e"] as const;
 
 export const CHAIN_ROLE_COLORS: Readonly<Record<ChainStepRole, string>> = {
   split: N4_VIZ_COLORS.indigo,
@@ -40,9 +48,9 @@ export function effectColor(value: number, baseline: number, halfRange: number):
   if (!Number.isFinite(value)) return "transparent";
   const span = halfRange > 0 ? halfRange : 1;
   const delta = value - baseline;
-  // divergingColor: t=0 → blue (better), t=0.5 → gray, t=1 → red (worse)
+  // t=0 → teal (better), t=0.5 → neutral, t=1 → amber (worse)
   const t = clamp(0.5 - (0.5 * delta) / span, 0, 1);
-  return divergingColor(t);
+  return rampAt(CHAIN_DIVERGING_STOPS, t);
 }
 
 /** Ink for text drawn on top of an {@link effectColor} fill. */

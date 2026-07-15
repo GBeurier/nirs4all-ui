@@ -56,9 +56,9 @@ export function PositionEffectHeatmap({
   const cols = matrix.buckets;
   const resolvedHeight = height ?? Math.max(150, rows.length * 34 + 66);
 
-  const padLeft = 150;
+  const padLeft = 104;
   const padTop = 40;
-  const padRight = 60;
+  const padRight = 44;
   const padBottom = 26;
   const gridLeft = padLeft;
   const gridRight = width - padRight;
@@ -114,7 +114,7 @@ export function PositionEffectHeatmap({
                 textAnchor="middle"
                 fill={effectTextColor(cell!.median, matrix.baseline, halfRange)}
               >
-                n={cell!.n}
+                {cell!.n}
               </text>
             ) : null}
           </>
@@ -133,7 +133,7 @@ export function PositionEffectHeatmap({
     >
       <title>{title}</title>
       {hideTitle ? null : (
-        <text className="n4chains-title" x={round(padLeft - 138)} y={16} textAnchor="start">
+        <text className="n4chains-title" x={8} y={16} textAnchor="start">
           {title}
         </text>
       )}
@@ -195,10 +195,10 @@ export function PositionEffectHeatmap({
           />
         );
       })}
-      <text className="n4chains-legend-cap" x={round(legendX + legendW / 2)} y={gridTop - 4} textAnchor="middle">
+      <text className="n4chains-legend-cap" x={round(legendX + legendW / 2)} y={gridTop - 4} textAnchor="middle" fill="#0f766e">
         better
       </text>
-      <text className="n4chains-legend-cap" x={round(legendX + legendW / 2)} y={gridBottom + 12} textAnchor="middle">
+      <text className="n4chains-legend-cap" x={round(legendX + legendW / 2)} y={gridBottom + 12} textAnchor="middle" fill="#b45309">
         worse
       </text>
 
