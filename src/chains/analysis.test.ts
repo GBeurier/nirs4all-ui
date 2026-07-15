@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildAnalysis, fromScoredChains, nodeNeighbors, positionMatrix, sequenceMatrix, stat, tokenContexts } from "./analysis.js";
+import { buildAnalysis, fromScoredChains, nodeFlow, nodeNeighbors, positionMatrix, sequenceMatrix, stat, tokenContexts } from "./analysis.js";
 import { computeChainPoints } from "./normalize.js";
 import type { ChainMetric, ScoredChain } from "./types.js";
 
@@ -138,6 +138,27 @@ describe("nodeNeighbors", () => {
     expect(orbit.neighbors.length).toBe(1);
     expect(orbit.otherCount).toBeGreaterThan(0);
     expect(orbit.otherWeight).toBeGreaterThan(0);
+  });
+});
+
+describe("nodeFlow", () => {
+  it("splits a focus into predecessors (inner) and an ordered successor tree (outer)", () => {
+    const analysis = fromScoredChains(corpus(), { metric: NRMSE, lens: "rankByDataset" });
+    // corpus chains are split_kfold → {snv|msc} → {pls|rf}; focus on the preprocess node
+    const flow = nodeFlow(analysis, "snv", { minCount: 1, depth: 2 })!;
+    expect(flow.token).toBe("snv");
+    // split_kfold precedes snv
+    expect(flow.predecessors.map((p) => p.token)).toContain("split_kfold");
+    // models follow snv → appear in the successor tree, and NOT among predecessors
+    const succTokens = flow.successors.map((s) => s.token);
+    expect(succTokens).toContain("pls");
+    expect(succTokens).toContain("rf");
+    expect(flow.predecessors.map((p) => p.token)).not.toContain("pls");
+    // depth is bounded
+    const treeDepth = (nodes: typeof flow.successors): number =>
+      nodes.length ? 1 + Math.max(...nodes.map((n) => treeDepth(n.children))) : 0;
+    expect(treeDepth(flow.successors)).toBeLessThanOrEqual(2);
+    expect(nodeFlow(analysis, "unknown")).toBeNull();
   });
 });
 

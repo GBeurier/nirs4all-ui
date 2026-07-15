@@ -946,11 +946,11 @@ export const SHOWCASE_ENTRIES: readonly ShowcaseEntry[] = [
     propsInterface: "ChainNodeOrbitProps",
     mirrors: "dag-ml ChainEffectAnalysis artifact (planned)",
     summary:
-      "A foldable radial navigator: a focus node at the centre, its co-occurring nodes orbiting as wedges sized by shared chains and colored by the combined effect (teal = better, amber = worse). Click a wedge to re-centre and unfold its neighbourhood; the breadcrumb walks back.",
-    hostOwned: ["initial focus (hub)", "neighbour cap", "role scope"],
+      "A foldable multi-ring sunburst: a focus node at the centre, an inner ring of what precedes it, and 2–3 outer rings of the real ordered continuations that follow — a whole bounded chain at a glance (no clicking into infinity). Wedges are sized by chain count and colored by the combined effect (teal = better, amber = worse). Click any wedge to re-centre.",
+    hostOwned: ["initial focus (hub)", "outward depth", "role scope"],
     importLine: 'import { ChainNodeOrbit } from "nirs4all-ui/chains";',
-    code: `<ChainNodeOrbit analysis={analysis} defaultFocusToken="snv" />`,
-    render: () => <ChainNodeOrbit analysis={CHAIN_ANALYSIS} defaultFocusToken="snv" size={440} />,
+    code: `<ChainNodeOrbit analysis={analysis} defaultFocusToken="snv" depth={2} />`,
+    render: () => <ChainNodeOrbit analysis={CHAIN_ANALYSIS} defaultFocusToken="snv" size={440} depth={2} />,
   },
   {
     id: "chain-explorer",
