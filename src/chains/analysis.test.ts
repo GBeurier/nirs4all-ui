@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { buildAnalysis, fromScoredChains, nodeFlow, nodeNeighbors, positionMatrix, sequenceMatrix, stat, tokenContexts } from "./analysis.js";
 import { computeChainPoints } from "./normalize.js";
-import type { ChainMetric, ScoredChain } from "./types.js";
+import type { ChainMetric, FlowNode, ScoredChain } from "./types.js";
 
 const NRMSE: ChainMetric = { key: "nrmse", label: "nRMSE", lowerIsBetter: true };
 
@@ -159,6 +159,29 @@ describe("nodeFlow", () => {
       nodes.length ? 1 + Math.max(...nodes.map((n) => treeDepth(n.children))) : 0;
     expect(treeDepth(flow.successors)).toBeLessThanOrEqual(2);
     expect(nodeFlow(analysis, "unknown")).toBeNull();
+  });
+
+  it("roots on the whole ordered path — a used node never reappears (no loops)", () => {
+    const pre = (token: string) => ({ token, role: "preprocess" as const });
+    const model = (token: string) => ({ token, role: "model" as const });
+    const chains: ScoredChain[] = [
+      { id: "1", dataset: "d", score: 0.10, steps: [pre("snv"), pre("sg1"), model("pls")] },
+      { id: "2", dataset: "d", score: 0.20, steps: [pre("snv"), pre("msc"), model("pls")] },
+      { id: "3", dataset: "d", score: 0.15, steps: [pre("msc"), pre("snv"), model("rf")] },
+    ];
+    const a = fromScoredChains(chains, { metric: NRMSE, lens: "raw" });
+    // directly after SNV: sg1 (chain 1), msc (chain 2), rf (chain 3)
+    const one = nodeFlow(a, "snv", { minCount: 1 })!;
+    expect(one.successors.map((n) => n.token).sort()).toEqual(["msc", "rf", "sg1"]);
+    // the ORDERED path [snv, sg1] matches only chain 1 → next is pls; snv/sg1 cannot recur
+    const two = nodeFlow(a, ["snv", "sg1"], { minCount: 1 })!;
+    const tokens = new Set<string>();
+    const collect = (nodes: readonly FlowNode[]) => nodes.forEach((n) => { tokens.add(n.token); collect(n.children); });
+    collect(two.successors);
+    expect(tokens.has("pls")).toBe(true);
+    expect(tokens.has("snv")).toBe(false);
+    expect(tokens.has("sg1")).toBe(false);
+    expect(two.self.n).toBe(1);
   });
 });
 

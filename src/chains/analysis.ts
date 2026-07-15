@@ -446,6 +446,27 @@ interface TrieNode {
 }
 
 /**
+ * If `path` occurs as an ordered subsequence of `orderedTokens`, return the
+ * indices of its first and last matched tokens; otherwise `null`.
+ */
+function pathSpan(
+  orderedTokens: readonly ChainTokenRef[],
+  path: readonly string[],
+): { first: number; last: number } | null {
+  let pi = 0;
+  let first = -1;
+  let last = -1;
+  for (let i = 0; i < orderedTokens.length && pi < path.length; i += 1) {
+    if (orderedTokens[i]!.token === path[pi]) {
+      if (pi === 0) first = i;
+      last = i;
+      pi += 1;
+    }
+  }
+  return pi === path.length ? { first, last } : null;
+}
+
+/**
  * Directional flow around a focus node: the predecessors that lead into it (one
  * inner ring) and the *real ordered continuations* that follow it, expanded as
  * a bounded successor tree (each path `focus → a → b` is an actual chain
@@ -453,9 +474,16 @@ interface TrieNode {
  * multi-ring {@link ChainNodeOrbit} sunburst; returns `null` for an unknown
  * focus.
  */
-export function nodeFlow(analysis: ChainEffectAnalysis, focusToken: string, options: NodeFlowOptions = {}): NodeFlow | null {
-  const focus = analysis.tokens.find((token) => token.token === focusToken);
-  if (!focus) return null;
+export function nodeFlow(
+  analysis: ChainEffectAnalysis,
+  focus: string | readonly string[],
+  options: NodeFlowOptions = {},
+): NodeFlow | null {
+  const path = typeof focus === "string" ? [focus] : focus.slice();
+  if (path.length === 0) return null;
+  const headToken = path[path.length - 1]!;
+  const head = analysis.tokens.find((token) => token.token === headToken);
+  if (!head) return null;
 
   const roleSet = options.roles ? new Set(options.roles) : null;
   const minCount = Math.max(1, Math.trunc(options.minCount ?? 1));
@@ -469,11 +497,11 @@ export function nodeFlow(analysis: ChainEffectAnalysis, focusToken: string, opti
   const root: TrieNode = { token: "", values: [], children: new Map() };
 
   for (const point of analysis.points) {
-    const focusIndex = point.orderedTokens.findIndex((entry) => entry.token === focusToken);
-    if (focusIndex < 0) continue;
+    const span = pathSpan(point.orderedTokens, path);
+    if (!span) continue;
     selfValues.push(point.goodness);
 
-    for (let i = 0; i < focusIndex; i += 1) {
+    for (let i = 0; i < span.first; i += 1) {
       const entry = point.orderedTokens[i]!;
       if (roleSet && !roleSet.has(entry.role)) continue;
       const bucket = predValues.get(entry.token);
@@ -483,7 +511,7 @@ export function nodeFlow(analysis: ChainEffectAnalysis, focusToken: string, opti
 
     let node = root;
     let level = 0;
-    for (let i = focusIndex + 1; i < point.orderedTokens.length && level < depth; i += 1) {
+    for (let i = span.last + 1; i < point.orderedTokens.length && level < depth; i += 1) {
       const entry = point.orderedTokens[i]!;
       if (roleSet && !roleSet.has(entry.role)) continue;
       let child = node.children.get(entry.token);
@@ -527,9 +555,9 @@ export function nodeFlow(analysis: ChainEffectAnalysis, focusToken: string, opti
       });
 
   return {
-    token: focus.token,
-    label: focus.label,
-    role: focus.role,
+    token: head.token,
+    label: head.label,
+    role: head.role,
     self: stat(selfValues),
     predecessors,
     successors: convert(root),

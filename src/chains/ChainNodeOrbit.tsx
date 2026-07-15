@@ -101,14 +101,16 @@ export function ChainNodeOrbit({
   const focusToken = path[path.length - 1] ?? hub;
 
   const flow = useMemo(
-    () => (focusToken ? nodeFlow(analysis, focusToken, { roles, depth, maxPerLevel, minCount }) : null),
-    [analysis, focusToken, roles, depth, maxPerLevel, minCount],
+    () => (path.length ? nodeFlow(analysis, path, { roles, depth, maxPerLevel, minCount }) : null),
+    [analysis, path, roles, depth, maxPerLevel, minCount],
   );
 
-  const navigate = (token: string) => {
-    if (token === focusToken) return;
-    setPath((prev) => [...prev, token]);
-    onFocusChange?.(token);
+  // Extend the *whole selected chain*: a successor is appended (forward), a
+  // predecessor is prepended (backward). Rooting on the full ordered path means
+  // an already-used node never reappears — no infinite back-and-forth.
+  const extend = (wedge: Wedge) => {
+    setPath((prev) => (wedge.kind === "succ" ? [...prev, wedge.token] : [wedge.token, ...prev]));
+    onFocusChange?.(wedge.token);
   };
   const jumpTo = (index: number) => {
     setPath((prev) => {
@@ -213,7 +215,8 @@ export function ChainNodeOrbit({
   return (
     <div className={cx("n4chains-orbit", className)} style={{ width: size }}>
       <header className="n4chains-orbit-head">
-        <nav className="n4chains-orbit-crumbs" aria-label="Navigation path">
+        <span className="n4chains-orbit-chainlabel">chain</span>
+        <nav className="n4chains-orbit-crumbs" aria-label="Selected chain">
           {crumbIndices.map((entry, i) => {
             if (entry === "gap") {
               return (
@@ -268,17 +271,17 @@ export function ChainNodeOrbit({
               key={wedge.key}
               className={cx("n4chains-wedge", "is-interactive", wedge.kind === "pred" && "is-pred")}
               data-role={wedge.role}
-              onClick={() => navigate(wedge.token)}
+              onClick={() => extend(wedge)}
               tabIndex={0}
               role="button"
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
-                  navigate(wedge.token);
+                  extend(wedge);
                 }
               }}
             >
-              <title>{`${wedge.kind === "pred" ? "before" : "after"} · ${wedge.label} — median ${fmt(wedge.median)}, ${wedge.count} chains`}</title>
+              <title>{`${wedge.kind === "pred" ? "prepend (before)" : "append (after)"} · ${wedge.label} — median ${fmt(wedge.median)}, ${wedge.count} chains`}</title>
               <path
                 className="n4chains-wedge-arc"
                 d={annularSector(cx0, cy0, rIn, rOut, wedge.a0, wedge.a1)}
@@ -347,7 +350,7 @@ export function ChainNodeOrbit({
           <span className="n4chains-chip-dom" style={{ background: roleColor(flow.role, roleColors) }} />
           {CHAIN_ROLE_LABELS[flow.role]}
         </span>
-        <span className="n4chains-orbit-flow">← before · after →</span>
+        <span className="n4chains-orbit-flow">inner = before · outer = after · click to extend</span>
         <span className="n4chains-orbit-legend" aria-hidden="true">
           <span style={{ color: "#0f766e" }}>better</span>
           <span className="n4chains-orbit-ramp" />
