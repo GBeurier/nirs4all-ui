@@ -69,3 +69,4 @@ export { ChainScoreBeeswarm, type ChainScoreBeeswarmProps } from "./ChainScoreBe
 // --- the interactive explorers ---
 export { ChainExplorer, type ChainExplorerProps } from "./ChainExplorer.js";
 export { ChainNodeOrbit, type ChainNodeOrbitProps } from "./ChainNodeOrbit.js";
+export { ChainNodeHub, type ChainNodeHubProps } from "./ChainNodeHub.js";

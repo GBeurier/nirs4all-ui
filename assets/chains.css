@@ -482,6 +482,41 @@
   text-transform: uppercase;
   color: var(--n4-color-muted, #94a3b8);
 }
+.n4chains-orbit-tools { display: inline-flex; align-items: center; gap: 8px; }
+.n4chains-orbit-reset {
+  appearance: none;
+  cursor: pointer;
+  border: 1px solid var(--n4-color-border, #e2e8f0);
+  background: var(--n4-color-surface, #ffffff);
+  color: var(--n4-color-muted, #64748b);
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 999px;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+.n4chains-orbit-reset:hover { color: var(--n4-color-primary-hover, #0f766e); border-color: var(--n4-color-primary, #0d9488); }
+
+/* hub (twin) — focus on the 2nd ring, predecessors pie at the core */
+.n4chains-hub-core-empty {
+  fill: color-mix(in srgb, var(--n4-color-muted, #94a3b8) 8%, transparent);
+  stroke: var(--n4-color-border, #e2e8f0);
+  stroke-width: 1;
+}
+.n4chains-hub-focus.is-interactive { cursor: pointer; }
+.n4chains-hub-focus-arc {
+  stroke: var(--n4-color-surface, #ffffff);
+  stroke-width: 2.5;
+  filter: drop-shadow(0 1px 3px rgba(15, 23, 42, 0.18));
+}
+.n4chains-hub-focus.is-interactive:focus-visible { outline: none; }
+.n4chains-hub-focus.is-interactive:focus-visible .n4chains-hub-focus-arc { stroke: var(--n4-color-primary, #0d9488); }
+.n4chains-hub-focus-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  pointer-events: none;
+}
 .n4chains-orbit-svg { display: block; width: 100%; height: auto; }
 
 .n4chains-wedge-arc {

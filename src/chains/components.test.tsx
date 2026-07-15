@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { fromScoredChains, positionMatrix, sequenceMatrix } from "./analysis.js";
 import { ChainExplorer } from "./ChainExplorer.js";
+import { ChainNodeHub } from "./ChainNodeHub.js";
 import { ChainNodeOrbit } from "./ChainNodeOrbit.js";
 import { ChainScoreBeeswarm } from "./ChainScoreBeeswarm.js";
 import { NodeEffectForest } from "./NodeEffectForest.js";
@@ -99,6 +100,15 @@ describe("ChainNodeOrbit", () => {
   it("renders an empty state for an unknown focus", () => {
     const markup = renderToStaticMarkup(<ChainNodeOrbit analysis={analysis} defaultFocusToken="nope" />);
     expect(markup).toContain("No node to explore");
+  });
+});
+
+describe("ChainNodeHub", () => {
+  it("renders the predecessor pie core, the focus band, and outer successor rings", () => {
+    const markup = renderToStaticMarkup(<ChainNodeHub analysis={analysis} defaultFocusToken="snv" depth={2} />);
+    expect(markup).toContain("n4chains-hub");
+    expect(markup).toContain("n4chains-hub-focus");
+    expect(markup).toContain("centre = predecessors");
   });
 });
 
