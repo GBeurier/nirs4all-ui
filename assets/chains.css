@@ -443,6 +443,14 @@
   flex-wrap: wrap;
   margin-bottom: 4px;
 }
+.n4chains-orbit-chainlabel {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--n4-color-muted, #94a3b8);
+  margin-right: 6px;
+}
 .n4chains-orbit-crumbs {
   display: flex;
   align-items: center;
