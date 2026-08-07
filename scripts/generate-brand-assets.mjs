@@ -121,7 +121,8 @@ async function checkAssets() {
     }
   }
   try {
-    if ((await readFile(path.join(brandsRoot, "README.md"), "utf8")) !== generatedReadme()) {
+    const readme = await readFile(path.join(brandsRoot, "README.md"), "utf8");
+    if (readme.replace(/\r\n/g, "\n") !== generatedReadme()) {
       problems.push("assets/brands/README.md: stale (run npm run brand:generate)");
     }
   } catch {
