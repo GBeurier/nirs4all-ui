@@ -115,6 +115,6 @@ jobs:
         run: |
           set -euo pipefail
           tarball="$(node -e "const fs=require('fs'); const m=JSON.parse(fs.readFileSync('release-artifact/nirs4all-ui-release-artifact.v1.json')); process.stdout.write(m.artifact.filename)")"
-          npm publish "release-artifact/${tarball}" --access public
+          npm publish "./release-artifact/${tarball}" --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
