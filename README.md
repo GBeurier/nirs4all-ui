@@ -93,6 +93,26 @@ npm test
 
 `npm run build` emits ESM JavaScript and declaration files under `dist/`.
 
+## Immutable release artifact
+
+Release CI builds one tarball and publishes that exact file instead of running
+`npm publish` from a second source build. After the normal package gate, create
+the tarball and its closed provenance manifest in an empty directory:
+
+```bash
+npm run ci
+npm run release:artifact -- --output-dir release-artifact
+npm run release:artifact:verify -- \
+  --manifest release-artifact/nirs4all-ui-release-artifact.v1.json \
+  --expected-commit "$(git rev-parse HEAD)"
+```
+
+The builder refuses tracked source modifications and records the exact Git
+commit, package version, filename, byte size, SHA-256, npm SHA-1 and SHA-512
+integrity. Studio and Web must consume the same verified tarball bytes; copying
+the source tree or rebuilding separate local `file:` packages is not release
+evidence.
+
 ## GitHub Pages showcase
 
 The single-page component and helper catalogue lives under `site/`.
