@@ -11,6 +11,7 @@ export * as runtime from "./runtime/index.js";
 export * as conformal from "./conformal/index.js";
 export * as robustness from "./robustness/index.js";
 export * as keywordRegistry from "./keywordRegistry/index.js";
+export * as nodeRegistry from "./nodeRegistry/index.js";
 export * as tuning from "./tuning/index.js";
 export * as dataset from "./dataset/index.js";
 export * as components from "./components/index.js";

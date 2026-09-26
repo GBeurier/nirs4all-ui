@@ -11,6 +11,7 @@ describe("nirs4all-ui root barrel", () => {
     expect(typeof root.dataset.buildDatasetPreview).toBe("function");
     expect(typeof root.keywordRegistry.parseKeywordRegistryDocument).toBe("function");
     expect(typeof root.keywordRegistry.createKeywordRegistryWorkspacePredictionPublicationContract).toBe("function");
+    expect(typeof root.nodeRegistry.projectN4mManifest).toBe("function");
     expect(typeof root.robustness.createRobustnessSummaryCards).toBe("function");
     expect(typeof root.runtime.buildRuntimeResultStatusView).toBe("function");
     expect(typeof root.score.formatMetricValue).toBe("function");

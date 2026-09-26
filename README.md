@@ -21,6 +21,7 @@ spectra motion asset.
 | `conformal` | `nirs4all-ui/conformal` | Validation and pure view-model projection for native nirs4all `CalibratedRunResult.to_dict()` and `ConformalMetricSet.to_dict()` payloads, guarantee-status badges, calibration replay provenance, coverage options, per-sample prediction interval rows, materialized interval summaries, and empirical metric rows. |
 | `robustness` | `nirs4all-ui/robustness` | Validation and compact card view-models for nirs4all robustness `summary.json` artifacts, optional conformal guarantee badge projection, plus fallback and registry-derived mode/scenario/distribution vocabulary and form validation aligned with the Python keyword registry. |
 | `keywordRegistry` | `nirs4all-ui/keywordRegistry` | Metadata-only validation, indexing, id/path/token/alias resolution, value-option extraction, form-field projection, ordered form-section grouping, optimizer-persistence field grouping, and workspace prediction publication contract projection for the exported full Python nirs4all keyword/effect registry. |
+| `nodeRegistry` | `nirs4all-ui/nodeRegistry` | `projectN4mManifest`: projects the n4m method manifest (`n4m_cli --manifest-json`) into typed pipeline-editor node definitions — role → node type, typed parameters (bounds, choices, unset defaults), required fit inputs, `n4m:<method_id>` operator token. |
 | `tuning` | `nirs4all-ui/tuning` | Validation and pure view-model projection for native nirs4all `TuningResult.to_dict()` payloads, lightweight `TuningResult.summary_artifact()` / `nirs4all.tuning.summary` cards, and pre-execution `nirs4all.tuning.ordered_search_space` artifacts for Studio/Web forms without optimizer logic. |
 | `dataset` | `nirs4all-ui/dataset` | Dataset preview contracts, counts, split summaries, spectral ranges, task labels, badges, and stats. |
 | `components` | `nirs4all-ui/components` | Stateless React components that render shared runtime, diagnostic, and metric affordances. |
@@ -35,7 +36,7 @@ spectra motion asset.
 The root export also exposes namespace barrels:
 
 ```ts
-import { brand, chains, conformal, dag, dataset, datasetBuilder, keywordRegistry, lab, robustness, runtime, score, styles, tuning } from "nirs4all-ui";
+import { brand, chains, conformal, dag, dataset, datasetBuilder, keywordRegistry, lab, nodeRegistry, robustness, runtime, score, styles, tuning } from "nirs4all-ui";
 ```
 
 Prefer domain imports when a consumer only needs one area:
@@ -47,6 +48,7 @@ import { buildRuntimeResultStatusView } from "nirs4all-ui/runtime";
 import { createConformalGuaranteeView, getCalibrationReplaySource, parseCalibratedRunResultArtifact } from "nirs4all-ui/conformal";
 import { createRobustnessGuaranteeView, createRobustnessSummaryCards, getRobustnessSpectralReplay, parseRobustnessSummaryArtifact, validateRobustnessScenarioDraft } from "nirs4all-ui/robustness";
 import { createKeywordRegistryFieldViews, createKeywordRegistryWorkspacePredictionPublicationContract, parseKeywordRegistryDocument } from "nirs4all-ui/keywordRegistry";
+import { projectN4mManifest } from "nirs4all-ui/nodeRegistry";
 import { createTuningSearchSpacePreview, createTuningStudySummary, createTuningSummaryCard, createTuningTrialRows, parseOrderedTuningSearchSpaceArtifact, parseTuningResultArtifact, parseTuningSummaryArtifact } from "nirs4all-ui/tuning";
 import { DatasetBuilder } from "nirs4all-ui/datasetBuilder";
 import { DagGraphView, fromCompiledGraph } from "nirs4all-ui/dag";
