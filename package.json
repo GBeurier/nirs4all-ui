@@ -49,6 +49,10 @@
       "types": "./dist/keywordRegistry/index.d.ts",
       "import": "./dist/keywordRegistry/index.js"
     },
+    "./nodeRegistry": {
+      "types": "./dist/nodeRegistry/index.d.ts",
+      "import": "./dist/nodeRegistry/index.js"
+    },
     "./tuning": {
       "types": "./dist/tuning/index.d.ts",
       "import": "./dist/tuning/index.js"
