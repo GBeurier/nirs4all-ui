@@ -3,3 +3,4 @@ site/dist/
 coverage/
 node_modules/
 *.tsbuildinfo
+release-artifact/

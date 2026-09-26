@@ -48,6 +48,16 @@ jobs:
             exit 1
           fi
 
+      - name: Build the immutable release tarball
+        run: npm run release:artifact -- --output-dir "${RUNNER_TEMP}/nirs4all-ui-release"
+
+      - name: Upload the exact release tarball and manifest
+        uses: actions/upload-artifact@v7
+        with:
+          name: nirs4all-ui-release-${{ github.sha }}
+          path: ${{ runner.temp }}/nirs4all-ui-release/
+          if-no-files-found: error
+
   publish:
     needs: build
     runs-on: ubuntu-latest
@@ -62,12 +72,6 @@ jobs:
           node-version: 24
           cache: npm
           registry-url: "https://registry.npmjs.org"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run package gate
-        run: npm run ci
 
       - name: Decide publish
         id: gate
@@ -92,8 +96,25 @@ jobs:
           fi
           echo "do=$do" >> "$GITHUB_OUTPUT"
 
+      - name: Download the build-job release tarball
+        if: steps.gate.outputs.do == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: nirs4all-ui-release-${{ github.sha }}
+          path: release-artifact
+
+      - name: Verify tarball bytes and source identity
+        if: steps.gate.outputs.do == 'true'
+        run: >-
+          node scripts/release-artifact.mjs verify
+          --manifest release-artifact/nirs4all-ui-release-artifact.v1.json
+          --expected-commit "${GITHUB_SHA}"
+
       - name: Publish to npm
         if: steps.gate.outputs.do == 'true'
-        run: npm publish --access public
+        run: |
+          set -euo pipefail
+          tarball="$(node -e "const fs=require('fs'); const m=JSON.parse(fs.readFileSync('release-artifact/nirs4all-ui-release-artifact.v1.json')); process.stdout.write(m.artifact.filename)")"
+          npm publish "./release-artifact/${tarball}" --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
