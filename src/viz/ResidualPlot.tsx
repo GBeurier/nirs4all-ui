@@ -1,7 +1,7 @@
 import { useId } from "react";
 
 import { cx } from "./_cx.js";
-import { countLabel, rangeText, summaryNumber } from "./description.js";
+import { countLabel, finiteRange, rangeText, summaryNumber } from "./description.js";
 import {
   buildFrame,
   makeScale,
@@ -93,7 +93,13 @@ export function ResidualPlot({
   const sigma = stdDev(residuals);
   const twoSigma = 2 * sigma;
 
-  const maxAbs = Math.max(1e-9, ...residuals.map((r) => Math.abs(r)), sigmaBand ? twoSigma : 0);
+  const residualRange = finiteRange(residuals);
+  const maxAbs = Math.max(
+    1e-9,
+    Math.abs(residualRange?.min ?? 0),
+    Math.abs(residualRange?.max ?? 0),
+    sigmaBand ? twoSigma : 0,
+  );
   const safeMaxAbs = Number.isFinite(maxAbs) && maxAbs > 0 ? maxAbs : 1;
   const yDomain: Extent = niceExtent([-safeMaxAbs, safeMaxAbs], 0.08);
   const xDomain: Extent = niceExtent(resolved.map((p) => p.predicted), 0.06);

@@ -87,20 +87,21 @@ export function PcaScatter({
   const bottom = top + frame.innerHeight;
   const right = left + frame.innerWidth;
 
-  const xDomain: Extent = niceExtent(points.map((p) => p.x), 0.06);
-  const yDomain: Extent = niceExtent(points.map((p) => p.y), 0.06);
+  const valid = points.filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
+  const xDomain: Extent = niceExtent(valid.map((p) => p.x), 0.06);
+  const yDomain: Extent = niceExtent(valid.map((p) => p.y), 0.06);
   const xScale = makeScale(xDomain, left, right);
   const yScale = makeScale(yDomain, bottom, top);
   const xTicks = ticks(xDomain, 5);
   const yTicks = ticks(yDomain, 5);
 
-  const valueList = points
+  const valueList = valid
     .map((p) => p.value)
     .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
   const valueDomain = extentOf(valueList.length ? valueList : [0, 1]);
 
   const groupOrder: string[] = [];
-  for (const p of points) {
+  for (const p of valid) {
     if (p.group != null && !groupOrder.includes(p.group)) groupOrder.push(p.group);
   }
   const groupColorMap = new Map<string, string>();
@@ -129,7 +130,6 @@ export function PcaScatter({
   const showLegend = legend && colorMode !== "value" && groupOrder.length > 0;
   const resolvedXLabel = xLabel ?? (explained ? `PC1 (${Math.round(explained[0] * 100)}%)` : "PC1");
   const resolvedYLabel = yLabel ?? (explained ? `PC2 (${Math.round(explained[1] * 100)}%)` : "PC2");
-  const valid = points.filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
   const groups = new Map<string, number>();
   if (colorMode !== "value") {
     for (const point of valid) {
@@ -185,7 +185,7 @@ export function PcaScatter({
         />
       ))}
 
-      {points.map((p, i) => (
+      {valid.map((p, i) => (
         <circle
           key={i}
           className="n4viz-dot"

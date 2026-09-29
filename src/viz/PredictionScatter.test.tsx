@@ -40,4 +40,13 @@ describe("viz/PredictionScatter", () => {
     const blank = renderToStaticMarkup(<PredictionScatter points={points} description="   " />);
     expect(blank).toContain("mean absolute error");
   });
+
+  it("ignores non-finite pairs for fit, marks, and the text alternative", () => {
+    const markup = renderToStaticMarkup(
+      <PredictionScatter points={[...points, { actual: Number.NaN, predicted: 9 }]} regressionLine />,
+    );
+    expect(markup.match(/class="n4viz-dot"/g)).toHaveLength(3);
+    expect(markup).toContain("3 valid observed and predicted pairs");
+    expect(markup).not.toContain("NaN");
+  });
 });

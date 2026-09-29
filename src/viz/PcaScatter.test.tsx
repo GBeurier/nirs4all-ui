@@ -48,4 +48,14 @@ describe("PcaScatter", () => {
     const markup = renderToStaticMarkup(<PcaScatter points={[]} />);
     expect(markup).toContain("No valid projected points.");
   });
+
+  it("excludes invalid projected coordinates from marks, legend, and description", () => {
+    const markup = renderToStaticMarkup(
+      <PcaScatter points={[{ x: 1, y: 2, group: "valid" }, { x: Number.NaN, y: 3, group: "missing" }]} />,
+    );
+    expect(markup.match(/class="n4viz-dot"/g)).toHaveLength(1);
+    expect(markup).toContain("1 projected point");
+    expect(markup).not.toContain("missing");
+    expect(markup).not.toContain("NaN");
+  });
 });
