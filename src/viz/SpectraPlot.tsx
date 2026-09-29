@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 
 import { cx } from "./_cx.js";
+import { countLabel, rangeText } from "./description.js";
 import {
   bandPath,
   buildFrame,
@@ -51,6 +52,8 @@ export interface SpectraPlotProps {
   showAxes?: boolean;
   meanColor?: string;
   title?: string;
+  /** Faithful host-provided text alternative; defaults to a data summary. */
+  description?: string;
   className?: string;
   /** Extra SVG content rendered in data space last (annotations, legends). */
   children?: ReactNode;
@@ -89,9 +92,11 @@ export function SpectraPlot({
   showAxes = true,
   meanColor = N4_VIZ_COLORS.tealDark,
   title = "NIRS spectra",
+  description,
   className,
   children,
 }: SpectraPlotProps) {
+  const descriptionId = useId();
   const frame = buildFrame(width, height, padding);
   const { top, left } = frame.padding;
   const bottom = top + frame.innerHeight;
@@ -113,6 +118,19 @@ export function SpectraPlot({
   const xTicks = ticks(xDomain, 5);
   const yTicks = ticks(yDomain, 4);
   const resolvedXLabel = xLabel ?? `Wavelength (${unit})`;
+  const wavelengthRange = rangeText(wavelengths);
+  const valueRange = rangeText(allValues);
+  const summary = description?.trim() || (
+    wavelengths.length === 0 || (!series.length && !mean && !band)
+      ? "No spectral curves available."
+      : [
+          `${countLabel(series.length, "sample spectrum", "sample spectra")} across ${countLabel(wavelengths.length, "axis position")}`,
+          ...(wavelengthRange ? [`axis range ${wavelengthRange} ${unit}`] : []),
+          ...(valueRange ? [`${yLabel} range ${valueRange}`] : []),
+          ...(mean ? ["mean curve shown"] : []),
+          ...(band ? ["range band shown"] : []),
+        ].join("; ") + "."
+  );
 
   return (
     <svg
@@ -120,9 +138,11 @@ export function SpectraPlot({
       viewBox={`0 0 ${width} ${height}`}
       role="img"
       aria-label={title}
+      aria-describedby={descriptionId}
       preserveAspectRatio="xMidYMid meet"
     >
       <title>{title}</title>
+      <desc id={descriptionId}>{summary}</desc>
       {showGrid
         ? yTicks.map((t) => (
             <line

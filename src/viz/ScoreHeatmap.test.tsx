@@ -26,5 +26,13 @@ describe("ScoreHeatmap", () => {
     expect(markup).toContain("Ridge");
     expect(markup).toContain("SNV");
     expect(markup).toContain("0.91");
+    expect(markup).toContain("2 rows by 2 columns; 3 finite scores");
+    expect(markup).toContain("lowest 0.74 at Ridge / Raw");
+    expect(markup).toContain("highest 0.91 at PLS / SNV");
+  });
+
+  it("describes an all-missing score matrix", () => {
+    const markup = renderToStaticMarkup(<ScoreHeatmap rows={["PLS"]} cols={["Raw"]} values={[[Number.NaN]]} />);
+    expect(markup).toContain("1 row by 1 column; no finite scores.");
   });
 });

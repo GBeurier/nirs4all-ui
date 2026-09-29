@@ -1,4 +1,7 @@
+import { useId } from "react";
+
 import { cx } from "./_cx.js";
+import { countLabel, rangeText, summaryNumber } from "./description.js";
 import {
   buildFrame,
   makeScale,
@@ -32,6 +35,8 @@ export interface ResidualPlotProps {
   xLabel?: string;
   yLabel?: string;
   title?: string;
+  /** Faithful host-provided text alternative; defaults to a data summary. */
+  description?: string;
   className?: string;
 }
 
@@ -71,8 +76,10 @@ export function ResidualPlot({
   xLabel = "Predicted",
   yLabel = "Residual",
   title = "Residuals",
+  description,
   className,
 }: ResidualPlotProps) {
+  const descriptionId = useId();
   const frame = buildFrame(width, height, padding);
   const { top, left } = frame.padding;
   const bottom = top + frame.innerHeight;
@@ -97,6 +104,19 @@ export function ResidualPlot({
   const yTicks = ticks(yDomain, 5);
 
   const showSigma = sigmaBand && Number.isFinite(sigma) && sigma > 0 && resolved.length > 1;
+  const meanResidual = residuals.length
+    ? residuals.reduce((sum, value) => sum + value, 0) / residuals.length
+    : null;
+  const summary = description?.trim() || (
+    resolved.length === 0
+      ? "No valid residual observations."
+      : [
+          countLabel(resolved.length, "valid residual observation"),
+          `residual range ${rangeText(residuals)}`,
+          `mean residual ${summaryNumber(meanResidual!)}`,
+          ...(showSigma ? [`two-standard-deviation guides at ±${summaryNumber(twoSigma)}`] : []),
+        ].join("; ") + "."
+  );
 
   return (
     <svg
@@ -104,9 +124,11 @@ export function ResidualPlot({
       viewBox={`0 0 ${width} ${height}`}
       role="img"
       aria-label={title}
+      aria-describedby={descriptionId}
       preserveAspectRatio="xMidYMid meet"
     >
       <title>{title}</title>
+      <desc id={descriptionId}>{summary}</desc>
 
       {yTicks.map((t) => (
         <line

@@ -1,4 +1,7 @@
+import { useId } from "react";
+
 import { cx } from "./_cx.js";
+import { countLabel, summaryNumber } from "./description.js";
 import { clamp, extentOf, round } from "./geometry.js";
 import { viridisColor } from "./theme.js";
 
@@ -22,6 +25,8 @@ export interface ScoreHeatmapProps {
   xLabel?: string;
   yLabel?: string;
   title?: string;
+  /** Faithful host-provided text alternative; defaults to a data summary. */
+  description?: string;
   className?: string;
 }
 
@@ -52,8 +57,10 @@ export function ScoreHeatmap({
   xLabel,
   yLabel,
   title = "Performance heatmap",
+  description,
   className,
 }: ScoreHeatmapProps) {
+  const descriptionId = useId();
   const resolvedHeight = height ?? Math.max(160, rows.length * 34 + 60);
 
   const padLeft = 88;
@@ -79,6 +86,23 @@ export function ScoreHeatmap({
   const legendX = gridRight + 14;
   const legendW = 10;
   const segCount = 16;
+  let finiteCellCount = 0;
+  let lowest: { rowLabel: string; colLabel: string; value: number } | null = null;
+  let highest: { rowLabel: string; colLabel: string; value: number } | null = null;
+  for (const [row, rowLabel] of rows.entries()) {
+    for (const [col, colLabel] of cols.entries()) {
+      const value = values[row]?.[col];
+      if (typeof value !== "number" || !Number.isFinite(value)) continue;
+      finiteCellCount += 1;
+      if (lowest === null || value < lowest.value) lowest = { rowLabel, colLabel, value };
+      if (highest === null || value > highest.value) highest = { rowLabel, colLabel, value };
+    }
+  }
+  const summary = description?.trim() || (
+    finiteCellCount === 0
+      ? `${countLabel(rows.length, "row")} by ${countLabel(cols.length, "column")}; no finite scores.`
+      : `${countLabel(rows.length, "row")} by ${countLabel(cols.length, "column")}; ${countLabel(finiteCellCount, "finite score")}; lowest ${summaryNumber(lowest!.value)} at ${lowest!.rowLabel} / ${lowest!.colLabel}; highest ${summaryNumber(highest!.value)} at ${highest!.rowLabel} / ${highest!.colLabel}.`
+  );
 
   return (
     <svg
@@ -86,9 +110,11 @@ export function ScoreHeatmap({
       viewBox={`0 0 ${width} ${resolvedHeight}`}
       role="img"
       aria-label={title}
+      aria-describedby={descriptionId}
       preserveAspectRatio="xMidYMid meet"
     >
       <title>{title}</title>
+      <desc id={descriptionId}>{summary}</desc>
 
       {rows.map((_, r) =>
         cols.map((__, c) => {

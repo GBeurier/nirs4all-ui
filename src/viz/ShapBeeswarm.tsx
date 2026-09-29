@@ -1,4 +1,7 @@
+import { useId } from "react";
+
 import { cx } from "./_cx.js";
+import { countLabel, rangeText, summaryNumber } from "./description.js";
 import { extentOf, makeScale, round, ticks } from "./geometry.js";
 import { divergingColor, N4_VIZ_COLORS } from "./theme.js";
 
@@ -21,6 +24,8 @@ export interface ShapBeeswarmProps {
   height?: number;
   pointRadius?: number;
   title?: string;
+  /** Faithful host-provided text alternative; defaults to a data summary. */
+  description?: string;
   className?: string;
   xLabel?: string;
 }
@@ -55,9 +60,11 @@ export function ShapBeeswarm({
   height,
   pointRadius = 2.5,
   title = "SHAP beeswarm",
+  description,
   className,
   xLabel = "SHAP value",
 }: ShapBeeswarmProps) {
+  const descriptionId = useId();
   const resolvedHeight = height ?? Math.max(180, features.length * 34 + 48);
 
   const padLeft = 96;
@@ -80,6 +87,17 @@ export function ShapBeeswarm({
   const n = features.length;
   const band = n > 0 ? plotHeight / n : plotHeight;
   const amplitude = Math.min(band, 30) * 0.35;
+  const featureSummaries = features.flatMap((feature) => {
+    const values = feature.points.map((point) => point.shap).filter((value) => Number.isFinite(value));
+    return values.length
+      ? [`${feature.label}: ${countLabel(values.length, "contribution")}, mean ${summaryNumber(values.reduce((sum, value) => sum + value, 0) / values.length)}, range ${rangeText(values)}`]
+      : [];
+  });
+  const summary = description?.trim() || (
+    featureSummaries.length === 0
+      ? "No finite SHAP contributions."
+      : `${countLabel(featureSummaries.length, "feature")}; ${featureSummaries.join("; ")}. Color encodes feature value.`
+  );
 
   return (
     <svg
@@ -87,9 +105,11 @@ export function ShapBeeswarm({
       viewBox={`0 0 ${width} ${resolvedHeight}`}
       role="img"
       aria-label={title}
+      aria-describedby={descriptionId}
       preserveAspectRatio="xMidYMid meet"
     >
       <title>{title}</title>
+      <desc id={descriptionId}>{summary}</desc>
 
       <line
         className="n4viz-reference n4viz-zero"

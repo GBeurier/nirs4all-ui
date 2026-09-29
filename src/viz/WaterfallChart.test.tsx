@@ -25,6 +25,7 @@ describe("viz/WaterfallChart", () => {
     expect(markup).toContain("1450 nm");
     // Positive contributions are signed with a leading plus.
     expect(markup).toContain("+0.8");
+    expect(markup).toContain("base value 4.2; predicted value 4.75; 3 of 3 contributions shown");
   });
 
   it("keeps only the largest |value| contributions for topN", () => {
@@ -42,5 +43,6 @@ describe("viz/WaterfallChart", () => {
     expect(markup).toContain("<svg");
     expect(markup).toContain("large");
     expect(markup).not.toContain("small");
+    expect(markup).toContain("1 of 2 contributions shown; large: -0.9; omitted contribution sum 0.01.");
   });
 });

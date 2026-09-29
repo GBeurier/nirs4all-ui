@@ -22,6 +22,10 @@ describe("PcaScatter", () => {
     expect(markup).toContain("n4viz-dot");
     expect(markup).toContain("PC1 (48%)");
     expect(markup).toContain("n4viz-legend-item");
+    expect(markup).toContain("3 projected points");
+    expect(markup).toContain("PC1 (48%) range -1.2 to 1.4");
+    expect(markup).toContain("A: 2");
+    expect(markup).toContain("B: 1");
   });
 
   it("colors continuously by value without a legend", () => {
@@ -37,5 +41,11 @@ describe("PcaScatter", () => {
 
     expect(markup).toContain("<svg");
     expect(markup).not.toContain("n4viz-legend-item");
+    expect(markup).toContain("color value range 1 to 9");
+  });
+
+  it("describes an empty projection", () => {
+    const markup = renderToStaticMarkup(<PcaScatter points={[]} />);
+    expect(markup).toContain("No valid projected points.");
   });
 });

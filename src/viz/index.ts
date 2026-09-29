@@ -8,7 +8,9 @@
  * nirs4all-ui: pure + stateless, NO app state, network/IO, browser globals, or
  * runtime execution. Hosts pass already-computed numeric arrays; each component
  * accepts `className` + color overrides and reads the shared teal palette by
- * default. A default stylesheet ships at `nirs4all-ui/assets/viz.css`.
+ * default. SVGs include data-derived text descriptions; hosts may override
+ * `description` for localized or domain-specific wording. A default stylesheet
+ * ships at `nirs4all-ui/assets/viz.css`.
  *
  * Consumed as `nirs4all-ui/viz`.
  */

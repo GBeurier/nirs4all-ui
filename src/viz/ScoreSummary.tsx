@@ -1,4 +1,7 @@
+import { useId } from "react";
+
 import { cx } from "./_cx.js";
+import { countLabel } from "./description.js";
 import { round } from "./geometry.js";
 import { N4_VIZ_COLORS } from "./theme.js";
 
@@ -17,6 +20,8 @@ export interface ScoreSummaryProps {
   tileHeight?: number;
   gap?: number;
   title?: string;
+  /** Faithful host-provided text alternative; defaults to a data summary. */
+  description?: string;
   className?: string;
 }
 
@@ -42,12 +47,19 @@ export function ScoreSummary({
   tileHeight = 76,
   gap = 10,
   title = "Scores",
+  description,
   className,
 }: ScoreSummaryProps) {
+  const descriptionId = useId();
   const cols = Math.max(1, Math.trunc(columns));
   const rows = stats.length > 0 ? Math.ceil(stats.length / cols) : 0;
   const width = cols * tileWidth + (cols + 1) * gap;
   const height = rows * tileHeight + (rows + 1) * gap;
+  const summary = description?.trim() || (
+    stats.length === 0
+      ? "No scores available."
+      : `${countLabel(stats.length, "score")}; ${stats.map((stat) => `${stat.label}: ${stat.value}${stat.delta ? `, change ${stat.delta}` : ""}`).join("; ")}.`
+  );
 
   return (
     <svg
@@ -55,9 +67,11 @@ export function ScoreSummary({
       viewBox={`0 0 ${width} ${height}`}
       role="img"
       aria-label={title}
+      aria-describedby={descriptionId}
       preserveAspectRatio="xMidYMid meet"
     >
       <title>{title}</title>
+      <desc id={descriptionId}>{summary}</desc>
 
       {stats.map((stat, i) => {
         const col = i % cols;

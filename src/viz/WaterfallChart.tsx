@@ -1,4 +1,7 @@
+import { useId } from "react";
+
 import { cx } from "./_cx.js";
+import { countLabel, summaryNumber } from "./description.js";
 import { makeScale, niceExtent, round, ticks } from "./geometry.js";
 import { N4_VIZ_COLORS } from "./theme.js";
 
@@ -22,6 +25,8 @@ export interface WaterfallChartProps {
   /** Auto-sized from the kept row count when omitted. */
   height?: number;
   title?: string;
+  /** Faithful host-provided text alternative; defaults to a data summary. */
+  description?: string;
   className?: string;
 }
 
@@ -57,8 +62,10 @@ export function WaterfallChart({
   width = 440,
   height,
   title = "SHAP waterfall",
+  description,
   className,
 }: WaterfallChartProps) {
+  const descriptionId = useId();
   const sumAll = contributions.reduce((s, c) => s + (Number.isFinite(c.value) ? c.value : 0), 0);
   const resolvedPredicted = predicted ?? baseValue + sumAll;
 
@@ -101,6 +108,18 @@ export function WaterfallChart({
   const n = rows.length;
   const band = n > 0 ? plotHeight / n : plotHeight;
   const barHeight = Math.min(18, Math.max(4, band - 8));
+  const keptSum = rows.reduce((sum, row) => sum + row.value, 0);
+  const summary = description?.trim() || (
+    !Number.isFinite(baseValue) || !Number.isFinite(resolvedPredicted)
+      ? "Base or predicted value is unavailable."
+      : [
+          `base value ${summaryNumber(baseValue)}`,
+          `predicted value ${summaryNumber(resolvedPredicted)}`,
+          `${rows.length} of ${countLabel(contributions.length, "contribution")} shown`,
+          ...rows.map((row) => `${row.label}: ${row.value >= 0 ? "+" : ""}${summaryNumber(row.value)}`),
+          ...(contributions.length > rows.length ? [`omitted contribution sum ${summaryNumber(sumAll - keptSum)}`] : []),
+        ].join("; ") + "."
+  );
 
   return (
     <svg
@@ -108,9 +127,11 @@ export function WaterfallChart({
       viewBox={`0 0 ${width} ${resolvedHeight}`}
       role="img"
       aria-label={title}
+      aria-describedby={descriptionId}
       preserveAspectRatio="xMidYMid meet"
     >
       <title>{title}</title>
+      <desc id={descriptionId}>{summary}</desc>
 
       {xTicks.map((t) => (
         <line

@@ -46,6 +46,8 @@ describe("ConformalIntervalStrip", () => {
     expect(markup).toContain("90%");
     expect(markup).toContain("covered");
     expect(markup).toContain("missed");
+    expect(markup).toContain("2 valid predictions; 2 shown; target interval 90%");
+    expect(markup).toContain("observed coverage 50% (1 of 2 known actual values)");
   });
 
   it("reports observed coverage against the target level", () => {
@@ -62,7 +64,13 @@ describe("ConformalIntervalStrip", () => {
     const markup = renderToStaticMarkup(<ConformalIntervalStrip samples={[]} />);
     expect(markup).toContain("<svg");
     expect(markup).toContain("No calibrated intervals");
+    expect(markup).toContain("No valid prediction intervals.");
     expect(markup).not.toContain("covered");
+  });
+
+  it("reports when a large strip omits samples from the rendering", () => {
+    const markup = renderToStaticMarkup(<ConformalIntervalStrip samples={SAMPLES} maxSamples={1} />);
+    expect(markup).toContain("2 valid predictions; 1 shown, 1 omitted");
   });
 
   it("adapts conformal prediction rows and attaches aligned actuals", () => {

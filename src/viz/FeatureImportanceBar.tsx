@@ -1,4 +1,7 @@
+import { useId } from "react";
+
 import { cx } from "./_cx.js";
+import { countLabel, summaryNumber } from "./description.js";
 import { makeScale, round, ticks } from "./geometry.js";
 import { N4_VIZ_COLORS } from "./theme.js";
 
@@ -19,6 +22,8 @@ export interface FeatureImportanceBarProps {
   /** Auto-sized from `topN` when omitted. */
   height?: number;
   title?: string;
+  /** Faithful host-provided text alternative; defaults to a data summary. */
+  description?: string;
   className?: string;
 }
 
@@ -47,8 +52,10 @@ export function FeatureImportanceBar({
   width = 360,
   height,
   title = "Feature importance",
+  description,
   className,
 }: FeatureImportanceBarProps) {
+  const descriptionId = useId();
   const keep = Math.max(0, Math.trunc(topN));
   const sorted = [...items].sort((a, b) => b.value - a.value).slice(0, keep);
   const resolvedHeight = height ?? Math.max(160, keep * 22 + 48);
@@ -71,6 +78,12 @@ export function FeatureImportanceBar({
   const n = sorted.length;
   const band = n > 0 ? plotHeight / n : plotHeight;
   const barHeight = Math.min(18, Math.max(4, band - 8));
+  const valid = sorted.filter((item) => Number.isFinite(item.value));
+  const summary = description?.trim() || (
+    valid.length === 0
+      ? "No finite feature importance values."
+      : `${countLabel(valid.length, "shown feature")}${items.length > sorted.length ? ` of ${items.length} supplied` : ""}; ${valid.map((item) => `${item.label}: ${summaryNumber(item.value)}`).join("; ")}.`
+  );
 
   return (
     <svg
@@ -78,9 +91,11 @@ export function FeatureImportanceBar({
       viewBox={`0 0 ${width} ${resolvedHeight}`}
       role="img"
       aria-label={title}
+      aria-describedby={descriptionId}
       preserveAspectRatio="xMidYMid meet"
     >
       <title>{title}</title>
+      <desc id={descriptionId}>{summary}</desc>
 
       {axisTicks.map((t) => (
         <line

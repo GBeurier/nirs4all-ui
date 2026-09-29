@@ -24,11 +24,14 @@ describe("BoxPlot", () => {
     expect(markup).toContain("n4viz-median");
     expect(markup).toContain("PLS");
     expect(markup).toContain("Ridge");
+    expect(markup).toContain("2 groups; PLS: 7 values, median 0.76, range 0.7 to 0.99");
+    expect(markup).toContain("Ridge: 5 values, median 0.65, range 0.6 to 0.7");
   });
 
   it("renders an empty svg gracefully with no groups", () => {
     const markup = renderToStaticMarkup(<BoxPlot groups={[]} />);
     expect(markup).toContain("<svg");
     expect(markup).toContain("n4viz-boxplot");
+    expect(markup).toContain("No finite grouped scores.");
   });
 });

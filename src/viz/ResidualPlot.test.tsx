@@ -25,11 +25,15 @@ describe("ResidualPlot", () => {
     expect(markup).toContain("n4viz-sigma");
     expect(markup).toContain("Predicted");
     expect(markup).toContain("Residual");
+    expect(markup).toContain("5 valid residual observations");
+    expect(markup).toContain("residual range -0.3 to 0.4");
+    expect(markup).toContain("mean residual 0.01");
   });
 
   it("renders an empty svg gracefully with no points", () => {
     const markup = renderToStaticMarkup(<ResidualPlot points={[]} />);
     expect(markup).toContain("<svg");
     expect(markup).toContain("n4viz-zero");
+    expect(markup).toContain("No valid residual observations.");
   });
 });

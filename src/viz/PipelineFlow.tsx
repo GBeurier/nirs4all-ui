@@ -1,4 +1,7 @@
+import { useId } from "react";
+
 import { cx } from "./_cx.js";
+import { countLabel, summaryNumber } from "./description.js";
 import { round } from "./geometry.js";
 import { N4_VIZ_COLORS } from "./theme.js";
 
@@ -20,6 +23,8 @@ export interface PipelineFlowProps {
   /** Defaults to `nodes.length * 84 + 24`. */
   height?: number;
   title?: string;
+  /** Faithful host-provided text alternative; defaults to a node sequence. */
+  description?: string;
   className?: string;
   /** Override the per-type accent color. */
   nodeColor?: (type: PipelineNode["type"]) => string;
@@ -62,9 +67,11 @@ export function PipelineFlow({
   width = 300,
   height,
   title = "Pipeline",
+  description,
   className,
   nodeColor = defaultNodeColor,
 }: PipelineFlowProps) {
+  const descriptionId = useId();
   const rowH = 84;
   const cardH = 60;
   const marginTop = 12;
@@ -72,6 +79,11 @@ export function PipelineFlow({
   const cardW = Math.max(0, width - 36);
   const spineX = width / 2;
   const resolvedHeight = height ?? nodes.length * rowH + 24;
+  const summary = description?.trim() || (
+    nodes.length === 0
+      ? "No pipeline steps."
+      : `${countLabel(nodes.length, "pipeline step")} in order; ${nodes.map((node, index) => `${index + 1}. ${node.label} (${node.type}${node.status ? `, ${node.status}` : ""}${node.metric != null && Number.isFinite(node.metric) ? `, metric ${summaryNumber(node.metric)}` : ""})`).join("; ")}.`
+  );
 
   return (
     <svg
@@ -79,9 +91,11 @@ export function PipelineFlow({
       viewBox={`0 0 ${width} ${resolvedHeight}`}
       role="img"
       aria-label={title}
+      aria-describedby={descriptionId}
       preserveAspectRatio="xMidYMid meet"
     >
       <title>{title}</title>
+      <desc id={descriptionId}>{summary}</desc>
 
       {nodes.map((node, i) => {
         if (i === 0) return null;

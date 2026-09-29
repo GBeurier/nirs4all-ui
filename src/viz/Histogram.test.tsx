@@ -21,6 +21,7 @@ describe("Histogram", () => {
     expect(markup).toContain("n4viz-bar");
     expect(markup).toContain("n4viz-mean");
     expect(markup).toContain("Count");
+    expect(markup).toContain("10 numeric observations; range 0.1 to 0.8; mean 0.4.");
   });
 
   it("renders precomputed classification bins with category labels", () => {
@@ -38,11 +39,13 @@ describe("Histogram", () => {
     expect(markup).toContain("n4viz-bar");
     expect(markup).toContain("healthy");
     expect(markup).toContain("stressed");
+    expect(markup).toContain("2 categories; 19 observations; healthy: 12; stressed: 7.");
   });
 
   it("renders an empty svg gracefully when no data is provided", () => {
     const markup = renderToStaticMarkup(<Histogram />);
     expect(markup).toContain("<svg");
     expect(markup).toContain("n4viz-histogram");
+    expect(markup).toContain("No finite numeric observations.");
   });
 });

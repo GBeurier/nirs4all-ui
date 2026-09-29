@@ -27,5 +27,11 @@ describe("FeatureImportanceBar", () => {
     expect(markup).toContain("0.41");
     // topN=2 drops the smallest importance.
     expect(markup).not.toContain("1450 nm");
+    expect(markup).toContain("2 shown features of 3 supplied; 1940 nm: 0.41; 2100 nm: 0.27.");
+  });
+
+  it("describes an empty ranking", () => {
+    const markup = renderToStaticMarkup(<FeatureImportanceBar items={[]} />);
+    expect(markup).toContain("No finite feature importance values.");
   });
 });
