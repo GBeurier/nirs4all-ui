@@ -87,8 +87,9 @@ export function PredictionScatter({
   const bottom = top + frame.innerHeight;
   const right = left + frame.innerWidth;
 
-  const actuals = points.map((p) => p.actual);
-  const predicted = points.map((p) => p.predicted);
+  const valid = points.filter((point) => Number.isFinite(point.actual) && Number.isFinite(point.predicted));
+  const actuals = valid.map((p) => p.actual);
+  const predicted = valid.map((p) => p.predicted);
   const domain: Extent = niceExtent([...actuals, ...predicted], 0.06);
 
   const xScale = makeScale(domain, left, right);
@@ -96,7 +97,6 @@ export function PredictionScatter({
   const axisTicks = ticks(domain, 5);
 
   const fit = regressionLine ? linearFit(actuals, predicted) : null;
-  const valid = points.filter((point) => Number.isFinite(point.actual) && Number.isFinite(point.predicted));
   const meanAbsoluteError = valid.length
     ? valid.reduce((sum, point) => sum + Math.abs(point.predicted - point.actual), 0) / valid.length
     : null;
@@ -160,7 +160,7 @@ export function PredictionScatter({
         />
       ) : null}
 
-      {points.map((p, i) => (
+      {valid.map((p, i) => (
         <circle
           key={p.label ?? i}
           className="n4viz-dot"
