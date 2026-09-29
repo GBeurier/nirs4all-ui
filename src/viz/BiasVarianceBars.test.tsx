@@ -24,11 +24,13 @@ describe("viz/BiasVarianceBars", () => {
     expect(markup).toContain("Variance");
     expect(markup).toContain("PLS");
     expect(markup).toContain("RF");
+    expect(markup).toContain("PLS: bias squared 0.04, variance 0.02, total 0.06");
   });
 
   it("renders an empty svg gracefully with no entries", () => {
     const markup = renderToStaticMarkup(<BiasVarianceBars entries={[]} />);
     expect(markup).toContain("<svg");
     expect(markup).toContain("n4viz-biasvariance");
+    expect(markup).toContain("No bias and variance estimates.");
   });
 });

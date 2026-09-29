@@ -34,5 +34,12 @@ describe("ShapBeeswarm", () => {
     expect(markup).toContain("n4viz-zero");
     expect(markup).toContain("n4viz-dot");
     expect(markup).toContain("1940 nm");
+    expect(markup).toContain("2 features; 1450 nm: 2 contributions, mean 0.1, range -0.3 to 0.5");
+    expect(markup).toContain("Color encodes feature value.");
+  });
+
+  it("describes absent finite contributions", () => {
+    const markup = renderToStaticMarkup(<ShapBeeswarm features={[]} />);
+    expect(markup).toContain("No finite SHAP contributions.");
   });
 });

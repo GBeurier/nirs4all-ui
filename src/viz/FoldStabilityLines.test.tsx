@@ -24,6 +24,8 @@ describe("viz/FoldStabilityLines", () => {
     // Default fold labels are derived from the longest series.
     expect(markup).toContain("F1");
     expect(markup).toContain("F5");
+    expect(markup).toContain("2 score series across 5 folds");
+    expect(markup).toContain("PLS: 5 scores, mean 0.72, range 0.7 to 0.74");
   });
 
   it("renders without the mean envelope when showMean is false", () => {
@@ -33,5 +35,10 @@ describe("viz/FoldStabilityLines", () => {
 
     expect(markup).toContain("<svg");
     expect(markup).not.toContain("n4viz-line-mean");
+  });
+
+  it("describes absent finite fold scores", () => {
+    const markup = renderToStaticMarkup(<FoldStabilityLines series={[{ id: "a", scores: [Number.NaN] }]} />);
+    expect(markup).toContain("No finite fold scores.");
   });
 });

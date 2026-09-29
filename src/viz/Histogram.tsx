@@ -1,4 +1,7 @@
+import { useId } from "react";
+
 import { cx } from "./_cx.js";
+import { countLabel, rangeText, summaryNumber } from "./description.js";
 import {
   buildFrame,
   extentOf,
@@ -34,6 +37,8 @@ export interface HistogramProps {
   xLabel?: string;
   yLabel?: string;
   title?: string;
+  /** Faithful host-provided text alternative; defaults to a data summary. */
+  description?: string;
   className?: string;
 }
 
@@ -67,8 +72,10 @@ export function Histogram({
   xLabel,
   yLabel = "Count",
   title = "Distribution",
+  description,
   className,
 }: HistogramProps) {
+  const descriptionId = useId();
   const frame = buildFrame(width, height, padding);
   const { top, left } = frame.padding;
   const bottom = top + frame.innerHeight;
@@ -96,6 +103,17 @@ export function Histogram({
 
   const meanValue = mean(values ?? []);
   const showMean = meanLine && !isClassification && numericBins.length > 0 && Number.isFinite(meanValue);
+  const validValues = (values ?? []).filter((value) => Number.isFinite(value));
+  const validCategories = categorical.filter((bar) => Number.isFinite(bar.count) && bar.count >= 0);
+  const summary = description?.trim() || (
+    isClassification
+      ? validCategories.length === 0
+        ? "No category counts available."
+        : `${countLabel(validCategories.length, "category", "categories")}; ${countLabel(validCategories.reduce((sum, bar) => sum + bar.count, 0), "observation")}; ${validCategories.map((bar) => `${bar.label}: ${summaryNumber(bar.count)}`).join("; ")}.`
+      : validValues.length === 0
+        ? "No finite numeric observations."
+        : `${countLabel(validValues.length, "numeric observation")}; range ${rangeText(validValues)}; mean ${summaryNumber(validValues.reduce((sum, value) => sum + value, 0) / validValues.length)}.`
+  );
 
   return (
     <svg
@@ -103,9 +121,11 @@ export function Histogram({
       viewBox={`0 0 ${width} ${height}`}
       role="img"
       aria-label={title}
+      aria-describedby={descriptionId}
       preserveAspectRatio="xMidYMid meet"
     >
       <title>{title}</title>
+      <desc id={descriptionId}>{summary}</desc>
 
       {yTicks.map((t) => (
         <line

@@ -22,5 +22,11 @@ describe("ScoreSummary", () => {
     expect(markup).toContain("n4viz-stat-value");
     expect(markup).toContain("data-tone=\"positive\"");
     expect(markup).toContain("+0.02");
+    expect(markup).toContain("3 scores; R²: 0.94, change +0.02; RMSE: 0.31, change -0.01; Bias: 0.00.");
+  });
+
+  it("describes the empty score grid", () => {
+    const markup = renderToStaticMarkup(<ScoreSummary stats={[]} />);
+    expect(markup).toContain("No scores available.");
   });
 });

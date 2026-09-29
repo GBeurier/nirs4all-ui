@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 
 import { cx } from "./_cx.js";
+import { countLabel, summaryNumber } from "./description.js";
 import {
   buildFrame,
   makeScale,
@@ -52,6 +53,8 @@ export interface ConformalIntervalStripProps {
   /** Sequential ramp (pale → dark) for widest → narrowest nested band. */
   bandStops?: readonly string[];
   title?: string;
+  /** Faithful host-provided text alternative; defaults to a data summary. */
+  description?: string;
   yLabel?: string;
   xLabel?: string;
   className?: string;
@@ -142,11 +145,13 @@ export function ConformalIntervalStrip({
   predictionColor = PREDICTION_COLOR,
   bandStops = CONFORMAL_BAND_STOPS,
   title = "Conformal prediction intervals",
+  description,
   yLabel,
   xLabel,
   className,
   children,
 }: ConformalIntervalStripProps) {
+  const descriptionId = useId();
   const frame = buildFrame(width, height, padding ?? { top: 58, right: 18, bottom: 38, left: 50 });
   const { top, left } = frame.padding;
   const bottom = top + frame.innerHeight;
@@ -210,6 +215,17 @@ export function ConformalIntervalStrip({
 
   const axisLabelY = yLabel ?? (unit ? `Value (${unit})` : "Value");
   const axisLabelX = xLabel ?? `Samples (n = ${valid.length})`;
+  const summary = description?.trim() || (
+    valid.length === 0
+      ? "No valid prediction intervals."
+      : [
+          `${countLabel(valid.length, "valid prediction")}; ${drawn.length} shown${truncated ? `, ${truncated} omitted` : ""}`,
+          ...(Number.isFinite(target) ? [`target interval ${fmtCoverage(target)}`] : []),
+          ...(observed != null
+            ? [`observed coverage ${summaryNumber(observed * 100)}% (${covered} of ${evaluated} known actual values)`]
+            : ["observed coverage unavailable without known actual values"]),
+        ].join("; ") + "."
+  );
 
   // ---- SVG legend (deterministic mono-width slots) ----
   const legendItems: Array<{ kind: "band" | "covered" | "missed"; color: string; label: string }> = [
@@ -228,9 +244,11 @@ export function ConformalIntervalStrip({
       viewBox={`0 0 ${width} ${height}`}
       role="img"
       aria-label={title}
+      aria-describedby={descriptionId}
       preserveAspectRatio="xMidYMid meet"
     >
       <title>{title}</title>
+      <desc id={descriptionId}>{summary}</desc>
 
       <text className="n4viz-conf-title" x={left} y={top - 34}>{title}</text>
 

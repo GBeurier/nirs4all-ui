@@ -22,5 +22,11 @@ describe("PipelineFlow", () => {
     expect(markup).toContain("n4viz-edge");
     expect(markup).toContain("n4viz-badge");
     expect(markup).toContain("×3");
+    expect(markup).toContain("3 pipeline steps in order; 1. Load (data); 2. SNV (preprocess); 3. PLS (model, done, metric 0.92).");
+  });
+
+  it("describes an empty pipeline", () => {
+    const markup = renderToStaticMarkup(<PipelineFlow nodes={[]} />);
+    expect(markup).toContain("No pipeline steps.");
   });
 });

@@ -1,4 +1,7 @@
+import { useId } from "react";
+
 import { cx } from "./_cx.js";
+import { countLabel, summaryNumber } from "./description.js";
 import { round } from "./geometry.js";
 import { N4_VIZ_COLORS } from "./theme.js";
 
@@ -17,6 +20,8 @@ export interface ConfusionMatrixProps {
   xLabel?: string;
   yLabel?: string;
   title?: string;
+  /** Faithful host-provided text alternative; defaults to a data summary. */
+  description?: string;
   className?: string;
 }
 
@@ -45,8 +50,10 @@ export function ConfusionMatrix({
   xLabel = "Predicted",
   yLabel = "Actual",
   title = "Confusion matrix",
+  description,
   className,
 }: ConfusionMatrixProps) {
+  const descriptionId = useId();
   const n = labels.length;
   const padLeft = 46;
   const padTop = 30;
@@ -59,6 +66,22 @@ export function ConfusionMatrix({
 
   const globalMax = Math.max(1, ...matrix.flatMap((row) => row.map((v) => (Number.isFinite(v) ? v : 0))));
   const rowTotals = matrix.map((row) => Math.max(1, row.reduce((s, v) => s + (Number.isFinite(v) ? v : 0), 0)));
+  const safeCount = (trueIndex: number, predictedIndex: number): number => {
+    const value = matrix[trueIndex]?.[predictedIndex] ?? 0;
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  };
+  const classTotals = labels.map((_, row) => labels.reduce((total, __, col) => total + safeCount(row, col), 0));
+  const total = classTotals.reduce((sum, value) => sum + value, 0);
+  const correct = labels.reduce((sum, _, index) => sum + safeCount(index, index), 0);
+  const summary = description?.trim() || (
+    total === 0
+      ? `${countLabel(n, "class", "classes")}; no classified observations.`
+      : [
+          `${countLabel(n, "class", "classes")} and ${countLabel(total, "classified observation")}`,
+          `${summaryNumber(correct)} correct (${summaryNumber((correct / total) * 100)}%)`,
+          ...labels.map((label, index) => `${label}: ${summaryNumber(safeCount(index, index))} of ${summaryNumber(classTotals[index] ?? 0)} correct`),
+        ].join("; ") + "."
+  );
 
   return (
     <svg
@@ -66,9 +89,11 @@ export function ConfusionMatrix({
       viewBox={`0 0 ${width} ${height}`}
       role="img"
       aria-label={title}
+      aria-describedby={descriptionId}
       preserveAspectRatio="xMidYMid meet"
     >
       <title>{title}</title>
+      <desc id={descriptionId}>{summary}</desc>
 
       {labels.map((_, trueIdx) =>
         labels.map((__, predIdx) => {

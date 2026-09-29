@@ -1,4 +1,7 @@
+import { useId } from "react";
+
 import { cx } from "./_cx.js";
+import { countLabel, rangeText, summaryNumber } from "./description.js";
 import {
   bandPath,
   buildFrame,
@@ -31,6 +34,8 @@ export interface FoldStabilityLinesProps {
   padding?: PlotPadding;
   yLabel?: string;
   title?: string;
+  /** Faithful host-provided text alternative; defaults to a data summary. */
+  description?: string;
   className?: string;
 }
 
@@ -56,8 +61,10 @@ export function FoldStabilityLines({
   padding,
   yLabel = "Score",
   title = "Fold stability",
+  description,
   className,
 }: FoldStabilityLinesProps) {
+  const descriptionId = useId();
   const frame = buildFrame(width, height, padding);
   const { top, left } = frame.padding;
   const bottom = top + frame.innerHeight;
@@ -88,6 +95,17 @@ export function FoldStabilityLines({
   const meanPoints = foldStats.map((f) => [xAt(f.i), yScale(f.mean)] as [number, number]);
   const upperPoints = foldStats.map((f) => [xAt(f.i), yScale(f.max)] as [number, number]);
   const lowerPoints = foldStats.map((f) => [xAt(f.i), yScale(f.min)] as [number, number]);
+  const seriesSummaries = series.flatMap((item) => {
+    const scores = item.scores.filter((value) => Number.isFinite(value));
+    return scores.length
+      ? [`${item.label ?? item.id}: ${countLabel(scores.length, "score")}, mean ${summaryNumber(mean(scores))}, range ${rangeText(scores)}`]
+      : [];
+  });
+  const summary = description?.trim() || (
+    seriesSummaries.length === 0
+      ? "No finite fold scores."
+      : `${countLabel(seriesSummaries.length, "score series", "score series")} across ${countLabel(foldCount, "fold")}; ${seriesSummaries.join("; ")}.`
+  );
 
   return (
     <svg
@@ -95,9 +113,11 @@ export function FoldStabilityLines({
       viewBox={`0 0 ${width} ${height}`}
       role="img"
       aria-label={title}
+      aria-describedby={descriptionId}
       preserveAspectRatio="xMidYMid meet"
     >
       <title>{title}</title>
+      <desc id={descriptionId}>{summary}</desc>
 
       {yTicks.map((t) => (
         <line

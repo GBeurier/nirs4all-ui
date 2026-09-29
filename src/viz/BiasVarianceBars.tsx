@@ -1,4 +1,7 @@
+import { useId } from "react";
+
 import { cx } from "./_cx.js";
+import { countLabel, summaryNumber } from "./description.js";
 import { buildFrame, makeScale, round, ticks, type PlotPadding } from "./geometry.js";
 import { N4_VIZ_COLORS } from "./theme.js";
 
@@ -18,6 +21,8 @@ export interface BiasVarianceBarsProps {
   padding?: PlotPadding;
   yLabel?: string;
   title?: string;
+  /** Faithful host-provided text alternative; defaults to a data summary. */
+  description?: string;
   className?: string;
 }
 
@@ -48,8 +53,10 @@ export function BiasVarianceBars({
   padding,
   yLabel = "Error",
   title = "Bias² / variance",
+  description,
   className,
 }: BiasVarianceBarsProps) {
+  const descriptionId = useId();
   const frame = buildFrame(width, height, { top: 34, ...(padding ?? {}) });
   const { top, left } = frame.padding;
   const bottom = top + frame.innerHeight;
@@ -68,6 +75,15 @@ export function BiasVarianceBars({
     { color: biasColor, label: "Bias²" },
     { color: varianceColor, label: "Variance" },
   ];
+  const summary = description?.trim() || (
+    entries.length === 0
+      ? "No bias and variance estimates."
+      : `${countLabel(entries.length, "group")}; ${entries.map((entry) => {
+          const bias = safe(entry.biasSquared);
+          const variance = safe(entry.variance);
+          return `${entry.label}: bias squared ${summaryNumber(bias)}, variance ${summaryNumber(variance)}, total ${summaryNumber(bias + variance)}`;
+        }).join("; ")}.`
+  );
 
   return (
     <svg
@@ -75,9 +91,11 @@ export function BiasVarianceBars({
       viewBox={`0 0 ${width} ${height}`}
       role="img"
       aria-label={title}
+      aria-describedby={descriptionId}
       preserveAspectRatio="xMidYMid meet"
     >
       <title>{title}</title>
+      <desc id={descriptionId}>{summary}</desc>
 
       {legend.map((item, k) => {
         const lx = left + k * 92;

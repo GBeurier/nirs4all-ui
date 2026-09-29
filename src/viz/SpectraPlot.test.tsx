@@ -23,10 +23,15 @@ describe("viz/SpectraPlot", () => {
     expect(markup).toContain("n4viz-band");
     expect(markup).toContain("n4viz-line-mean");
     expect(markup).toContain("Wavelength (nm)");
+    expect(markup).toContain("2 sample spectra across 5 axis positions");
+    expect(markup).toContain("axis range 1000 to 1400 nm");
+    expect(markup).toContain("Absorbance range 0.05 to 0.45");
+    expect(markup).toContain("mean curve shown");
   });
 
   it("renders without series or band", () => {
     const markup = renderToStaticMarkup(<SpectraPlot wavelengths={wavelengths} />);
     expect(markup).toContain("<svg");
+    expect(markup).toContain("No spectral curves available.");
   });
 });

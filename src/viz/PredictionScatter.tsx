@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 
 import { cx } from "./_cx.js";
+import { countLabel, summaryNumber } from "./description.js";
 import {
   buildFrame,
   linearFit,
@@ -38,6 +39,8 @@ export interface PredictionScatterProps {
   xLabel?: string;
   yLabel?: string;
   title?: string;
+  /** Faithful host-provided text alternative; defaults to a data summary. */
+  description?: string;
   className?: string;
   children?: ReactNode;
 }
@@ -74,9 +77,11 @@ export function PredictionScatter({
   xLabel = "Observed",
   yLabel = "Predicted",
   title = "Predicted vs observed",
+  description,
   className,
   children,
 }: PredictionScatterProps) {
+  const descriptionId = useId();
   const frame = buildFrame(width, height, padding);
   const { top, left } = frame.padding;
   const bottom = top + frame.innerHeight;
@@ -91,6 +96,25 @@ export function PredictionScatter({
   const axisTicks = ticks(domain, 5);
 
   const fit = regressionLine ? linearFit(actuals, predicted) : null;
+  const valid = points.filter((point) => Number.isFinite(point.actual) && Number.isFinite(point.predicted));
+  const meanAbsoluteError = valid.length
+    ? valid.reduce((sum, point) => sum + Math.abs(point.predicted - point.actual), 0) / valid.length
+    : null;
+  const partitionCounts = new Map<PartitionKey, number>();
+  for (const point of valid) {
+    if (point.partition) partitionCounts.set(point.partition, (partitionCounts.get(point.partition) ?? 0) + 1);
+  }
+  const summary = description?.trim() || (
+    valid.length === 0
+      ? "No valid observed and predicted pairs."
+      : [
+          countLabel(valid.length, "valid observed and predicted pair"),
+          `mean absolute error ${summaryNumber(meanAbsoluteError!)}`,
+          ...[...partitionCounts].map(([partition, count]) => `${partition}: ${count}`),
+          ...(metrics?.r2 != null && Number.isFinite(metrics.r2) ? [`R² ${summaryNumber(metrics.r2)}`] : []),
+          ...(metrics?.rmse != null && Number.isFinite(metrics.rmse) ? [`RMSE ${summaryNumber(metrics.rmse)}`] : []),
+        ].join("; ") + "."
+  );
 
   return (
     <svg
@@ -98,9 +122,11 @@ export function PredictionScatter({
       viewBox={`0 0 ${width} ${height}`}
       role="img"
       aria-label={title}
+      aria-describedby={descriptionId}
       preserveAspectRatio="xMidYMid meet"
     >
       <title>{title}</title>
+      <desc id={descriptionId}>{summary}</desc>
 
       {axisTicks.map((t) => (
         <g key={`grid-${t}`}>

@@ -19,10 +19,25 @@ describe("viz/PredictionScatter", () => {
     expect(markup).toContain("n4viz-identity");
     expect(markup).toContain("R²");
     expect(markup).toContain("Observed");
+    expect(markup).toContain("3 valid observed and predicted pairs");
+    expect(markup).toContain("mean absolute error 0.1667");
+    expect(markup).toContain("train: 2");
+    expect(markup).toMatch(/aria-describedby="([^"]+)"/);
+    expect(markup).toContain("<desc id=");
   });
 
   it("renders with no points", () => {
     const markup = renderToStaticMarkup(<PredictionScatter points={[]} />);
     expect(markup).toContain("<svg");
+    expect(markup).toContain("No valid observed and predicted pairs.");
+  });
+
+  it("accepts a host summary for a localized or domain-specific chart", () => {
+    const markup = renderToStaticMarkup(<PredictionScatter points={points} description="Three calibration samples." />);
+    expect(markup).toContain("<desc id=");
+    expect(markup).toContain("Three calibration samples.");
+    expect(markup).not.toContain("mean absolute error");
+    const blank = renderToStaticMarkup(<PredictionScatter points={points} description="   " />);
+    expect(blank).toContain("mean absolute error");
   });
 });

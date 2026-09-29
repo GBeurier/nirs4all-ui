@@ -1,4 +1,7 @@
+import { useId } from "react";
+
 import { cx } from "./_cx.js";
+import { countLabel, rangeText, summaryNumber } from "./description.js";
 import {
   buildFrame,
   extentOf,
@@ -44,6 +47,8 @@ export interface PcaScatterProps {
   /** Small swatch legend (top-right); defaults on for categorical modes. */
   legend?: boolean;
   title?: string;
+  /** Faithful host-provided text alternative; defaults to a data summary. */
+  description?: string;
   className?: string;
 }
 
@@ -73,8 +78,10 @@ export function PcaScatter({
   padding,
   legend = true,
   title = "Projection",
+  description,
   className,
 }: PcaScatterProps) {
+  const descriptionId = useId();
   const frame = buildFrame(width, height, padding);
   const { top, left } = frame.padding;
   const bottom = top + frame.innerHeight;
@@ -122,6 +129,28 @@ export function PcaScatter({
   const showLegend = legend && colorMode !== "value" && groupOrder.length > 0;
   const resolvedXLabel = xLabel ?? (explained ? `PC1 (${Math.round(explained[0] * 100)}%)` : "PC1");
   const resolvedYLabel = yLabel ?? (explained ? `PC2 (${Math.round(explained[1] * 100)}%)` : "PC2");
+  const valid = points.filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
+  const groups = new Map<string, number>();
+  if (colorMode !== "value") {
+    for (const point of valid) {
+      if (point.group != null) groups.set(point.group, (groups.get(point.group) ?? 0) + 1);
+    }
+  }
+  const valueRange = colorMode === "value"
+    ? rangeText(valid.map((point) => point.value).filter((value): value is number => value != null))
+    : null;
+  const summary = description?.trim() || (
+    valid.length === 0
+      ? "No valid projected points."
+      : [
+          countLabel(valid.length, "projected point"),
+          `${resolvedXLabel} range ${rangeText(valid.map((point) => point.x))}`,
+          `${resolvedYLabel} range ${rangeText(valid.map((point) => point.y))}`,
+          ...[...groups].map(([group, count]) => `${group}: ${count}`),
+          ...(valueRange ? [`color value range ${valueRange}`] : []),
+          ...(explained ? [`explained variance ${summaryNumber(explained[0] * 100)}% and ${summaryNumber(explained[1] * 100)}%`] : []),
+        ].join("; ") + "."
+  );
 
   return (
     <svg
@@ -129,9 +158,11 @@ export function PcaScatter({
       viewBox={`0 0 ${width} ${height}`}
       role="img"
       aria-label={title}
+      aria-describedby={descriptionId}
       preserveAspectRatio="xMidYMid meet"
     >
       <title>{title}</title>
+      <desc id={descriptionId}>{summary}</desc>
 
       {xTicks.map((t) => (
         <line

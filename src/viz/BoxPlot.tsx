@@ -1,4 +1,7 @@
+import { useId } from "react";
+
 import { cx } from "./_cx.js";
+import { countLabel, summaryNumber } from "./description.js";
 import {
   buildFrame,
   fiveNumberSummary,
@@ -24,6 +27,8 @@ export interface BoxPlotProps {
   padding?: PlotPadding;
   yLabel?: string;
   title?: string;
+  /** Faithful host-provided text alternative; defaults to a data summary. */
+  description?: string;
   className?: string;
 }
 
@@ -47,8 +52,10 @@ export function BoxPlot({
   padding,
   yLabel = "Score",
   title = "Score distribution",
+  description,
   className,
 }: BoxPlotProps) {
+  const descriptionId = useId();
   const frame = buildFrame(width, height, padding);
   const { top, left } = frame.padding;
   const bottom = top + frame.innerHeight;
@@ -61,6 +68,17 @@ export function BoxPlot({
 
   const slotW = groups.length > 0 ? frame.innerWidth / groups.length : frame.innerWidth;
   const boxHalf = Math.min(slotW * 0.28, 26);
+  const groupSummaries = groups.flatMap((group) => {
+    const validCount = group.values.filter((value) => Number.isFinite(value)).length;
+    if (validCount === 0) return [];
+    const stats = fiveNumberSummary(group.values);
+    return [`${group.label}: ${countLabel(validCount, "value")}, median ${summaryNumber(stats.median)}, range ${summaryNumber(stats.min)} to ${summaryNumber(stats.max)}`];
+  });
+  const summary = description?.trim() || (
+    groupSummaries.length === 0
+      ? "No finite grouped scores."
+      : `${countLabel(groupSummaries.length, "group")}; ${groupSummaries.join("; ")}.`
+  );
 
   return (
     <svg
@@ -68,9 +86,11 @@ export function BoxPlot({
       viewBox={`0 0 ${width} ${height}`}
       role="img"
       aria-label={title}
+      aria-describedby={descriptionId}
       preserveAspectRatio="xMidYMid meet"
     >
       <title>{title}</title>
+      <desc id={descriptionId}>{summary}</desc>
 
       {yTicks.map((t) => (
         <line
