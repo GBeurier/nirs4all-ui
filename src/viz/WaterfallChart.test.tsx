@@ -4,6 +4,18 @@ import { describe, expect, it } from "vitest";
 import { WaterfallChart } from "./WaterfallChart.js";
 
 describe("viz/WaterfallChart", () => {
+  it.each([NaN, Infinity, -Infinity])("reports known contributions omitted when base %s cannot position bars", (baseValue) => {
+    for (const predicted of [undefined, 7]) {
+      const predictionProps = predicted === undefined ? {} : { predicted };
+      const markup = renderToStaticMarkup(<WaterfallChart baseValue={baseValue} {...predictionProps} contributions={[{ label: "known", value: 2 }]} />);
+      expect(markup).toContain("base value unavailable");
+      expect(markup).toContain(`predicted value ${predicted === undefined ? "unavailable" : "7"}`);
+      expect(markup).toContain("0 of 1 contribution shown; omitted contribution sum 2.");
+      expect(markup).not.toContain("n4viz-bar");
+      expect(markup).not.toMatch(/NaN|Infinity/);
+    }
+  });
+
   it("does not derive a prediction or zero contribution from unavailable values", () => {
     const markup = renderToStaticMarkup(<WaterfallChart baseValue={1} contributions={[{ label: "missing", value: NaN }]} />);
     expect(markup).toContain("base value 1; predicted value unavailable; 0 of 1 contribution shown");
