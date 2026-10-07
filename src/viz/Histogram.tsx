@@ -83,7 +83,7 @@ export function Histogram({
 
   const isClassification = variant === "classification";
   const numericBins = isClassification ? [] : histogram(values ?? [], binCount);
-  const categorical = bins ?? [];
+  const categorical = (bins ?? []).filter((bar) => Number.isFinite(bar.count) && bar.count >= 0);
 
   const counts = isClassification ? categorical.map((b) => b.count) : numericBins.map((b) => b.count);
   const maxCount = Math.max(1, ...counts.filter((c) => Number.isFinite(c)));
@@ -104,7 +104,7 @@ export function Histogram({
   const meanValue = mean(values ?? []);
   const showMean = meanLine && !isClassification && numericBins.length > 0 && Number.isFinite(meanValue);
   const validValues = (values ?? []).filter((value) => Number.isFinite(value));
-  const validCategories = categorical.filter((bar) => Number.isFinite(bar.count) && bar.count >= 0);
+  const validCategories = categorical;
   const summary = description?.trim() || (
     isClassification
       ? validCategories.length === 0

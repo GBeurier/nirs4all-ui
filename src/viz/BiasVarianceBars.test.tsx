@@ -4,6 +4,19 @@ import { describe, expect, it } from "vitest";
 import { BiasVarianceBars } from "./BiasVarianceBars.js";
 
 describe("viz/BiasVarianceBars", () => {
+  it("keeps unavailable estimates distinct from known zero and suppresses incomplete stacks", () => {
+    const markup = renderToStaticMarkup(<BiasVarianceBars entries={[
+      { label: "unknown", biasSquared: NaN, variance: Infinity },
+      { label: "partial", biasSquared: 0, variance: NaN },
+      { label: "zero", biasSquared: 0, variance: 0 },
+    ]} />);
+    expect(markup).toContain("unknown: bias squared unavailable, variance unavailable, total unavailable");
+    expect(markup).toContain("partial: bias squared 0, variance unavailable, total unavailable");
+    expect(markup).toContain("zero: bias squared 0, variance 0, total 0");
+    expect(markup.match(/class="n4viz-bar"/g)).toHaveLength(2);
+    expect(markup).not.toMatch(/NaN|Infinity/);
+  });
+
   it("renders stacked bias²/variance bars per group with a legend", () => {
     const markup = renderToStaticMarkup(
       <BiasVarianceBars

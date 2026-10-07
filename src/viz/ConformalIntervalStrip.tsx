@@ -102,6 +102,11 @@ function fmtCoverage(coverage: number): string {
   return `${Number.isInteger(percent) ? percent.toFixed(0) : percent.toFixed(1)}%`;
 }
 
+function validBand(band: ConformalBand): boolean {
+  return Number.isFinite(band.coverage) && band.coverage >= 0 && band.coverage <= 1
+    && Number.isFinite(band.lower) && Number.isFinite(band.upper) && band.lower <= band.upper;
+}
+
 function sampleWidth(sample: ConformalStripSample, coverage: number): number {
   const band = sample.bands.find((candidate) => candidate.coverage === coverage) ?? widestBand(sample);
   return band ? band.upper - band.lower : Number.POSITIVE_INFINITY;
@@ -157,10 +162,9 @@ export function ConformalIntervalStrip({
   const bottom = top + frame.innerHeight;
   const right = left + frame.innerWidth;
 
-  const valid = samples.filter(
-    (sample) => Number.isFinite(sample.prediction)
-      && sample.bands.some((band) => Number.isFinite(band.lower) && Number.isFinite(band.upper)),
-  );
+  const valid = samples
+    .map((sample) => ({ ...sample, bands: sample.bands.filter(validBand) }))
+    .filter((sample) => Number.isFinite(sample.prediction) && sample.bands.length > 0);
 
   const coverages = [...new Set(valid.flatMap((sample) => sample.bands.map((band) => band.coverage)))]
     .filter((coverage) => Number.isFinite(coverage))
@@ -212,6 +216,7 @@ export function ConformalIntervalStrip({
   }
   const observed = evaluated > 0 ? covered / evaluated : null;
   const hasActuals = evaluated > 0;
+  const hasKnownActuals = drawn.some((sample) => sample.actual != null && Number.isFinite(sample.actual));
 
   const axisLabelY = yLabel ?? (unit ? `Value (${unit})` : "Value");
   const axisLabelX = xLabel ?? `Samples (n = ${valid.length})`;
@@ -223,7 +228,9 @@ export function ConformalIntervalStrip({
           ...(Number.isFinite(target) ? [`target interval ${fmtCoverage(target)}`] : []),
           ...(observed != null
             ? [`observed coverage ${summaryNumber(observed * 100)}% (${covered} of ${evaluated} known actual values)`]
-            : ["observed coverage unavailable without known actual values"]),
+            : [hasKnownActuals
+                ? "observed coverage unavailable without evaluable target intervals"
+                : "observed coverage unavailable without known actual values"]),
         ].join("; ") + "."
   );
 
@@ -300,7 +307,7 @@ export function ConformalIntervalStrip({
       {drawn.map((sample, index) => {
         const xc = left + (index + 0.5) * slot;
         const bands = [...sample.bands]
-          .filter((band) => Number.isFinite(band.lower) && Number.isFinite(band.upper))
+          .filter(validBand)
           .sort((a, b) => b.coverage - a.coverage);
         const state = isCovered(sample, target);
         return (

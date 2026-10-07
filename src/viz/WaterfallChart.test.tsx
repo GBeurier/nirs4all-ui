@@ -4,6 +4,25 @@ import { describe, expect, it } from "vitest";
 import { WaterfallChart } from "./WaterfallChart.js";
 
 describe("viz/WaterfallChart", () => {
+  it("does not derive a prediction or zero contribution from unavailable values", () => {
+    const markup = renderToStaticMarkup(<WaterfallChart baseValue={1} contributions={[{ label: "missing", value: NaN }]} />);
+    expect(markup).toContain("base value 1; predicted value unavailable; 0 of 1 contribution shown");
+    expect(markup).toContain("omitted contribution sum unavailable");
+    expect(markup).not.toContain("n4viz-prediction");
+    expect(markup).not.toContain("n4viz-bar");
+    expect(markup).not.toMatch(/NaN|Infinity|missing: \+0/);
+  });
+
+  it("retains an explicitly supplied prediction while reporting an incomplete decomposition", () => {
+    const markup = renderToStaticMarkup(<WaterfallChart baseValue={1} predicted={3} topN={1} contributions={[
+      { label: "missing", value: NaN }, { label: "known", value: 2 },
+    ]} />);
+    expect(markup).toContain("predicted value 3; 1 of 2 contributions shown; known: +2");
+    expect(markup).toContain("omitted contribution sum unavailable");
+    expect(markup).toContain("n4viz-prediction");
+    expect(markup).not.toMatch(/NaN|Infinity/);
+  });
+
   it("renders floating contribution bars with base and prediction references", () => {
     const markup = renderToStaticMarkup(
       <WaterfallChart

@@ -44,7 +44,11 @@ function fmtDelta(value: number): string {
 function sortTokens(tokens: readonly TokenEffect[], sortBy: ForestSort): TokenEffect[] {
   const list = tokens.slice();
   if (sortBy === "median") {
-    list.sort((a, b) => (b.with.median || -Infinity) - (a.with.median || -Infinity));
+    list.sort((a, b) => {
+      const aMedian = Number.isFinite(a.with.median) ? a.with.median : -Infinity;
+      const bMedian = Number.isFinite(b.with.median) ? b.with.median : -Infinity;
+      return aMedian === bMedian ? 0 : bMedian - aMedian;
+    });
   } else if (sortBy === "coverage") {
     list.sort((a, b) => b.coverage - a.coverage);
   }

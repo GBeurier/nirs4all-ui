@@ -39,12 +39,6 @@ function semanticToTask(col: DatasetColumn): TargetTask {
     : "regression";
 }
 
-/** Collapse a long list of x columns to head…tail so the config stays readable. */
-function summarizeXColumns(names: string[]): string[] {
-  if (names.length <= 6) return names;
-  return [names[0]!, names[1]!, "...", names[names.length - 2]!, names[names.length - 1]!];
-}
-
 export function buildExportConfig(name: string, sources: DatasetSource[]): DatasetExportConfig {
   const exportSources: ExportSource[] = [];
   const targets: ExportTarget[] = [];
@@ -63,7 +57,7 @@ export function buildExportConfig(name: string, sources: DatasetSource[]): Datas
       id_column: idCol?.name,
       replicate_column: repCol?.name,
       partition_column: partCol?.name,
-      x_columns: xNames.length ? summarizeXColumns(xNames) : undefined,
+      x_columns: xNames.length ? xNames : undefined,
       parsing: {
         separator: source.parsing.separator,
         decimal: source.parsing.decimal,
