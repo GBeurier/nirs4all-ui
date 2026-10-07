@@ -109,14 +109,14 @@ export function WaterfallChart({
   const n = visibleRows.length;
   const band = n > 0 ? plotHeight / n : plotHeight;
   const barHeight = Math.min(18, Math.max(4, band - 8));
-  const keptSum = rows.reduce((sum, row) => sum + row.value, 0);
+  const shownSum = visibleRows.reduce((sum, row) => sum + row.value, 0);
   const summary = description?.trim() || (
     [
       `base value ${summaryNumber(baseValue)}`,
       `predicted value ${summaryNumber(resolvedPredicted)}`,
       `${visibleRows.length} of ${countLabel(contributions.length, "contribution")} shown`,
       ...visibleRows.map((row) => `${row.label}: ${row.value >= 0 ? "+" : ""}${summaryNumber(row.value)}`),
-      ...(contributions.length > visibleRows.length ? [`omitted contribution sum ${summaryNumber(sumAll - keptSum)}`] : []),
+      ...(contributions.length > visibleRows.length ? [`omitted contribution sum ${summaryNumber(sumAll - shownSum)}`] : []),
     ].join("; ") + "."
   );
 
