@@ -4,6 +4,15 @@ import { describe, expect, it } from "vitest";
 import { FeatureImportanceBar } from "./FeatureImportanceBar.js";
 
 describe("FeatureImportanceBar", () => {
+  it("filters unavailable importance before selecting the strongest feature", () => {
+    const markup = renderToStaticMarkup(<FeatureImportanceBar items={[
+      { label: "unknown", value: NaN }, { label: "infinite", value: Infinity }, { label: "strongest", value: 0.9 },
+    ]} topN={1} />);
+    expect(markup).toContain("1 shown feature of 3 supplied; strongest: 0.9");
+    expect(markup.match(/class="n4viz-bar"/g)).toHaveLength(1);
+    expect(markup).not.toMatch(/unknown|infinite|NaN|Infinity/);
+  });
+
   it("renders ranked horizontal bars for the top features", () => {
     const markup = renderToStaticMarkup(
       <FeatureImportanceBar

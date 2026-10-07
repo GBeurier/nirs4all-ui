@@ -65,6 +65,9 @@ export function ShapBeeswarm({
   xLabel = "SHAP value",
 }: ShapBeeswarmProps) {
   const descriptionId = useId();
+  const validFeatures = features.map((feature) => ({
+    ...feature, points: feature.points.filter((point) => Number.isFinite(point.shap)),
+  }));
   const resolvedHeight = height ?? Math.max(180, features.length * 34 + 48);
 
   const padLeft = 96;
@@ -77,7 +80,7 @@ export function ShapBeeswarm({
   const plotBottom = resolvedHeight - padBottom;
   const plotHeight = Math.max(0, plotBottom - plotTop);
 
-  const allShap = features.flatMap((f) => f.points.map((p) => p.shap));
+  const allShap = validFeatures.flatMap((f) => f.points.map((p) => p.shap));
   const ext = extentOf(allShap);
   const domain = { min: Math.min(0, ext.min), max: Math.max(0, ext.max) };
   const xScale = makeScale(domain, plotLeft, plotRight);
@@ -87,16 +90,17 @@ export function ShapBeeswarm({
   const n = features.length;
   const band = n > 0 ? plotHeight / n : plotHeight;
   const amplitude = Math.min(band, 30) * 0.35;
-  const featureSummaries = features.flatMap((feature) => {
+  const featureSummaries = validFeatures.flatMap((feature) => {
     const values = feature.points.map((point) => point.shap).filter((value) => Number.isFinite(value));
     return values.length
       ? [`${feature.label}: ${countLabel(values.length, "contribution")}, mean ${summaryNumber(values.reduce((sum, value) => sum + value, 0) / values.length)}, range ${rangeText(values)}`]
       : [];
   });
+  const missingFeatureValues = validFeatures.some((feature) => feature.points.some((point) => !Number.isFinite(point.featureValue)));
   const summary = description?.trim() || (
     featureSummaries.length === 0
       ? "No finite SHAP contributions."
-      : `${countLabel(featureSummaries.length, "feature")}; ${featureSummaries.join("; ")}. Color encodes feature value.`
+      : `${countLabel(featureSummaries.length, "feature")}; ${featureSummaries.join("; ")}. Color encodes feature value.${missingFeatureValues ? " Unavailable feature values use a neutral color." : ""}`
   );
 
   return (
@@ -122,7 +126,7 @@ export function ShapBeeswarm({
         strokeWidth={1.4}
       />
 
-      {features.map((feature, fi) => {
+      {validFeatures.map((feature, fi) => {
         const center = plotTop + band * fi + band / 2;
         const fvExtent = extentOf(feature.points.map((p) => p.featureValue));
         const fvSpan = fvExtent.max - fvExtent.min;
@@ -146,7 +150,7 @@ export function ShapBeeswarm({
                   cx={round(xScale(point.shap))}
                   cy={round(cy)}
                   r={pointRadius}
-                  fill={divergingColor(norm)}
+                  fill={Number.isFinite(point.featureValue) ? divergingColor(norm) : N4_VIZ_COLORS.slate}
                   fillOpacity={0.72}
                 />
               );

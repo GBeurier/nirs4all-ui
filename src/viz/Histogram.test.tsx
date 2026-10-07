@@ -4,6 +4,16 @@ import { describe, expect, it } from "vitest";
 import { Histogram } from "./Histogram.js";
 
 describe("Histogram", () => {
+  it("uses the same finite nonnegative category counts for descriptions and marks", () => {
+    const markup = renderToStaticMarkup(<Histogram variant="classification" bins={[
+      { label: "unknown", count: NaN }, { label: "invalid", count: -1 },
+      { label: "known", count: 2 }, { label: "zero", count: 0 },
+    ]} />);
+    expect(markup).toContain("2 categories; 2 observations; known: 2; zero: 0");
+    expect(markup.match(/class="n4viz-bar"/g)).toHaveLength(2);
+    expect(markup).not.toMatch(/unknown|invalid|NaN|Infinity/);
+  });
+
   it("renders a regression distribution from raw values with a mean line", () => {
     const markup = renderToStaticMarkup(
       <Histogram

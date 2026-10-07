@@ -82,15 +82,20 @@ function isMetric(value: unknown): value is ChainEffectMetricArtifact {
 }
 
 function isStepArtifact(value: unknown): value is ChainEffectStepArtifact {
-  return isRecord(value) && typeof value.token === "string" && typeof value.role === "string";
+  return (
+    isRecord(value) && typeof value.token === "string" && typeof value.role === "string" &&
+    (value.label === undefined || typeof value.label === "string")
+  );
 }
 
 function isPointArtifact(value: unknown): value is ChainEffectPointArtifact {
   return (
     isRecord(value) &&
     typeof value.id === "string" &&
-    typeof value.score === "number" &&
-    typeof value.goodness === "number" &&
+    typeof value.score === "number" && Number.isFinite(value.score) &&
+    typeof value.goodness === "number" && Number.isFinite(value.goodness) &&
+    (value.dataset === undefined || value.dataset === null || typeof value.dataset === "string") &&
+    (value.source === undefined || value.source === null || typeof value.source === "string") &&
     Array.isArray(value.ordered_tokens) &&
     value.ordered_tokens.every(isStepArtifact)
   );
@@ -101,10 +106,12 @@ export function isChainEffectAnalysisArtifact(value: unknown): value is ChainEff
   return (
     isRecord(value) &&
     value.schema_id === CHAIN_EFFECT_SCHEMA_ID &&
-    typeof value.schema_version === "number" &&
+    value.schema_version === CHAIN_EFFECT_SCHEMA_VERSION &&
+    (value.baseline === undefined || value.baseline === null ||
+      (typeof value.baseline === "number" && Number.isFinite(value.baseline))) &&
     isMetric(value.metric) &&
     typeof value.lens === "string" &&
-    value.lens in LENS_FROM_WIRE &&
+    Object.prototype.hasOwnProperty.call(LENS_FROM_WIRE, value.lens) &&
     Array.isArray(value.points) &&
     value.points.every(isPointArtifact)
   );

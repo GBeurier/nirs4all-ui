@@ -64,22 +64,26 @@ export function ConfusionMatrix({
   const cellW = n > 0 ? gridW / n : gridW;
   const cellH = n > 0 ? gridH / n : gridH;
 
-  const globalMax = Math.max(1, ...matrix.flatMap((row) => row.map((v) => (Number.isFinite(v) ? v : 0))));
-  const rowTotals = matrix.map((row) => Math.max(1, row.reduce((s, v) => s + (Number.isFinite(v) ? v : 0), 0)));
-  const safeCount = (trueIndex: number, predictedIndex: number): number => {
-    const value = matrix[trueIndex]?.[predictedIndex] ?? 0;
-    return Number.isFinite(value) && value > 0 ? value : 0;
-  };
-  const classTotals = labels.map((_, row) => labels.reduce((total, __, col) => total + safeCount(row, col), 0));
+  const counts = labels.map((_, row) => labels.map((__, col) => {
+    const value = matrix.length === 0 ? 0 : matrix[row]?.[col];
+    return value != null && Number.isFinite(value) && value >= 0 ? value : null;
+  }));
+  const globalMax = counts.flat().reduce<number>((max, value) => Math.max(max, value ?? 0), 1);
+  const classTotals = counts.map((row) => row.every((value) => value != null)
+    ? row.reduce<number>((sum, value) => sum + value!, 0) : Number.NaN);
+  const rowTotals = classTotals.map((total) => Number.isFinite(total) ? Math.max(1, total) : null);
   const total = classTotals.reduce((sum, value) => sum + value, 0);
-  const correct = labels.reduce((sum, _, index) => sum + safeCount(index, index), 0);
+  const correct = labels.reduce((sum, _, index) => sum + (counts[index]?.[index] ?? Number.NaN), 0);
+  const unavailable = counts.flat().filter((value) => value == null).length;
   const summary = description?.trim() || (
-    total === 0
+    unavailable || !Number.isFinite(total)
+      ? `${countLabel(n, "class", "classes")}; classification counts unavailable${unavailable ? ` (${countLabel(unavailable, "unavailable cell")})` : ""}; accuracy unavailable.`
+      : total === 0
       ? `${countLabel(n, "class", "classes")}; no classified observations.`
       : [
           `${countLabel(n, "class", "classes")} and ${countLabel(total, "classified observation")}`,
           `${summaryNumber(correct)} correct (${summaryNumber((correct / total) * 100)}%)`,
-          ...labels.map((label, index) => `${label}: ${summaryNumber(safeCount(index, index))} of ${summaryNumber(classTotals[index] ?? 0)} correct`),
+          ...labels.map((label, index) => `${label}: ${summaryNumber(counts[index]?.[index] ?? 0)} of ${summaryNumber(classTotals[index] ?? 0)} correct`),
         ].join("; ") + "."
   );
 
@@ -97,9 +101,9 @@ export function ConfusionMatrix({
 
       {labels.map((_, trueIdx) =>
         labels.map((__, predIdx) => {
-          const value = matrix[trueIdx]?.[predIdx] ?? 0;
+          const value = counts[trueIdx]?.[predIdx] ?? null;
           const denom = normalize ? (rowTotals[trueIdx] ?? 1) : globalMax;
-          const intensity = denom > 0 ? value / denom : 0;
+          const intensity = value != null && (!normalize || rowTotals[trueIdx] != null) ? value / denom : null;
           const x = padLeft + predIdx * cellW;
           const y = padTop + trueIdx * cellH;
           const isDiagonal = trueIdx === predIdx;
@@ -112,18 +116,18 @@ export function ConfusionMatrix({
                 width={round(cellW - 2)}
                 height={round(cellH - 2)}
                 rx={4}
-                fill={cellColor(intensity, isDiagonal)}
+                fill={intensity == null ? "transparent" : cellColor(intensity, isDiagonal)}
                 stroke={isDiagonal ? N4_VIZ_COLORS.teal : "transparent"}
                 strokeOpacity={0.5}
               />
               {showCounts ? (
                 <text
-                  className={cx("n4viz-cell-value", intensity > 0.55 ? "n4viz-cell-value-strong" : undefined)}
+                  className={cx("n4viz-cell-value", intensity != null && intensity > 0.55 ? "n4viz-cell-value-strong" : undefined)}
                   x={round(x + cellW / 2)}
                   y={round(y + cellH / 2 + 4)}
                   textAnchor="middle"
                 >
-                  {normalize ? (value / (rowTotals[trueIdx] ?? 1)).toFixed(2) : value}
+                  {intensity == null ? "—" : normalize ? intensity.toFixed(2) : value}
                 </text>
               ) : null}
             </g>

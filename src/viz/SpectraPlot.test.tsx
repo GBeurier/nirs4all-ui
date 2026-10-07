@@ -6,6 +6,25 @@ import { SpectraPlot } from "./SpectraPlot.js";
 describe("viz/SpectraPlot", () => {
   const wavelengths = [1000, 1100, 1200, 1300, 1400];
 
+  it.each([{ mean: [] }, { mean: [0.1] }, { mean: [NaN, Infinity] }, { mean: [0.1, 0.2, 0.3] }])("does not invent a mean from unavailable or unaligned values %j", ({ mean }) => {
+    const markup = renderToStaticMarkup(<SpectraPlot wavelengths={[1000, 1100]} mean={mean} />);
+    expect(markup).toContain("No spectral curves available.");
+    expect(markup).not.toContain("n4viz-line-mean");
+    expect(markup).not.toMatch(/NaN|Infinity/);
+  });
+
+  it("counts and renders only complete finite aligned sample curves", () => {
+    const markup = renderToStaticMarkup(<SpectraPlot wavelengths={[1000, 1100]} series={[
+      { id: "unknown", values: [NaN, Infinity] },
+      { id: "short", values: [0.1] },
+      { id: "valid", values: [0.1, 0.2] },
+    ]} band={{ lower: [0.2, 0.3], upper: [0.1, 0.4] }} />);
+    expect(markup).toContain("1 sample spectrum across 2 axis positions");
+    expect(markup.match(/class="n4viz-line"/g)).toHaveLength(1);
+    expect(markup).not.toContain("range band shown");
+    expect(markup).not.toMatch(/NaN|Infinity/);
+  });
+
   it("renders overlaid series, a mean line, and a min/max band", () => {
     const markup = renderToStaticMarkup(
       <SpectraPlot

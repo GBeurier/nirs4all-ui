@@ -33,8 +33,8 @@ function fmt(value: number): string {
   return value.toFixed(3);
 }
 
-function safe(value: number): number {
-  return Number.isFinite(value) ? Math.max(0, value) : 0;
+function estimate(value: number): number {
+  return Number.isFinite(value) && value >= 0 ? value : Number.NaN;
 }
 
 /**
@@ -62,7 +62,7 @@ export function BiasVarianceBars({
   const bottom = top + frame.innerHeight;
   const right = left + frame.innerWidth;
 
-  const totals = entries.map((e) => safe(e.biasSquared) + safe(e.variance));
+  const totals = entries.map((e) => estimate(e.biasSquared) + estimate(e.variance));
   const maxTotal = Math.max(0, ...totals.filter((t) => Number.isFinite(t)));
   const yDomain = { min: 0, max: maxTotal || 1 };
   const yScale = makeScale(yDomain, bottom, top);
@@ -79,8 +79,8 @@ export function BiasVarianceBars({
     entries.length === 0
       ? "No bias and variance estimates."
       : `${countLabel(entries.length, "group")}; ${entries.map((entry) => {
-          const bias = safe(entry.biasSquared);
-          const variance = safe(entry.variance);
+          const bias = estimate(entry.biasSquared);
+          const variance = estimate(entry.variance);
           return `${entry.label}: bias squared ${summaryNumber(bias)}, variance ${summaryNumber(variance)}, total ${summaryNumber(bias + variance)}`;
         }).join("; ")}.`
   );
@@ -122,8 +122,9 @@ export function BiasVarianceBars({
 
       {entries.map((entry, i) => {
         const center = left + (i + 0.5) * slotW;
-        const bias = safe(entry.biasSquared);
-        const variance = safe(entry.variance);
+        const bias = estimate(entry.biasSquared);
+        const variance = estimate(entry.variance);
+        if (!Number.isFinite(bias + variance)) return null;
         const yBias = yScale(bias);
         const yTotal = yScale(bias + variance);
         const x = center - barW / 2;

@@ -30,6 +30,40 @@ const SAMPLES: ConformalStripSample[] = [
 ];
 
 describe("ConformalIntervalStrip", () => {
+  it.each([
+    { coverage: 0.9, lower: NaN, upper: NaN },
+    { coverage: 0.9, lower: 2, upper: 0 },
+    { coverage: Infinity, lower: 0, upper: 2 },
+    { coverage: 1.1, lower: 0, upper: 2 },
+  ])("excludes unusable bands from selection, marks and coverage: %j", (invalid) => {
+    const markup = renderToStaticMarkup(<ConformalIntervalStrip samples={[{
+      prediction: 1, actual: 1,
+      bands: [invalid, { coverage: 0.5, lower: 0, upper: 2 }],
+    }]} />);
+    expect(markup).toContain("target interval 50%");
+    expect(markup).toContain("observed coverage 100% (1 of 1 known actual values)");
+    expect(markup.match(/class="n4viz-conf-band /g)).toHaveLength(1);
+    expect(markup).not.toMatch(/NaN|Infinity|90%/);
+  });
+
+  it("excludes unavailable target intervals from the denominator without inventing missing actuals", () => {
+    const markup = renderToStaticMarkup(<ConformalIntervalStrip samples={[
+      { prediction: 1, bands: [{ coverage: 0.9, lower: 0, upper: 2 }] },
+      { prediction: 1, actual: 1, bands: [{ coverage: 0.5, lower: 0, upper: 2 }] },
+    ]} />);
+    expect(markup).toContain("observed coverage unavailable without evaluable target intervals");
+    expect(markup).not.toContain("without known actual values");
+    expect(markup).not.toContain("obs 0%");
+  });
+
+  it("counts only known actuals paired with valid selected intervals", () => {
+    const markup = renderToStaticMarkup(<ConformalIntervalStrip samples={[
+      { prediction: 1, actual: 1, bands: [{ coverage: 0.9, lower: 0, upper: 2 }] },
+      { prediction: 1, actual: 3, bands: [{ coverage: 0.9, lower: NaN, upper: NaN }, { coverage: 0.5, lower: 0, upper: 2 }] },
+    ]} />);
+    expect(markup).toContain("observed coverage 100% (1 of 1 known actual values)");
+  });
+
   it("renders nested bands, a prediction tick, and covered/missed markers", () => {
     const markup = renderToStaticMarkup(
       <ConformalIntervalStrip samples={SAMPLES} unit="g/kg" title="Calibrated intervals" />,

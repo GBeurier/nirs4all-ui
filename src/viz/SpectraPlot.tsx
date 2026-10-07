@@ -101,11 +101,19 @@ export function SpectraPlot({
   const { top, left } = frame.padding;
   const bottom = top + frame.innerHeight;
 
+  const usableAxis = wavelengths.length > 0 && wavelengths.every(Number.isFinite);
+  const aligned = (values: readonly number[]): boolean =>
+    usableAxis && values.length === wavelengths.length && values.every(Number.isFinite);
+  const validSeries = series.filter((curve) => aligned(curve.values));
+  const validMean = mean && aligned(mean) ? mean : null;
+  const validBand = band && aligned(band.lower) && aligned(band.upper)
+    && band.lower.every((lower, index) => lower <= band.upper[index]!) ? band : null;
+
   const xDomain = extentOf(wavelengths);
   const allValues = [
-    ...series.flatMap((s) => s.values as number[]),
-    ...(mean ?? []),
-    ...(band ? [...band.lower, ...band.upper] : []),
+    ...validSeries.flatMap((s) => s.values as number[]),
+    ...(validMean ?? []),
+    ...(validBand ? [...validBand.lower, ...validBand.upper] : []),
   ];
   const yDomain = niceExtent(allValues.length ? allValues : [0, 1], 0.08);
 
@@ -113,7 +121,7 @@ export function SpectraPlot({
   const yScale = makeScale(yDomain, bottom, top);
 
   const toPoints = (values: readonly number[]): Array<[number, number]> =>
-    wavelengths.map((wl, i) => [xScale(wl), yScale(values[i] ?? 0)] as [number, number]);
+    wavelengths.map((wl, i) => [xScale(wl), yScale(values[i]!)] as [number, number]);
 
   const xTicks = ticks(xDomain, 5);
   const yTicks = ticks(yDomain, 4);
@@ -121,14 +129,14 @@ export function SpectraPlot({
   const wavelengthRange = rangeText(wavelengths);
   const valueRange = rangeText(allValues);
   const summary = description?.trim() || (
-    wavelengths.length === 0 || (!series.length && !mean && !band)
+    !validSeries.length && !validMean && !validBand
       ? "No spectral curves available."
       : [
-          `${countLabel(series.length, "sample spectrum", "sample spectra")} across ${countLabel(wavelengths.length, "axis position")}`,
+          `${countLabel(validSeries.length, "sample spectrum", "sample spectra")} across ${countLabel(wavelengths.length, "axis position")}`,
           ...(wavelengthRange ? [`axis range ${wavelengthRange} ${unit}`] : []),
           ...(valueRange ? [`${yLabel} range ${valueRange}`] : []),
-          ...(mean ? ["mean curve shown"] : []),
-          ...(band ? ["range band shown"] : []),
+          ...(validMean ? ["mean curve shown"] : []),
+          ...(validBand ? ["range band shown"] : []),
         ].join("; ") + "."
   );
 
@@ -156,17 +164,17 @@ export function SpectraPlot({
           ))
         : null}
 
-      {band ? (
+      {validBand ? (
         <path
           className="n4viz-band"
-          d={bandPath(toPoints(band.upper), toPoints(band.lower))}
-          fill={band.color ?? N4_VIZ_COLORS.teal}
-          fillOpacity={band.opacity ?? 0.12}
+          d={bandPath(toPoints(validBand.upper), toPoints(validBand.lower))}
+          fill={validBand.color ?? N4_VIZ_COLORS.teal}
+          fillOpacity={validBand.opacity ?? 0.12}
           stroke="none"
         />
       ) : null}
 
-      {series.map((s) => (
+      {validSeries.map((s) => (
         <path
           key={s.id}
           className="n4viz-line"
@@ -178,10 +186,10 @@ export function SpectraPlot({
         />
       ))}
 
-      {mean ? (
+      {validMean ? (
         <path
           className="n4viz-line n4viz-line-mean"
-          d={linePath(toPoints(mean))}
+          d={linePath(toPoints(validMean))}
           fill="none"
           stroke={meanColor}
           strokeWidth={2.4}

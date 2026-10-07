@@ -66,11 +66,11 @@ export function WaterfallChart({
   className,
 }: WaterfallChartProps) {
   const descriptionId = useId();
-  const sumAll = contributions.reduce((s, c) => s + (Number.isFinite(c.value) ? c.value : 0), 0);
+  const sumAll = contributions.reduce((s, c) => s + c.value, 0);
   const resolvedPredicted = predicted ?? baseValue + sumAll;
 
   const keep = Math.max(0, Math.trunc(topN));
-  const indexed = contributions.map((c, i) => ({ c, i }));
+  const indexed = contributions.map((c, i) => ({ c, i })).filter(({ c }) => Number.isFinite(c.value));
   const keptIndices = new Set(
     [...indexed]
       .sort((a, b) => Math.abs(b.c.value) - Math.abs(a.c.value))
@@ -94,31 +94,30 @@ export function WaterfallChart({
   let running = baseValue;
   const rows = kept.map((c) => {
     const from = running;
-    const value = Number.isFinite(c.value) ? c.value : 0;
+    const value = c.value;
     const to = from + value;
     running = to;
     return { label: c.label, value, from, to };
   });
+  const visibleRows = rows.filter((row) => Number.isFinite(row.from) && Number.isFinite(row.to));
 
   const boundaries = [baseValue, resolvedPredicted, ...rows.flatMap((r) => [r.from, r.to])];
   const domain = niceExtent(boundaries, 0.06);
   const xScale = makeScale(domain, plotLeft, plotRight);
   const xTicks = ticks(domain, 5);
 
-  const n = rows.length;
+  const n = visibleRows.length;
   const band = n > 0 ? plotHeight / n : plotHeight;
   const barHeight = Math.min(18, Math.max(4, band - 8));
   const keptSum = rows.reduce((sum, row) => sum + row.value, 0);
   const summary = description?.trim() || (
-    !Number.isFinite(baseValue) || !Number.isFinite(resolvedPredicted)
-      ? "Base or predicted value is unavailable."
-      : [
-          `base value ${summaryNumber(baseValue)}`,
-          `predicted value ${summaryNumber(resolvedPredicted)}`,
-          `${rows.length} of ${countLabel(contributions.length, "contribution")} shown`,
-          ...rows.map((row) => `${row.label}: ${row.value >= 0 ? "+" : ""}${summaryNumber(row.value)}`),
-          ...(contributions.length > rows.length ? [`omitted contribution sum ${summaryNumber(sumAll - keptSum)}`] : []),
-        ].join("; ") + "."
+    [
+      `base value ${summaryNumber(baseValue)}`,
+      `predicted value ${summaryNumber(resolvedPredicted)}`,
+      `${visibleRows.length} of ${countLabel(contributions.length, "contribution")} shown`,
+      ...visibleRows.map((row) => `${row.label}: ${row.value >= 0 ? "+" : ""}${summaryNumber(row.value)}`),
+      ...(contributions.length > visibleRows.length ? [`omitted contribution sum ${summaryNumber(sumAll - keptSum)}`] : []),
+    ].join("; ") + "."
   );
 
   return (
@@ -144,7 +143,7 @@ export function WaterfallChart({
         />
       ))}
 
-      <line
+      {Number.isFinite(baseValue) ? <line
         className="n4viz-reference n4viz-base"
         x1={round(xScale(baseValue))}
         x2={round(xScale(baseValue))}
@@ -153,8 +152,8 @@ export function WaterfallChart({
         stroke={N4_VIZ_COLORS.slate}
         strokeDasharray="5 4"
         strokeWidth={1.4}
-      />
-      <line
+      /> : null}
+      {Number.isFinite(resolvedPredicted) ? <line
         className="n4viz-reference n4viz-prediction"
         x1={round(xScale(resolvedPredicted))}
         x2={round(xScale(resolvedPredicted))}
@@ -162,15 +161,15 @@ export function WaterfallChart({
         y2={plotBottom}
         stroke={N4_VIZ_COLORS.tealDark}
         strokeWidth={1.6}
-      />
-      <text className="n4viz-tick" x={round(xScale(baseValue))} y={plotTop - 6} textAnchor="middle">
+      /> : null}
+      {Number.isFinite(baseValue) ? <text className="n4viz-tick" x={round(xScale(baseValue))} y={plotTop - 6} textAnchor="middle">
         base
-      </text>
-      <text className="n4viz-tick" x={round(xScale(resolvedPredicted))} y={plotTop - 6} textAnchor="middle">
+      </text> : null}
+      {Number.isFinite(resolvedPredicted) ? <text className="n4viz-tick" x={round(xScale(resolvedPredicted))} y={plotTop - 6} textAnchor="middle">
         f(x)
-      </text>
+      </text> : null}
 
-      {rows.map((row, i) => {
+      {visibleRows.map((row, i) => {
         const center = plotTop + band * i + band / 2;
         const x0 = xScale(Math.min(row.from, row.to));
         const x1 = xScale(Math.max(row.from, row.to));

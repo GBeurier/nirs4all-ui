@@ -57,7 +57,7 @@ export function FeatureImportanceBar({
 }: FeatureImportanceBarProps) {
   const descriptionId = useId();
   const keep = Math.max(0, Math.trunc(topN));
-  const sorted = [...items].sort((a, b) => b.value - a.value).slice(0, keep);
+  const sorted = items.filter((item) => Number.isFinite(item.value)).sort((a, b) => b.value - a.value).slice(0, keep);
   const resolvedHeight = height ?? Math.max(160, keep * 22 + 48);
 
   const padLeft = 96;
