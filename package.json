@@ -1,6 +1,6 @@
 {
   "name": "nirs4all-ui",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "description": "Shared React UI components, visual assets, and pure view-model helpers for nirs4all apps.",
   "type": "module",
   "license": "(CECILL-2.1 OR AGPL-3.0-or-later)",
@@ -105,7 +105,11 @@
       "types": "./dist/datasetBuilder/index.d.ts",
       "import": "./dist/datasetBuilder/index.js"
     },
-    "./assets/*": "./assets/*"
+    "./assets/*": "./assets/*",
+    "./qualification": {
+      "types": "./dist/qualification/index.d.ts",
+      "import": "./dist/qualification/index.js"
+    }
   },
   "scripts": {
     "brand:generate": "node scripts/generate-brand-assets.mjs",

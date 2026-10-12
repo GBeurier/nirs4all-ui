@@ -1,0 +1,37 @@
+/* nirs4all-ui qualification domain. Variables fall back to the shared teal/red brand. */
+.n4q-badge{display:inline-flex;align-items:center;gap:.4em;padding:.15em .6em;border-radius:999px;font-size:.78rem;font-weight:600;border:1px solid currentColor;background:var(--n4q-badge-bg,transparent);white-space:nowrap}
+.n4q-reason{font-weight:400;font-size:.72rem;opacity:.85}
+.n4q-profile-exploratory{color:#b45309}.n4q-profile-partial{color:#0f766e}.n4q-profile-complete{color:#047857}
+.n4q-avail-computed{color:#047857}.n4q-avail-not_applicable,.n4q-avail-undefined{color:#475569}
+.n4q-avail-insufficient_data,.n4q-avail-unsupported,.n4q-avail-not_identifiable{color:#b45309}
+.n4q-avail-cancelled{color:#6d28d9}.n4q-avail-error{color:#b91c1c}
+.n4q-conf-unknown{color:#475569}.n4q-conf-low{color:#b45309}.n4q-conf-medium{color:#0f766e}.n4q-conf-high{color:#047857}
+.n4q-sev-info{color:#0f766e}.n4q-sev-warning{color:#b45309}.n4q-sev-high{color:#b91c1c}.n4q-sev-blocking{color:#7f1d1d}
+.n4q-table-wrap{overflow-x:auto;max-width:100%}
+.n4q-table-wrap:focus-visible,.n4q-datatable summary:focus-visible{outline:2px solid var(--n4q-focus,#058e96);outline-offset:2px}
+.n4q-table{width:100%;border-collapse:collapse;font-size:.88rem}
+.n4q-table caption{text-align:left;font-weight:600;padding:.4rem 0}
+.n4q-table th,.n4q-table td{padding:.45rem .6rem;border-bottom:1px solid var(--n4q-line,rgba(100,116,139,.3));text-align:left;vertical-align:top}
+.n4q-table thead th{font-size:.76rem;text-transform:uppercase;letter-spacing:.04em}
+.n4q-table-compact th,.n4q-table-compact td{padding:.25rem .5rem}
+.n4q-num{text-align:right;font-variant-numeric:tabular-nums}
+.n4q-sub{display:block;font-size:.76rem;opacity:.75}
+.n4q-null{opacity:.7;font-style:italic}
+.n4q-unit{opacity:.75}
+.n4q-findings{list-style:none;margin:0;padding:0;display:grid;gap:.6rem}
+.n4q-finding{border:1px solid var(--n4q-line,rgba(100,116,139,.3));border-left-width:4px;border-radius:8px;padding:.6rem .8rem}
+.n4q-finding[data-severity=blocking]{border-left-color:#7f1d1d}.n4q-finding[data-severity=high]{border-left-color:#b91c1c}.n4q-finding[data-severity=warning]{border-left-color:#b45309}.n4q-finding[data-severity=info]{border-left-color:#058e96}
+.n4q-finding-head{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center}
+.n4q-finding p{margin:.35rem 0 0}
+.n4q-empty{opacity:.8}
+.n4q-overview{display:grid;gap:.8rem}
+.n4q-overview-head{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center}.n4q-overview-head p{margin:0}
+.n4q-provenance{display:grid;grid-template-columns:max-content 1fr;gap:.2rem .8rem;margin:0;font-size:.85rem}.n4q-provenance dt{opacity:.75}.n4q-provenance dd{margin:0}
+.n4q-summary{margin:0;display:grid;gap:.5rem}
+.n4q-bar{width:100%;height:14px;border-radius:7px;overflow:hidden;background:rgba(100,116,139,.15)}
+.n4q-swatch{display:inline-block;width:.8em;height:.8em;margin-right:.5em;border-radius:2px;vertical-align:baseline}
+.n4q-fill-computed{fill:#059669;background:#059669}.n4q-fill-not_applicable{fill:#94a3b8;background:#94a3b8}
+.n4q-fill-insufficient_data{fill:#d97706;background:#d97706}.n4q-fill-unsupported{fill:#b45309;background:#b45309}
+.n4q-fill-not_identifiable{fill:#0891b2;background:#0891b2}.n4q-fill-undefined{fill:#64748b;background:#64748b}
+.n4q-fill-cancelled{fill:#7c3aed;background:#7c3aed}.n4q-fill-error{fill:#dc2626;background:#dc2626}
+.n4q-datatable summary{cursor:pointer;font-size:.85rem}
