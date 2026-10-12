@@ -1,14 +1,15 @@
 import { useState, type ReactNode } from "react";
 
 import { cx } from "../workbench/_cx.js";
-import { Button, IconButton, NumberField, Popover, SelectField, Toggle } from "../workbench/controls.js";
+import { Button, IconButton, Popover, SelectField, Toggle } from "../workbench/controls.js";
 import { formatDuration, formatValue } from "../workbench/format.js";
 import { resolveIcons, type WorkbenchIcons } from "../workbench/icons.js";
 import type { RowColumn } from "../workbench/colorBy.js";
 import type { PlaygroundStrings } from "./locale.js";
-import { OPERATOR_KIND_COLORS, OperatorPicker } from "./OperatorPicker.js";
+import { OPERATOR_KIND_COLORS } from "./OperatorPicker.js";
+import { ParamEditor } from "./ParamEditor.js";
 import { RAW_CURSOR, summarizeParams } from "./pipeline.js";
-import type { OperatorDefinition, OperatorParam, PipelineStep, StepOutcome } from "./types.js";
+import type { OperatorDefinition, PipelineStep, StepOutcome } from "./types.js";
 
 export interface PipelinePanelProps {
   steps: readonly PipelineStep[];
@@ -16,7 +17,8 @@ export interface PipelinePanelProps {
   outcomes: ReadonlyMap<string, StepOutcome>;
   cursor: string | null;
   onCursorChange: (cursor: string | null) => void;
-  onAdd: (operator: OperatorDefinition, afterStepId: string | null) => void;
+  /** Open the operator browser (steps are inserted after the preview cursor). */
+  onOpenPicker: () => void;
   onUpdate: (stepId: string, patch: Partial<Omit<PipelineStep, "id">>) => void;
   onRemove: (stepId: string) => void;
   onDuplicate: (stepId: string) => void;
@@ -34,94 +36,6 @@ export interface PipelinePanelProps {
   running: boolean;
   strings: PlaygroundStrings;
   icons?: WorkbenchIcons | undefined;
-}
-
-function ParamEditor({
-  param,
-  value,
-  onChange,
-  columns,
-}: {
-  param: OperatorParam;
-  value: unknown;
-  onChange: (value: unknown) => void;
-  columns: readonly RowColumn[];
-}) {
-  const label = param.label ?? param.name;
-  switch (param.type) {
-    case "bool":
-      return <Toggle checked={Boolean(value)} onChange={onChange} label={label} {...(param.help ? { hint: param.help } : {})} />;
-    case "select":
-      return (
-        <SelectField
-          label={label}
-          value={String(value ?? "")}
-          options={(param.options ?? []).map((o) => ({ value: String(o.value), label: o.label ?? String(o.value) }))}
-          onChange={(raw) => {
-            const option = param.options?.find((o) => String(o.value) === raw);
-            onChange(option ? option.value : raw);
-          }}
-        />
-      );
-    case "column":
-      return (
-        <SelectField
-          label={label}
-          value={String(value ?? "")}
-          placeholder="—"
-          options={columns.map((c) => ({ value: c.key, label: c.label }))}
-          onChange={onChange}
-        />
-      );
-    case "range": {
-      const pair = Array.isArray(value) ? (value as number[]) : [param.min ?? 0, param.max ?? 1];
-      return (
-        <div className="n4pg-param-range">
-          <span className="n4wb-field-label">{label}</span>
-          <NumberField label="min" value={pair[0] ?? 0} onChange={(v) => onChange([v, pair[1]])} {...(param.unit ? { unit: param.unit } : {})} />
-          <NumberField label="max" value={pair[1] ?? 0} onChange={(v) => onChange([pair[0], v])} {...(param.unit ? { unit: param.unit } : {})} />
-        </div>
-      );
-    }
-    case "int":
-    case "float": {
-      const numeric = typeof value === "number" ? value : Number(param.default ?? 0);
-      const step = param.step ?? (param.type === "int" ? 1 : 0.01);
-      const bounded = param.min !== undefined && param.max !== undefined;
-      return (
-        <div className="n4pg-param-num">
-          <NumberField
-            label={label}
-            value={numeric}
-            onChange={(v) => onChange(param.type === "int" ? Math.round(v) : v)}
-            {...(param.min !== undefined ? { min: param.min } : {})}
-            {...(param.max !== undefined ? { max: param.max } : {})}
-            step={step}
-            {...(param.unit ? { unit: param.unit } : {})}
-          />
-          {bounded ? (
-            <input
-              type="range"
-              className="n4pg-slider"
-              min={param.min}
-              max={param.max}
-              step={step}
-              value={numeric}
-              aria-label={label}
-              onChange={(event) => onChange(param.type === "int" ? Math.round(Number(event.target.value)) : Number(event.target.value))}
-            />
-          ) : null}
-        </div>
-      );
-    }
-    default:
-      return (
-        <label className="n4wb-field">
-          <span className="n4wb-field-label">{label}</span>
-          <input className="n4wb-input" defaultValue={String(value ?? "")} onBlur={(event) => onChange(event.target.value)} />
-        </label>
-      );
-  }
 }
 
 function StepCard({
@@ -317,33 +231,11 @@ export function PipelinePanel(props: PipelinePanelProps) {
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const byId = new Map(operators.map((op) => [op.id, op]));
   const cursorIndex = cursor && cursor !== RAW_CURSOR ? steps.findIndex((s) => s.id === cursor) : cursor === RAW_CURSOR ? -1 : steps.length - 1;
-  const insertAfter = cursor && cursor !== RAW_CURSOR ? cursor : null;
 
   const picker = (
-    <Popover
-      label={strings.addStep}
-      align="start"
-      className="n4pg-add"
-      triggerClassName="n4wb-btn n4wb-btn-primary n4pg-add-btn"
-      trigger={
-        <>
-          {icon.plus}
-          <span>{strings.addStep}</span>
-        </>
-      }
-    >
-      {(close) => (
-        <OperatorPicker
-          operators={operators}
-          strings={strings}
-          icons={props.icons}
-          onPick={(op) => {
-            props.onAdd(op, insertAfter);
-            close();
-          }}
-        />
-      )}
-    </Popover>
+    <Button variant="primary" className="n4pg-add-btn" icon={icon.plus} onClick={props.onOpenPicker} title={`${strings.addStep} (A)`}>
+      {strings.addStep}
+    </Button>
   );
 
   return (

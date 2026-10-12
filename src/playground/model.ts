@@ -5,7 +5,7 @@
  * per-output-row colors, and the scoped row universe.
  */
 
-import { resolveRowColors, type ColorMapping, type RowColumn } from "../workbench/colorBy.js";
+import { colorSchemeOptions, DEFAULT_COLOR_SCHEME, resolveRowColors, type ColorMapping, type ColorScheme, type RowColumn } from "../workbench/colorBy.js";
 import { toSpectraMatrix, type SpectraMatrix } from "../workbench/matrix.js";
 import type { PlaygroundDataset, PlaygroundResult, PlaygroundScope, PlaygroundTarget } from "./types.js";
 
@@ -135,9 +135,9 @@ export function colorsForFrame(mapping: ColorMapping, frame: PlaygroundFrame): {
   return { colors, groups };
 }
 
-export function colorMappingFor(columns: readonly RowColumn[], key: string | null, rowCount: number): ColorMapping {
+export function colorMappingFor(columns: readonly RowColumn[], key: string | null, rowCount: number, scheme: ColorScheme = DEFAULT_COLOR_SCHEME): ColorMapping {
   const column = key ? columns.find((c) => c.key === key) : undefined;
-  return resolveRowColors(rowCount, column ?? null);
+  return resolveRowColors(rowCount, column ?? null, colorSchemeOptions(scheme));
 }
 
 /** Dataset rows in scope (`all`, the selection, or one partition value). */

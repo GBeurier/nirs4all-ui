@@ -36,6 +36,8 @@ export interface ViewSpec {
   unavailableReason?: ReactNode | undefined;
   /** One-line help shown in the views menu. */
   description?: string | undefined;
+  /** Section of the views menu this view is listed under. */
+  group?: string | undefined;
   render: () => ReactNode;
   /** View-specific options rendered in the header popover. */
   options?: ReactNode | undefined;
@@ -308,10 +310,12 @@ export function ViewsMenu({
       }
     >
       <ul className="n4wb-menu" role="list">
-        {views.map((view) => {
+        {views.map((view, index) => {
           const on = visible.has(view.id);
+          const heading = view.group && view.group !== views[index - 1]?.group ? view.group : null;
           return (
             <li key={view.id}>
+              {heading ? <span className="n4wb-menu-group">{heading}</span> : null}
               <button
                 type="button"
                 className={cx("n4wb-menu-item", on && "is-on")}

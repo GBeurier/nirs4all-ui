@@ -23,12 +23,30 @@ describe("Inspector capsule", () => {
     expect(renderToStaticMarkup(<Inspector chains={[]} scoreRefs={refs} />)).toContain("No trained chains");
   });
 
-  it("renders the ranked list, compare tray and views", () => {
+  it("renders the ranked list, compare tray, perspectives and the verdict", () => {
     const html = renderToStaticMarkup(<Inspector chains={chains} scoreRefs={refs} />);
-    for (const text of ["Chains", "PLS", "Ridge", "auto · best", "Score landscape", "Pivot heatmap", "Predicted vs observed", "RMSE · CV"]) {
+    for (const text of ["Chains", "PLS", "Ridge", "auto · best", "Verdict", "Top chains", "Step effects", "Predicted vs observed", "RMSE · CV", "Best chain", "Steps", "Tuning"]) {
       expect(html).toContain(text);
     }
-    // best chain first in the ranked list
+    // best chain first in the ranked list (the list renders before the views)
     expect(html.indexOf("0.500")).toBeLessThan(html.indexOf("0.600"));
+  });
+});
+
+describe("Inspector perspectives", () => {
+  it("adapts curated view sets to the task and dataset count", async () => {
+    const { perspectiveViews } = await import("./Inspector.js");
+    expect(perspectiveViews("verdict", { classification: false, multiDataset: false })).toContain("parity");
+    expect(perspectiveViews("verdict", { classification: true, multiDataset: false })).toContain("confusion");
+    expect(perspectiveViews("landscape", { classification: false, multiDataset: true })).toContain("datasets");
+  });
+
+  it("renders every perspective without crashing", async () => {
+    const { perspectiveViews } = await import("./Inspector.js");
+    for (const perspective of ["verdict", "landscape", "steps", "predictions", "tuning", "compare"] as const) {
+      const views = perspectiveViews(perspective, { classification: false, multiDataset: false });
+      const html = renderToStaticMarkup(<Inspector chains={chains} scoreRefs={refs} defaultLayout={{ preset: "grid", views, maximized: null }} defaultCompare={["c0", "c1"]} />);
+      expect(html).toContain("n4ins-persp is-active");
+    }
   });
 });

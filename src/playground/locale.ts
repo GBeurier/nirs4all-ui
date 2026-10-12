@@ -116,6 +116,68 @@ export interface PlaygroundStrings {
   taggedRows: (n: number) => string;
   hiddenBySelection: string;
   differenceUnavailable: string;
+  viewVariance: string;
+  viewGroupMeans: string;
+  viewHeatmap: string;
+  descVariance: string;
+  descGroupMeans: string;
+  descHeatmap: string;
+  bandMinMax: string;
+  absoluteDiff: string;
+  ghostStyle: string;
+  ghostEnvelope: string;
+  ghostLines: string;
+  curves: string;
+  drawn: string;
+  all: string;
+  samplingRandom: string;
+  samplingStratified: string;
+  samplingCoverage: string;
+  reshuffle: string;
+  selectedOnly: string;
+  lineWidth: string;
+  lineOpacity: string;
+  auto: string;
+  statistics: string;
+  statMean: string;
+  statMedian: string;
+  statStd: string;
+  statMinMax: string;
+  bandStatistic: string;
+  wavelengthWindow: string;
+  fullRange: string;
+  invertAxis: string;
+  view3d: string;
+  axisZ: string;
+  pointSize: string;
+  sizeSmall: string;
+  sizeMedium: string;
+  sizeLarge: string;
+  equalScale: string;
+  showMean: string;
+  showMedian: string;
+  bins: string;
+  logScale: string;
+  groupBy: string;
+  metric: string;
+  reference: string;
+  display: string;
+  strip: string;
+  histogram: string;
+  sortBy: string;
+  quantiles: string;
+  threshold: string;
+  thresholdHost: string;
+  thresholdManual: string;
+  thresholdOff: string;
+  ranges: string;
+  flaggedOnly: string;
+  needsGroupColumn: string;
+  centered: string;
+  showBands: string;
+  compareInput: string;
+  selectionProfile: string;
+  variability: string;
 }
 
 export const PLAYGROUND_STRINGS_EN: PlaygroundStrings = {
@@ -232,6 +294,68 @@ export const PLAYGROUND_STRINGS_EN: PlaygroundStrings = {
   taggedRows: (n) => `${n} flagged`,
   hiddenBySelection: "Scope: selection only",
   differenceUnavailable: "Diff needs the same samples and wavelengths in input and output.",
+  viewVariance: "Variability",
+  viewGroupMeans: "Group means",
+  viewHeatmap: "Heat map",
+  descVariance: "Per-wavelength σ, CV or SNR · input vs output",
+  descGroupMeans: "Mean spectrum ± σ of each color group",
+  descHeatmap: "Samples × wavelengths raster, sorted",
+  bandMinMax: "Min–max",
+  absoluteDiff: "Absolute difference",
+  ghostStyle: "Input drawn as",
+  ghostEnvelope: "Envelope",
+  ghostLines: "Curves",
+  curves: "Curves",
+  drawn: "Drawn",
+  all: "All",
+  samplingRandom: "Random",
+  samplingStratified: "Stratified by target",
+  samplingCoverage: "Max. coverage",
+  reshuffle: "Reshuffle",
+  selectedOnly: "Selected samples only",
+  lineWidth: "Width",
+  lineOpacity: "Opacity",
+  auto: "Auto",
+  statistics: "Statistics overlay",
+  statMean: "Mean",
+  statMedian: "Median",
+  statStd: "± σ",
+  statMinMax: "Min / max",
+  bandStatistic: "Band statistic",
+  wavelengthWindow: "Wavelength window",
+  fullRange: "Full",
+  invertAxis: "Reverse x axis",
+  view3d: "3D",
+  axisZ: "Z",
+  pointSize: "Point size",
+  sizeSmall: "S",
+  sizeMedium: "M",
+  sizeLarge: "L",
+  equalScale: "Same scale on all axes",
+  showMean: "Mean line",
+  showMedian: "Median line",
+  bins: "Bins (0 = auto)",
+  logScale: "Log scale",
+  groupBy: "Replicate column",
+  metric: "Distance",
+  reference: "Reference",
+  display: "Display",
+  strip: "Strip",
+  histogram: "Histogram",
+  sortBy: "Sort",
+  quantiles: "Quantile lines",
+  threshold: "Threshold",
+  thresholdHost: "Host",
+  thresholdManual: "Manual",
+  thresholdOff: "None",
+  ranges: "Group range bars",
+  flaggedOnly: "Flagged groups only",
+  needsGroupColumn: "Pick a replicate column in this view's options.",
+  centered: "Subtract mean spectrum",
+  showBands: "± σ envelopes",
+  compareInput: "Show input",
+  selectionProfile: "Show selection",
+  variability: "Statistic",
 };
 
 export const PLAYGROUND_STRINGS_FR: PlaygroundStrings = {
@@ -343,6 +467,68 @@ export const PLAYGROUND_STRINGS_FR: PlaygroundStrings = {
   taggedRows: (n) => `${n} signalés`,
   hiddenBySelection: "Portée : sélection seule",
   differenceUnavailable: "L'écart nécessite les mêmes échantillons et longueurs d'onde en entrée et en sortie.",
+  viewVariance: "Variabilité",
+  viewGroupMeans: "Moyennes par groupe",
+  viewHeatmap: "Carte de chaleur",
+  descVariance: "σ, CV ou SNR par longueur d'onde · entrée vs sortie",
+  descGroupMeans: "Spectre moyen ± σ de chaque groupe de couleur",
+  descHeatmap: "Matrice échantillons × longueurs d'onde, triée",
+  bandMinMax: "Min–max",
+  absoluteDiff: "Écart absolu",
+  ghostStyle: "Entrée dessinée en",
+  ghostEnvelope: "Enveloppe",
+  ghostLines: "Courbes",
+  curves: "Courbes",
+  drawn: "Affichées",
+  all: "Toutes",
+  samplingRandom: "Aléatoire",
+  samplingStratified: "Stratifié sur la cible",
+  samplingCoverage: "Couverture max.",
+  reshuffle: "Retirer au sort",
+  selectedOnly: "Échantillons sélectionnés seuls",
+  lineWidth: "Épaisseur",
+  lineOpacity: "Opacité",
+  auto: "Auto",
+  statistics: "Statistiques superposées",
+  statMean: "Moyenne",
+  statMedian: "Médiane",
+  statStd: "± σ",
+  statMinMax: "Min / max",
+  bandStatistic: "Statistique des bandes",
+  wavelengthWindow: "Fenêtre spectrale",
+  fullRange: "Complète",
+  invertAxis: "Inverser l'axe x",
+  view3d: "3D",
+  axisZ: "Z",
+  pointSize: "Taille des points",
+  sizeSmall: "P",
+  sizeMedium: "M",
+  sizeLarge: "G",
+  equalScale: "Même échelle sur tous les axes",
+  showMean: "Ligne de moyenne",
+  showMedian: "Ligne de médiane",
+  bins: "Classes (0 = auto)",
+  logScale: "Échelle log",
+  groupBy: "Colonne de répétitions",
+  metric: "Distance",
+  reference: "Référence",
+  display: "Affichage",
+  strip: "Points",
+  histogram: "Histogramme",
+  sortBy: "Tri",
+  quantiles: "Lignes de quantiles",
+  threshold: "Seuil",
+  thresholdHost: "Hôte",
+  thresholdManual: "Manuel",
+  thresholdOff: "Aucun",
+  ranges: "Barres d'étendue par groupe",
+  flaggedOnly: "Groupes signalés seuls",
+  needsGroupColumn: "Choisissez une colonne de répétitions dans les options de la vue.",
+  centered: "Soustraire le spectre moyen",
+  showBands: "Enveloppes ± σ",
+  compareInput: "Afficher l'entrée",
+  selectionProfile: "Afficher la sélection",
+  variability: "Statistique",
 };
 
 export function resolvePlaygroundStrings(locale: PlaygroundLocale = "en", overrides?: Partial<PlaygroundStrings>): PlaygroundStrings {

@@ -9,7 +9,9 @@ import { decimationIndices, nearestAxisIndex, normalizeRect, type PixelRect } fr
 import type { WorkbenchIcons } from "./icons.js";
 
 export type SpectraDisplayMode = "lines" | "bands" | "density";
-export type SpectraBandKind = "meanStd" | "quantiles";
+export type SpectraBandKind = "meanStd" | "quantiles" | "minMax";
+/** Statistic curves drawn over the data (computed over `rows`). */
+export type SpectraStatLine = "mean" | "median" | "std" | "minMax";
 
 /** A per-group envelope precomputed by the view (or supplied by the host). */
 export interface SpectraBandGroup {
@@ -23,6 +25,8 @@ export interface SpectraGhost {
   matrix: SpectraMatrix;
   wavelengths: ArrayLike<number>;
   label?: string;
+  /** Ghost rows drawn as faint dashed curves; without it the ghost is a min–max envelope + mean. */
+  rows?: readonly number[] | undefined;
 }
 
 /** Highlighted wavelength regions (e.g. a crop window, absorbance bands). */
@@ -36,8 +40,19 @@ export interface SpectraRegion {
 export interface SpectraViewProps {
   matrix: SpectraMatrix;
   wavelengths: ArrayLike<number>;
-  /** Matrix rows to draw (defaults to all). */
+  /** Matrix rows in view (defaults to all): bands, density, statistics and the y extent use them. */
   rows?: readonly number[] | undefined;
+  /** Subset drawn as curves in `lines` mode (display subsampling); defaults to `rows`. */
+  lineRows?: readonly number[] | undefined;
+  /** Initial wavelength window (axis units); the y axis fits the curves inside it. */
+  xRange?: readonly [number, number] | null | undefined;
+  /** Curve width in px (auto when omitted). */
+  lineWidth?: number | undefined;
+  /** Curve opacity in [0, 1] (auto from the curve count when omitted). */
+  lineOpacity?: number | undefined;
+  statLines?: readonly SpectraStatLine[] | undefined;
+  /** Color ramp of the `density` raster (low → high). */
+  densityStops?: readonly string[] | undefined;
   /** One CSS color per matrix row. */
   colors: readonly string[];
   /** Color batching groups per matrix row + their palette (from `resolveRowColors`). */
@@ -175,6 +190,12 @@ export function SpectraView({
   matrix,
   wavelengths,
   rows,
+  lineRows,
+  xRange,
+  lineWidth,
+  lineOpacity,
+  statLines,
+  densityStops = DENSITY_STOPS,
   colors,
   groups,
   palette,
@@ -198,6 +219,7 @@ export function SpectraView({
   className,
 }: SpectraViewProps) {
   const universe = useMemo(() => rows ?? Array.from({ length: matrix.rows }, (_, i) => i), [rows, matrix.rows]);
+  const curves = lineRows ?? universe;
   const selectedSet = useMemo(() => new Set(selected), [selected]);
   const hasSelection = selected.length > 0;
 
@@ -209,14 +231,21 @@ export function SpectraView({
       if (w < lo) lo = w;
       if (w > hi) hi = w;
     }
-    return Number.isFinite(lo) ? [lo, hi] : [0, 1];
-  }, [wavelengths]);
+    if (!Number.isFinite(lo)) return [0, 1];
+    if (xRange) {
+      const a = Math.max(lo, Math.min(xRange[0], xRange[1]));
+      const b = Math.min(hi, Math.max(xRange[0], xRange[1]));
+      if (b > a) return [a, b];
+    }
+    return [lo, hi];
+  }, [wavelengths, xRange]);
 
   const yDomain: Domain = useMemo(() => {
-    const extent = matrixExtent(matrix, universe) ?? { min: 0, max: 1 };
+    const [c0, c1] = columnWindow(wavelengths, xDomain);
+    const extent = matrixExtent(matrix, universe, c0, c1) ?? { min: 0, max: 1 };
     const pad = (extent.max - extent.min || 1) * 0.06;
     return [extent.min - pad, extent.max + pad];
-  }, [matrix, universe]);
+  }, [matrix, universe, wavelengths, xDomain]);
 
   const bands = useMemo(() => {
     if (mode !== "bands") return [];
@@ -229,6 +258,7 @@ export function SpectraView({
           return { ...group, outer: [q05!, q95!] as const, inner: [q25!, q75!] as const, center: q50! };
         }
         const stats = wavelengthStats(matrix, group.rows);
+        if (bandKind === "minMax") return { ...group, outer: [stats.min, stats.max] as const, inner: [stats.min, stats.max] as const, center: stats.mean };
         const lo = new Float32Array(matrix.cols);
         const hi = new Float32Array(matrix.cols);
         const lo2 = new Float32Array(matrix.cols);
@@ -243,12 +273,55 @@ export function SpectraView({
       });
   }, [mode, bandGroups, bandKind, matrix, universe, palette]);
 
-  const ghostStats = useMemo(() => (ghost ? wavelengthStats(ghost.matrix) : null), [ghost]);
+  const ghostStats = useMemo(() => (ghost && !ghost.rows ? wavelengthStats(ghost.matrix) : null), [ghost]);
+  const overlayStats = useMemo(() => {
+    if (!statLines || statLines.length === 0 || universe.length === 0) return null;
+    const stats = wavelengthStats(matrix, universe);
+    const median = statLines.includes("median") ? wavelengthQuantiles(matrix, [0.5], universe)[0]! : null;
+    return { stats, median };
+  }, [statLines, matrix, universe]);
   // Outside `lines` mode a large selection is summarized as its own envelope.
   const selectionEnvelope = useMemo(
     () => (mode !== "lines" && selected.length > SELECTION_LINE_LIMIT ? wavelengthStats(matrix, selected.filter((row) => row < matrix.rows)) : null),
     [mode, selected, matrix],
   );
+
+  // Statistic curves over the data: dark halo + dashed/solid strokes so they read on any palette.
+  const drawStatLines = (ctx: CanvasRenderingContext2D, geo: PlotGeometry) => {
+    if (!overlayStats || !statLines) return;
+    const { stats, median } = overlayStats;
+    const stroke = (values: ArrayLike<number>, dash: number[], width: number) => {
+      linePath(ctx, wavelengths, values, geo);
+      ctx.setLineDash([]);
+      ctx.lineWidth = width + 2;
+      ctx.strokeStyle = "rgba(255,255,255,0.75)";
+      ctx.stroke();
+      ctx.setLineDash(dash);
+      ctx.lineWidth = width;
+      ctx.strokeStyle = "rgba(15,23,42,0.85)";
+      ctx.stroke();
+      ctx.setLineDash([]);
+    };
+    if (statLines.includes("minMax")) {
+      stroke(stats.min, [2, 3], 1);
+      stroke(stats.max, [2, 3], 1);
+    }
+    if (statLines.includes("std")) {
+      const lo = new Float32Array(matrix.cols);
+      const hi = new Float32Array(matrix.cols);
+      for (let c = 0; c < matrix.cols; c += 1) {
+        lo[c] = stats.mean[c]! - stats.std[c]!;
+        hi[c] = stats.mean[c]! + stats.std[c]!;
+      }
+      ctx.fillStyle = "rgba(15,23,42,0.07)";
+      bandPath(ctx, wavelengths, lo, hi, geo);
+      ctx.fill();
+      stroke(lo, [6, 4], 1.1);
+      stroke(hi, [6, 4], 1.1);
+    }
+    if (median) stroke(median, [1.5, 2.5], 1.8);
+    if (statLines.includes("mean")) stroke(stats.mean, [], 1.8);
+  };
 
   const drawBase = useCallback(
     (ctx: CanvasRenderingContext2D, geo: PlotGeometry) => {
@@ -259,6 +332,17 @@ export function SpectraView({
           ctx.fillStyle = region.tone === "warning" ? "rgba(217,119,6,0.08)" : region.tone === "muted" ? "rgba(100,116,139,0.08)" : "rgba(13,148,136,0.08)";
           ctx.fillRect(Math.min(x0, x1), geo.top, Math.abs(x1 - x0), geo.height);
         }
+      }
+      if (ghost?.rows && ghost.rows.length > 0) {
+        const [g0, g1] = columnWindow(ghost.wavelengths, geo.x.domain);
+        const local = decimationIndices(Math.max(2, g1 - g0), geo.width);
+        const ghostColumns = new Uint32Array(local.length);
+        for (let i = 0; i < local.length; i += 1) ghostColumns[i] = local[i]! + g0;
+        ctx.strokeStyle = `rgba(100,116,139,${Math.min(0.5, lineAlpha(ghost.rows.length) * 0.8)})`;
+        ctx.lineWidth = 0.9;
+        ctx.setLineDash([3, 3]);
+        strokeRows(ctx, ghost.matrix, ghost.wavelengths, ghost.rows, ghostColumns, geo);
+        ctx.setLineDash([]);
       }
       if (ghost && ghostStats) {
         ctx.fillStyle = "rgba(100,116,139,0.12)";
@@ -279,20 +363,21 @@ export function SpectraView({
       for (let i = 0; i < local.length; i += 1) columns[i] = local[i]! + c0;
 
       if (mode === "lines") {
-        const alpha = lineAlpha(universe.length) * (hasSelection ? 0.35 : 1);
+        const alpha = (lineOpacity ?? lineAlpha(curves.length)) * (hasSelection ? 0.35 : 1);
         const byGroup = new Map<number, number[]>();
-        for (const row of universe) {
+        for (const row of curves) {
           const group = groups[row] ?? 0;
           const bucket = byGroup.get(group);
           if (bucket) bucket.push(row);
           else byGroup.set(group, [row]);
         }
-        ctx.lineWidth = universe.length > 2000 ? 0.7 : 1;
+        ctx.lineWidth = lineWidth ?? (curves.length > 2000 ? 0.7 : 1);
         ctx.lineJoin = "round";
         for (const [group, groupRows] of byGroup) {
           ctx.strokeStyle = rgba(palette[group] ?? "#0d9488", alpha);
           strokeRows(ctx, matrix, wavelengths, groupRows, columns, geo);
         }
+        drawStatLines(ctx, geo);
         return;
       }
 
@@ -309,6 +394,7 @@ export function SpectraView({
           linePath(ctx, wavelengths, band.center, geo);
           ctx.stroke();
         }
+        drawStatLines(ctx, geo);
         return;
       }
 
@@ -344,7 +430,7 @@ export function SpectraView({
       const image = new ImageData(W, H);
       const logMax = Math.log1p(max);
       const lut = Array.from({ length: 256 }, (_, i) => {
-        const css = rampAt(DENSITY_STOPS, i / 255);
+        const css = rampAt(densityStops, i / 255);
         const m = /rgb\((\d+), (\d+), (\d+)\)/.exec(css);
         return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : [13, 148, 136];
       });
@@ -364,8 +450,10 @@ export function SpectraView({
       off.getContext("2d")?.putImageData(image, 0, 0);
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(off, geo.left, geo.top, W, H);
+      drawStatLines(ctx, geo);
     },
-    [regions, ghost, ghostStats, wavelengths, mode, universe, hasSelection, groups, palette, matrix, bands],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [regions, ghost, ghostStats, wavelengths, mode, universe, curves, hasSelection, groups, palette, matrix, bands, lineWidth, lineOpacity, overlayStats, densityStops],
   );
 
   const drawHighlight = useCallback(
@@ -437,7 +525,7 @@ export function SpectraView({
       const tolerance = Math.abs(geo.y.invert(py + 6) - target);
       let best: number | null = null;
       let bestDistance = tolerance;
-      const candidates = mode === "lines" ? universe : selected;
+      const candidates = mode === "lines" ? curves : selected;
       for (const row of candidates) {
         if (hasSelection && mode === "lines" && !selectedSet.has(row) && best !== null) continue;
         const value = matrix.data[row * matrix.cols + c]!;
@@ -449,7 +537,7 @@ export function SpectraView({
       }
       return best;
     },
-    [mode, hasSelection, wavelengths, universe, selected, selectedSet, matrix],
+    [mode, hasSelection, wavelengths, curves, selected, selectedSet, matrix],
   );
 
   const rowsCrossing = useCallback(
@@ -461,7 +549,7 @@ export function SpectraView({
       const yLo = geo.y.invert(r.y1);
       const [c0, c1] = columnWindow(wavelengths, [Math.min(wA, wB), Math.max(wA, wB)]);
       const out: number[] = [];
-      for (const row of universe) {
+      for (const row of mode === "lines" ? curves : universe) {
         const offset = row * matrix.cols;
         for (let c = c0; c < c1; c += 1) {
           const w = wavelengths[c]!;
@@ -475,7 +563,7 @@ export function SpectraView({
       }
       return out;
     },
-    [wavelengths, universe, matrix],
+    [wavelengths, mode, curves, universe, matrix],
   );
 
   const emit = (hits: readonly number[], mods: ModifierState) => {
@@ -509,7 +597,7 @@ export function SpectraView({
       {...(renderTooltip ? { renderTooltip } : {})}
       crosshair
       ariaLabel={ariaLabel}
-      description={`${universe.length} spectra over ${wavelengths.length} wavelengths, ${mode} mode${hasSelection ? `, ${selected.length} selected` : ""}.`}
+      description={`${universe.length} spectra${curves.length < universe.length ? ` (${curves.length} drawn)` : ""} over ${wavelengths.length} wavelengths, ${mode} mode${hasSelection ? `, ${selected.length} selected` : ""}.`}
       icons={icons}
       toolExtras={toolExtras}
     />

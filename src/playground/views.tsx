@@ -4,7 +4,7 @@
  * gesture in one view is reflected in all others.
  */
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { cx } from "../workbench/_cx.js";
 import type { ColorMapping, RowColumn } from "../workbench/colorBy.js";
@@ -12,15 +12,21 @@ import { Button, Chip, SearchInput } from "../workbench/controls.js";
 import { DistributionView } from "../workbench/DistributionView.js";
 import { formatPercent, formatValue } from "../workbench/format.js";
 import { resolveIcons, type WorkbenchIcons } from "../workbench/icons.js";
-import { columnCorrelation, type SpectraMatrix } from "../workbench/matrix.js";
+import { CanvasPlot, type PlotGeometry } from "../workbench/CanvasPlot.js";
+import { rampStops } from "../workbench/colorBy.js";
+import { columnCorrelation, wavelengthStats, type SpectraMatrix } from "../workbench/matrix.js";
+import { nearestAxisIndex, normalizeRect } from "../workbench/spatial.js";
+import { rampAt } from "../viz/theme.js";
 import { ProfileView, type ProfileSeries } from "../workbench/ProfileView.js";
+import { Scatter3DView } from "../workbench/Scatter3DView.js";
 import { ScatterView, type ScatterGuide } from "../workbench/ScatterView.js";
-import { selectionModeFromModifiers, combineSelection, type Selection } from "../workbench/selection.js";
-import { SpectraView, type SpectraBandGroup, type SpectraBandKind, type SpectraDisplayMode } from "../workbench/SpectraView.js";
+import { clickSelection, selectionModeFromModifiers, combineSelection, type Selection } from "../workbench/selection.js";
+import { sampleRows, type SamplingStrategy } from "../workbench/sampling.js";
+import { SpectraView, type SpectraBandGroup, type SpectraBandKind, type SpectraDisplayMode, type SpectraGhost, type SpectraStatLine } from "../workbench/SpectraView.js";
 import { VirtualTable, type VirtualColumn } from "../workbench/VirtualTable.js";
 import type { PlaygroundStrings } from "./locale.js";
 import { outputToSelection, sampleLabel, type PlaygroundFrame } from "./model.js";
-import type { PlaygroundDataset, PlaygroundResult, PlaygroundTarget } from "./types.js";
+import type { PlaygroundDataset, PlaygroundProjection, PlaygroundRepetitions, PlaygroundResult, PlaygroundTarget, RepetitionMetric, RepetitionReference } from "./types.js";
 
 export type SpectraCompareMode = "off" | "split" | "overlay" | "diff";
 
@@ -48,6 +54,8 @@ export interface PlaygroundViewContext {
   targetOut: Float64Array;
   strings: PlaygroundStrings;
   icons?: WorkbenchIcons | undefined;
+  /** Continuous ramp of the user's color scheme (density rasters, heat maps). */
+  densityStops: readonly string[];
   onCropRange?: ((range: readonly [number, number]) => void) | undefined;
 }
 
@@ -109,26 +117,73 @@ function frameSelection(ctx: PlaygroundViewContext, frame: PlaygroundFrame) {
   return { selected: ctx.selection, hover: ctx.hoverRow };
 }
 
-function scopeFor(ctx: PlaygroundViewContext, frame: PlaygroundFrame): number[] {
-  if (frame === ctx.frame) return ctx.scopeOut as number[];
-  const out: number[] = [];
-  frame.rows.forEach((row, o) => {
-    if (!ctx.scopeSet || ctx.scopeSet.has(row)) out.push(o);
-  });
-  return out;
-}
-
 function colorsFor(ctx: PlaygroundViewContext, frame: PlaygroundFrame) {
   if (frame === ctx.frame) return ctx.colorsOut;
   return { colors: ctx.mapping.colors, groups: ctx.mapping.groups };
+}
+
+export type SpectraOverlayStyle = "envelope" | "lines";
+
+/** User options of the spectra view (owned by the capsule, persisted by hosts if they wish). */
+export interface SpectraOptions {
+  mode: SpectraDisplayMode;
+  bandKind: SpectraBandKind;
+  compare: SpectraCompareMode;
+  /** `diff` compare: plot |output − input|. */
+  absoluteDiff: boolean;
+  /** How the input is drawn under the output in `overlay` compare. */
+  overlayStyle: SpectraOverlayStyle;
+  sampling: SamplingStrategy;
+  /** Curves drawn in `lines` mode (0 = all). */
+  sampleCount: number;
+  seed: number;
+  statLines: readonly SpectraStatLine[];
+  /** Wavelength window (axis units), `null` = full range. */
+  range: readonly [number, number] | null;
+  lineWidth: number | null;
+  lineOpacity: number | null;
+  selectedOnly: boolean;
+  /** `null` = automatic (reversed for wavenumbers). */
+  invertX: boolean | null;
+}
+
+export const DEFAULT_SPECTRA_OPTIONS: SpectraOptions = {
+  mode: "lines",
+  bandKind: "meanStd",
+  compare: "off",
+  absoluteDiff: false,
+  overlayStyle: "envelope",
+  sampling: "random",
+  sampleCount: 0,
+  seed: 42,
+  statLines: [],
+  range: null,
+  lineWidth: null,
+  lineOpacity: null,
+  selectedOnly: false,
+  invertX: null,
+};
+
+/** Common NIR absorption regions offered as one-click wavelength windows (nm). */
+export const NIR_REGIONS: ReadonlyArray<{ id: string; label: string; range: readonly [number, number] }> = [
+  { id: "oh1", label: "O–H 1st overtone (water)", range: [1400, 1500] },
+  { id: "ch1", label: "C–H 1st overtone", range: [1650, 1800] },
+  { id: "water", label: "Water combination", range: [1900, 2000] },
+  { id: "nh", label: "N–H combination (protein)", range: [2050, 2200] },
+  { id: "ch", label: "C–H combination (lipid, starch)", range: [2250, 2400] },
+];
+
+function isWavenumber(unit: string): boolean {
+  return /cm/i.test(unit);
 }
 
 function SpectraPane({
   ctx,
   frame,
   matrix,
-  mode,
-  bandKind,
+  scope,
+  curves,
+  opts,
   ghost,
   yLabel,
   label,
@@ -136,16 +191,16 @@ function SpectraPane({
   ctx: PlaygroundViewContext;
   frame: PlaygroundFrame;
   matrix: SpectraMatrix;
-  mode: SpectraDisplayMode;
-  bandKind: SpectraBandKind;
-  ghost?: PlaygroundFrame | null;
+  scope: readonly number[];
+  curves: readonly number[];
+  opts: SpectraOptions;
+  ghost?: SpectraGhost | null;
   yLabel: string;
   label?: string;
 }) {
-  const scope = useMemo(() => scopeFor(ctx, frame), [ctx, frame]);
   const { selected, hover } = frameSelection(ctx, frame);
   const colors = colorsFor(ctx, frame);
-  const bandGroups = useMemo(() => (mode === "bands" ? bandGroupsFor(ctx, frame, scope) : undefined), [mode, ctx, frame, scope]);
+  const bandGroups = useMemo(() => (opts.mode === "bands" ? bandGroupsFor(ctx, frame, scope) : undefined), [opts.mode, ctx, frame, scope]);
   const toDataset = (rows: readonly number[]) => (frame === ctx.frame ? outputToSelection(rows, frame) : [...rows]);
   return (
     <div className="n4wb-rel">
@@ -154,17 +209,24 @@ function SpectraPane({
         matrix={matrix}
         wavelengths={frame.wavelengths}
         rows={scope}
+        lineRows={curves}
+        xRange={opts.range}
+        lineWidth={opts.lineWidth ?? undefined}
+        lineOpacity={opts.lineOpacity ?? undefined}
+        statLines={opts.statLines}
+        densityStops={ctx.densityStops}
         colors={colors.colors}
         groups={colors.groups}
         palette={ctx.mapping.palette}
         selected={selected}
         hoverRow={hover}
-        mode={mode}
-        bandKind={bandKind}
+        mode={opts.mode}
+        bandKind={opts.bandKind}
         bandGroups={bandGroups}
-        ghost={ghost ? { matrix: ghost.matrix, wavelengths: ghost.wavelengths } : null}
+        ghost={ghost ?? null}
         unit={frame.unit}
         yLabel={yLabel}
+        invertX={opts.invertX ?? isWavenumber(frame.unit)}
         onHover={(o) => ctx.setHoverRow(o === null ? null : frame.rows[o] ?? null)}
         onSelectionChange={(next) => ctx.setSelection(toDataset(next))}
         renderTooltip={(o) => (frame === ctx.frame ? <SampleTooltip ctx={ctx} outputRow={o} /> : <SampleTooltip ctx={{ ...ctx, frame }} outputRow={o} />)}
@@ -175,52 +237,77 @@ function SpectraPane({
   );
 }
 
-export function SpectraBody({
-  ctx,
-  mode,
-  bandKind,
-  compare,
-}: {
-  ctx: PlaygroundViewContext;
-  mode: SpectraDisplayMode;
-  bandKind: SpectraBandKind;
-  compare: SpectraCompareMode;
-}) {
+/** Dataset rows of output rows, deduplicated in order (raw-frame rows). */
+function datasetRowsOf(frame: PlaygroundFrame, outputRows: readonly number[]): number[] {
+  const seen = new Set<number>();
+  const out: number[] = [];
+  for (const o of outputRows) {
+    const row = frame.rows[o];
+    if (row !== undefined && !seen.has(row)) {
+      seen.add(row);
+      out.push(row);
+    }
+  }
+  return out;
+}
+
+/** Output rows in view and the subset drawn as curves, after "selected only" and subsampling. */
+export function useSpectraRows(ctx: PlaygroundViewContext, opts: SpectraOptions) {
+  return useMemo(() => {
+    const selectedSet = new Set(ctx.selectedOut);
+    const scope = opts.selectedOnly && selectedSet.size > 0 ? ctx.scopeOut.filter((o) => selectedSet.has(o)) : [...ctx.scopeOut];
+    const curves = opts.sampleCount > 0 ? sampleRows(scope, opts.sampleCount, opts.sampling, { seed: opts.seed, values: ctx.targetOut, matrix: ctx.frame.matrix }) : scope;
+    return { scope, curves };
+  }, [ctx.scopeOut, ctx.selectedOut, ctx.targetOut, ctx.frame.matrix, opts.selectedOnly, opts.sampleCount, opts.sampling, opts.seed]);
+}
+
+export function SpectraBody({ ctx, opts }: { ctx: PlaygroundViewContext; opts: SpectraOptions }) {
   const { frame, raw, strings } = ctx;
+  const { scope, curves } = useSpectraRows(ctx, opts);
   const sameShape =
     frame.matrix.cols === raw.matrix.cols &&
     frame.matrix.rows === raw.matrix.rows &&
     frame.rows.every((row, i) => row === i);
   const diff = useMemo(() => {
-    if (compare !== "diff" || !sameShape) return null;
+    if (opts.compare !== "diff" || !sameShape) return null;
     const data = new Float32Array(frame.matrix.data.length);
-    for (let i = 0; i < data.length; i += 1) data[i] = frame.matrix.data[i]! - raw.matrix.data[i]!;
+    for (let i = 0; i < data.length; i += 1) {
+      const d = frame.matrix.data[i]! - raw.matrix.data[i]!;
+      data[i] = opts.absoluteDiff ? Math.abs(d) : d;
+    }
     return { rows: frame.matrix.rows, cols: frame.matrix.cols, data } satisfies SpectraMatrix;
-  }, [compare, sameShape, frame, raw]);
+  }, [opts.compare, opts.absoluteDiff, sameShape, frame, raw]);
+  const rawScope = useMemo(() => datasetRowsOf(frame, scope), [frame, scope]);
+  const rawCurves = useMemo(() => (curves === scope ? rawScope : datasetRowsOf(frame, curves)), [frame, curves, scope, rawScope]);
 
-  if (compare === "split") {
+  if (opts.compare === "split") {
     return (
       <div className="n4wb-view-split">
-        <SpectraPane ctx={ctx} frame={raw} matrix={raw.matrix} mode={mode} bandKind={bandKind} yLabel={raw.signal} label={strings.input} />
-        <SpectraPane ctx={ctx} frame={frame} matrix={frame.matrix} mode={mode} bandKind={bandKind} yLabel={frame.signal} label={strings.output} />
+        <SpectraPane ctx={ctx} frame={raw} matrix={raw.matrix} scope={rawScope} curves={rawCurves} opts={opts} yLabel={raw.signal} label={strings.input} />
+        <SpectraPane ctx={ctx} frame={frame} matrix={frame.matrix} scope={scope} curves={curves} opts={opts} yLabel={frame.signal} label={strings.output} />
       </div>
     );
   }
-  if (compare === "diff") {
+  if (opts.compare === "diff") {
     if (!diff) return <p className="n4wb-note is-warning n4pg-inline-note">{strings.differenceUnavailable}</p>;
-    return <SpectraPane ctx={ctx} frame={frame} matrix={diff} mode={mode} bandKind={bandKind} yLabel={`Δ ${frame.signal}`} label={`${strings.output} − ${strings.input}`} />;
+    return (
+      <SpectraPane
+        ctx={ctx}
+        frame={frame}
+        matrix={diff}
+        scope={scope}
+        curves={curves}
+        opts={opts}
+        yLabel={opts.absoluteDiff ? `|Δ ${frame.signal}|` : `Δ ${frame.signal}`}
+        label={opts.absoluteDiff ? `|${strings.output} − ${strings.input}|` : `${strings.output} − ${strings.input}`}
+      />
+    );
   }
-  return (
-    <SpectraPane
-      ctx={ctx}
-      frame={frame}
-      matrix={frame.matrix}
-      mode={mode}
-      bandKind={bandKind}
-      ghost={compare === "overlay" && raw !== frame ? raw : null}
-      yLabel={frame.signal}
-    />
-  );
+  const ghost: SpectraGhost | null =
+    opts.compare === "overlay" && raw !== frame
+      ? { matrix: raw.matrix, wavelengths: raw.wavelengths, ...(opts.overlayStyle === "lines" ? { rows: rawCurves } : {}) }
+      : null;
+  return <SpectraPane ctx={ctx} frame={frame} matrix={frame.matrix} scope={scope} curves={curves} opts={opts} ghost={ghost} yLabel={frame.signal} />;
 }
 
 /** Variance of finite values. */
@@ -241,29 +328,121 @@ function variance(values: ArrayLike<number>, rows: readonly number[]): { mean: n
 
 const CHI2_2DF_95 = 5.991;
 
-export function ScoresBody({ ctx, axes, showEllipse }: { ctx: PlaygroundViewContext; axes: readonly [number, number]; showEllipse: boolean }) {
+/** Axis index meaning "the active numeric target" instead of a component. */
+export const TARGET_AXIS = -1;
+
+export type PointSizePreset = "auto" | "small" | "medium" | "large";
+
+const POINT_SIZES: Record<Exclude<PointSizePreset, "auto">, number> = { small: 1.8, medium: 3.2, large: 5 };
+
+export interface ScoresOptions {
+  projection: "pca" | "umap";
+  /** Component index per axis (x, y, z); {@link TARGET_AXIS} plots the target. */
+  axes: readonly [number, number, number];
+  view3d: boolean;
+  ellipse: boolean;
+  pointSize: PointSizePreset;
+  /** Same scale on every axis (true geometry of the score space). */
+  equalScale: boolean;
+}
+
+export const DEFAULT_SCORES_OPTIONS: ScoresOptions = {
+  projection: "pca",
+  axes: [0, 1, 2],
+  view3d: false,
+  ellipse: true,
+  pointSize: "auto",
+  equalScale: false,
+};
+
+function axisName(projection: PlaygroundProjection, axis: number, target: PlaygroundTarget | undefined): string {
+  if (axis === TARGET_AXIS) return target ? `${target.name}${target.unit ? ` (${target.unit})` : ""}` : "Target";
+  const ratio = projection.explained?.[axis];
+  const name = projection.method.toLowerCase() === "pca" ? `PC${axis + 1}` : `${projection.method.toUpperCase()} ${axis + 1}`;
+  return ratio !== undefined ? `${name} (${formatPercent(ratio)})` : name;
+}
+
+/** Ordinary least squares fit + Pearson r over finite pairs of `rows`. */
+function linearFit(xs: ArrayLike<number>, ys: ArrayLike<number>, rows: readonly number[]) {
+  let n = 0;
+  let sx = 0;
+  let sy = 0;
+  for (const row of rows) {
+    const x = xs[row]!;
+    const y = ys[row]!;
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    n += 1;
+    sx += x;
+    sy += y;
+  }
+  if (n < 3) return null;
+  const mx = sx / n;
+  const my = sy / n;
+  let sxx = 0;
+  let syy = 0;
+  let sxy = 0;
+  for (const row of rows) {
+    const x = xs[row]!;
+    const y = ys[row]!;
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    sxx += (x - mx) ** 2;
+    syy += (y - my) ** 2;
+    sxy += (x - mx) * (y - my);
+  }
+  if (sxx === 0 || syy === 0) return null;
+  const slope = sxy / sxx;
+  return { slope, intercept: my - slope * mx, r: sxy / Math.sqrt(sxx * syy) };
+}
+
+export function ScoresBody({ ctx, opts }: { ctx: PlaygroundViewContext; opts: ScoresOptions }) {
   const projection = ctx.result?.projection;
   const coords = projection?.coordinates;
-  const { xs, ys } = useMemo(() => {
+  const [ax, ay, az] = opts.axes;
+  const columns = useMemo(() => {
     const n = coords?.length ?? 0;
-    const xs = new Float64Array(n);
-    const ys = new Float64Array(n);
-    for (let i = 0; i < n; i += 1) {
-      xs[i] = coords![i]![axes[0]] ?? Number.NaN;
-      ys[i] = coords![i]![axes[1]] ?? Number.NaN;
-    }
-    return { xs, ys };
-  }, [coords, axes]);
+    const pick = (axis: number) => {
+      if (axis === TARGET_AXIS) return ctx.targetOut.length === n ? ctx.targetOut : new Float64Array(n).fill(Number.NaN);
+      const out = new Float64Array(n);
+      for (let i = 0; i < n; i += 1) out[i] = coords![i]![axis] ?? Number.NaN;
+      return out;
+    };
+    return { xs: pick(ax), ys: pick(ay), zs: pick(az) };
+  }, [coords, ax, ay, az, ctx.targetOut]);
   if (!projection || !coords || coords.length !== ctx.frame.rows.length) return null;
-  const label = (axis: number) => {
-    const ratio = projection.explained?.[axis];
-    const name = projection.method.toLowerCase() === "pca" ? `PC${axis + 1}` : `${projection.method.toUpperCase()} ${axis + 1}`;
-    return ratio !== undefined ? `${name} (${formatPercent(ratio)})` : name;
-  };
+  const pointSize = opts.pointSize === "auto" ? undefined : POINT_SIZES[opts.pointSize];
+  const onHover = (o: number | null) => ctx.setHoverRow(o === null ? null : ctx.frame.rows[o] ?? null);
+  const onSelectionChange = (next: Selection) => ctx.setSelection(outputToSelection(next, ctx.frame));
+  const tooltip = (o: number) => <SampleTooltip ctx={ctx} outputRow={o} />;
+
+  if (opts.view3d) {
+    return (
+      <Scatter3DView
+        xs={columns.xs}
+        ys={columns.ys}
+        zs={columns.zs}
+        rows={ctx.scopeOut}
+        colors={ctx.colorsOut.colors}
+        groups={ctx.colorsOut.groups}
+        palette={ctx.mapping.palette}
+        selected={ctx.selectedOut}
+        hoverRow={ctx.hoverOut}
+        labels={[axisName(projection, ax, ctx.target), axisName(projection, ay, ctx.target), axisName(projection, az, ctx.target)]}
+        pointSize={pointSize}
+        isotropic={opts.equalScale}
+        onHover={onHover}
+        onSelectionChange={onSelectionChange}
+        renderTooltip={tooltip}
+        icons={ctx.icons}
+        ariaLabel="3D score plot"
+      />
+    );
+  }
+
   const guides: ScatterGuide[] = [];
-  if (showEllipse && projection.method.toLowerCase() === "pca") {
-    const vx = variance(xs, ctx.scopeOut);
-    const vy = variance(ys, ctx.scopeOut);
+  const usesTarget = ax === TARGET_AXIS || ay === TARGET_AXIS;
+  if (opts.ellipse && !usesTarget && projection.method.toLowerCase() === "pca") {
+    const vx = variance(columns.xs, ctx.scopeOut);
+    const vy = variance(columns.ys, ctx.scopeOut);
     guides.push({
       kind: "ellipse",
       cx: vx.mean,
@@ -274,29 +453,41 @@ export function ScoresBody({ ctx, axes, showEllipse }: { ctx: PlaygroundViewCont
       tone: "accent",
     });
   }
+  const fit = usesTarget ? linearFit(columns.xs, columns.ys, ctx.scopeOut) : null;
+  if (fit) guides.push({ kind: "line", slope: fit.slope, intercept: fit.intercept, label: `r = ${formatValue(fit.r)}`, tone: "accent" });
   return (
     <ScatterView
-      xs={xs}
-      ys={ys}
+      xs={columns.xs}
+      ys={columns.ys}
       rows={ctx.scopeOut}
       colors={ctx.colorsOut.colors}
       groups={ctx.colorsOut.groups}
       palette={ctx.mapping.palette}
       selected={ctx.selectedOut}
       hoverRow={ctx.hoverOut}
-      xLabel={label(axes[0])}
-      yLabel={label(axes[1])}
+      xLabel={axisName(projection, ax, ctx.target)}
+      yLabel={axisName(projection, ay, ctx.target)}
+      equalAspect={opts.equalScale && !usesTarget}
+      pointSize={pointSize}
       guides={guides}
-      onHover={(o) => ctx.setHoverRow(o === null ? null : ctx.frame.rows[o] ?? null)}
-      onSelectionChange={(next) => ctx.setSelection(outputToSelection(next, ctx.frame))}
-      renderTooltip={(o) => <SampleTooltip ctx={ctx} outputRow={o} />}
+      onHover={onHover}
+      onSelectionChange={onSelectionChange}
+      renderTooltip={tooltip}
       icons={ctx.icons}
       ariaLabel="Score plot"
     />
   );
 }
 
-export function TargetBody({ ctx, binCount }: { ctx: PlaygroundViewContext; binCount: number | undefined }) {
+export interface TargetOptions {
+  bins: number | undefined;
+  showMean: boolean;
+  showMedian: boolean;
+}
+
+export const DEFAULT_TARGET_OPTIONS: TargetOptions = { bins: undefined, showMean: true, showMedian: false };
+
+export function TargetBody({ ctx, opts }: { ctx: PlaygroundViewContext; opts: TargetOptions }) {
   const target = ctx.target;
   const values = useMemo(() => {
     if (!target) return [];
@@ -312,7 +503,9 @@ export function TargetBody({ ctx, binCount }: { ctx: PlaygroundViewContext; binC
       rows={ctx.scopeOut}
       stack={categorical ? { groups: ctx.colorsOut.groups, palette: ctx.mapping.palette } : null}
       selected={ctx.selectedOut}
-      binCount={binCount}
+      binCount={opts.bins}
+      showMean={opts.showMean}
+      showMedian={opts.showMedian}
       xLabel={target.unit ? `${target.name} (${target.unit})` : target.name}
       onSelectionChange={(next) => ctx.setSelection(outputToSelection(next, ctx.frame))}
       icons={ctx.icons}
@@ -545,43 +738,218 @@ export function FoldsBody({ ctx }: { ctx: PlaygroundViewContext }) {
   );
 }
 
-export function RepetitionsBody({ ctx }: { ctx: PlaygroundViewContext }) {
+export type RepetitionDisplay = "strip" | "histogram";
+export type RepetitionSort = "worst" | "mean" | "name" | "order" | "size";
+export type RepetitionThreshold = "host" | "p90" | "p95" | "p99" | "manual" | "off";
+
+export interface RepetitionOptions {
+  /** Replicate group column (metadata key); `null` = dataset default. */
+  groupBy: string | null;
+  metric: RepetitionMetric;
+  reference: RepetitionReference;
+  display: RepetitionDisplay;
+  sort: RepetitionSort;
+  log: boolean;
+  /** Distance quantile guides (0–1). */
+  quantiles: readonly number[];
+  threshold: RepetitionThreshold;
+  manualThreshold: number;
+  /** Vertical min–max segment per group in the strip plot. */
+  ranges: boolean;
+  /** Only show groups with a replicate above the threshold. */
+  flaggedOnly: boolean;
+}
+
+export const DEFAULT_REPETITION_OPTIONS: RepetitionOptions = {
+  groupBy: null,
+  metric: "euclidean",
+  reference: "mean",
+  display: "strip",
+  sort: "worst",
+  log: false,
+  quantiles: [],
+  threshold: "host",
+  manualThreshold: 0,
+  ranges: true,
+  flaggedOnly: false,
+};
+
+export const REPETITION_METRIC_LABELS: Readonly<Record<RepetitionMetric, string>> = {
+  euclidean: "Euclidean (RMS)",
+  manhattan: "Manhattan",
+  cosine: "Cosine",
+  spectralAngle: "Spectral angle",
+  correlation: "1 − Pearson r",
+  mahalanobis: "Mahalanobis",
+  pca: "PCA scores",
+};
+
+export const REPETITION_REFERENCE_LABELS: Readonly<Record<RepetitionReference, string>> = {
+  mean: "Group mean",
+  median: "Group median",
+  leaveOneOut: "Mean of the others",
+  first: "First replicate",
+};
+
+const QUANTILE_TONES = ["neutral", "neutral", "warning", "warning"] as const;
+
+function sortedQuantile(sorted: readonly number[], q: number): number {
+  if (sorted.length === 0) return Number.NaN;
+  const position = (sorted.length - 1) * q;
+  const lo = Math.floor(position);
+  const hi = Math.min(sorted.length - 1, lo + 1);
+  return sorted[lo]! + (sorted[hi]! - sorted[lo]!) * (position - lo);
+}
+
+/** Replicate groups of the output rows, ranked, with the threshold in effect. */
+export function repetitionModel(
+  reps: PlaygroundRepetitions,
+  scope: readonly number[],
+  opts: RepetitionOptions,
+  colorValue: (outputRow: number) => number,
+) {
+  const inScope = new Set(scope);
+  const groups = new Map<string, number[]>();
+  reps.groups.forEach((g, o) => {
+    if (g === null || !inScope.has(o) || !Number.isFinite(reps.distance[o]!)) return;
+    const bucket = groups.get(g);
+    if (bucket) bucket.push(o);
+    else groups.set(g, [o]);
+  });
+  const sorted = scope.map((o) => reps.distance[o]!).filter(Number.isFinite).sort((a, b) => a - b);
+  const threshold =
+    opts.threshold === "host"
+      ? reps.threshold
+      : opts.threshold === "manual"
+        ? opts.manualThreshold
+        : opts.threshold === "off"
+          ? undefined
+          : sortedQuantile(sorted, opts.threshold === "p90" ? 0.9 : opts.threshold === "p95" ? 0.95 : 0.99);
+  let entries = [...groups.entries()].map(([g, rows], order) => {
+    const distances = rows.map((o) => reps.distance[o]!);
+    const max = Math.max(...distances);
+    return {
+      g,
+      rows,
+      order,
+      max,
+      min: Math.min(...distances),
+      mean: distances.reduce((s, d) => s + d, 0) / distances.length,
+      color: rows.reduce((s, o) => s + colorValue(o), 0) / rows.length,
+      flagged: threshold !== undefined && max > threshold,
+    };
+  });
+  if (opts.flaggedOnly && threshold !== undefined) entries = entries.filter((e) => e.flagged);
+  const natural = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
+  const compare: Record<RepetitionSort, (a: (typeof entries)[number], b: (typeof entries)[number]) => number> = {
+    worst: (a, b) => b.max - a.max,
+    mean: (a, b) => b.mean - a.mean,
+    name: (a, b) => natural.compare(a.g, b.g),
+    order: (a, b) => a.order - b.order,
+    size: (a, b) => b.rows.length - a.rows.length || b.max - a.max,
+  };
+  entries.sort(compare[opts.sort]);
+  const quantiles = opts.quantiles.map((q) => ({ q, value: sortedQuantile(sorted, q) }));
+  return { entries, threshold, quantiles, sorted };
+}
+
+export function RepetitionsBody({ ctx, opts }: { ctx: PlaygroundViewContext; opts: RepetitionOptions }) {
   const reps = ctx.result?.repetitions;
   const model = useMemo(() => {
-    if (!reps) return null;
-    const groups = new Map<string, number[]>();
-    reps.groups.forEach((g, o) => {
-      if (g === null) return;
-      const bucket = groups.get(g);
-      if (bucket) bucket.push(o);
-      else groups.set(g, [o]);
-    });
-    const ordered = [...groups.entries()]
-      .map(([g, rows]) => ({ g, rows, max: Math.max(...rows.map((o) => reps.distance[o] ?? 0)) }))
-      .sort((a, b) => b.max - a.max);
+    if (!reps || reps.groups.length !== ctx.frame.rows.length) return null;
+    const m = repetitionModel(reps, ctx.scopeOut, opts, (o) => ctx.targetOut[o] ?? Number.NaN);
     const xs = new Float64Array(reps.groups.length).fill(Number.NaN);
-    ordered.forEach((entry, rank) => entry.rows.forEach((o) => (xs[o] = rank)));
-    return { ordered, xs, ys: Float64Array.from(reps.distance) };
-  }, [reps]);
-  if (!reps || !model || model.xs.length !== ctx.frame.rows.length) return null;
-  const flagged = reps.threshold !== undefined ? model.ordered.filter((e) => e.max > reps.threshold!).length : 0;
+    const shown: number[] = [];
+    m.entries.forEach((entry, rank) =>
+      entry.rows.forEach((o) => {
+        xs[o] = rank;
+        shown.push(o);
+      }),
+    );
+    return { ...m, xs, shown };
+  }, [reps, ctx.frame.rows.length, ctx.scopeOut, ctx.targetOut, opts]);
+  if (!reps || !model) return null;
+  const scale = (v: number) => (opts.log ? Math.log10(Math.max(v, 1e-12)) : v);
+  const ys = Float64Array.from(reps.distance, scale);
+  const flaggedGroups = model.entries.filter((e) => e.flagged);
+  const flaggedRows = model.threshold === undefined ? [] : model.shown.filter((o) => reps.distance[o]! > model.threshold!);
+  const select = (rows: readonly number[]) => ctx.setSelection(outputToSelection(rows, ctx.frame));
+  const yLabel = `${opts.log ? "log₁₀ " : ""}distance (${reps.metric})`;
+
+  const guides: ScatterGuide[] = model.quantiles.map(({ q, value }, i) => ({
+    kind: "hline" as const,
+    y: scale(value),
+    label: `P${Math.round(q * 100)}`,
+    tone: QUANTILE_TONES[Math.min(i, QUANTILE_TONES.length - 1)]!,
+  }));
+  if (model.threshold !== undefined) guides.push({ kind: "hline", y: scale(model.threshold), label: "threshold", tone: "danger" });
+  if (opts.ranges && opts.display === "strip" && model.entries.length <= 1500) {
+    model.entries.forEach((entry, rank) => {
+      if (entry.rows.length > 1) guides.push({ kind: "segment", x0: rank, y0: scale(entry.min), x1: rank, y1: scale(entry.max), tone: entry.flagged ? "danger" : "neutral" });
+    });
+  }
+
+  const foot = (
+    <footer className="n4wb-view-foot">
+      <span>
+        <strong className="n4wb-mono">{model.entries.length}</strong> groups · median <strong className="n4wb-mono">{formatValue(sortedQuantile(model.sorted, 0.5))}</strong>
+      </span>
+      {model.threshold !== undefined ? (
+        <span>
+          <strong className={cx("n4wb-mono", flaggedGroups.length > 0 && "n4pg-text-danger")}>{flaggedGroups.length}</strong> flagged
+        </span>
+      ) : null}
+      <span className="n4wb-header-grow" />
+      {flaggedRows.length > 0 ? (
+        <>
+          <span className="n4wb-muted">select</span>
+          <Button variant="outline" onClick={() => select(flaggedRows)} title="Select the replicates above the threshold">
+            {flaggedRows.length} reps
+          </Button>
+          <Button variant="outline" onClick={() => select(flaggedGroups.flatMap((e) => e.rows))} title="Select every replicate of the flagged groups">
+            {flaggedGroups.length} groups
+          </Button>
+        </>
+      ) : null}
+    </footer>
+  );
+
+  if (opts.display === "histogram") {
+    return (
+      <>
+        <DistributionView
+          values={ys}
+          rows={model.shown}
+          stack={ctx.mapping.legend?.kind === "categorical" ? { groups: ctx.colorsOut.groups, palette: ctx.mapping.palette } : null}
+          selected={ctx.selectedOut}
+          showMean={false}
+          showMedian
+          xLabel={yLabel}
+          onSelectionChange={(next) => select(next)}
+          icons={ctx.icons}
+          ariaLabel="Replicate distance distribution"
+        />
+        {foot}
+      </>
+    );
+  }
   return (
     <>
       <ScatterView
         xs={model.xs}
-        ys={model.ys}
-        rows={ctx.scopeOut}
+        ys={ys}
+        rows={model.shown}
         colors={ctx.colorsOut.colors}
         groups={ctx.colorsOut.groups}
         palette={ctx.mapping.palette}
         selected={ctx.selectedOut}
         hoverRow={ctx.hoverOut}
-        xLabel="Replicate group (sorted by worst spread)"
-        yLabel={`Distance to group (${reps.metric})`}
+        xLabel={`Replicate group (${{ worst: "worst spread first", mean: "highest mean first", name: "by name", order: "dataset order", size: "largest first" }[opts.sort]})`}
+        yLabel={yLabel}
         formatX={() => ""}
-        guides={reps.threshold !== undefined ? [{ kind: "hline", y: reps.threshold, label: "threshold", tone: "danger" }] : []}
+        guides={guides}
         onHover={(o) => ctx.setHoverRow(o === null ? null : ctx.frame.rows[o] ?? null)}
-        onSelectionChange={(next) => ctx.setSelection(outputToSelection(next, ctx.frame))}
+        onSelectionChange={(next) => select(next)}
         renderTooltip={(o) => (
           <>
             <SampleTooltip ctx={ctx} outputRow={o} />
@@ -596,15 +964,335 @@ export function RepetitionsBody({ ctx }: { ctx: PlaygroundViewContext }) {
         icons={ctx.icons}
         ariaLabel="Replicate spread"
       />
+      {foot}
+    </>
+  );
+}
+
+export type VarianceMetric = "std" | "variance" | "cv" | "snr";
+
+export interface VarianceOptions {
+  metric: VarianceMetric;
+  /** Also draw the profile of the pipeline input. */
+  compareInput: boolean;
+  /** Add the profile of the current selection. */
+  selection: boolean;
+}
+
+export const DEFAULT_VARIANCE_OPTIONS: VarianceOptions = { metric: "std", compareInput: true, selection: true };
+
+export const VARIANCE_METRIC_LABELS: Readonly<Record<VarianceMetric, string>> = {
+  std: "Standard deviation",
+  variance: "Variance",
+  cv: "Coefficient of variation",
+  snr: "Signal / noise (|μ| / σ)",
+};
+
+function varianceProfile(matrix: SpectraMatrix, rows: readonly number[], metric: VarianceMetric): Float32Array {
+  const stats = wavelengthStats(matrix, rows);
+  const out = new Float32Array(matrix.cols);
+  for (let c = 0; c < matrix.cols; c += 1) {
+    const sd = stats.std[c]!;
+    const mean = Math.abs(stats.mean[c]!);
+    out[c] = metric === "std" ? sd : metric === "variance" ? sd * sd : metric === "cv" ? (mean > 1e-12 ? sd / mean : Number.NaN) : sd > 1e-12 ? mean / sd : Number.NaN;
+  }
+  return out;
+}
+
+function meanOf(values: ArrayLike<number>): number {
+  let sum = 0;
+  let n = 0;
+  for (let i = 0; i < values.length; i += 1) {
+    const v = values[i]!;
+    if (Number.isFinite(v)) {
+      sum += v;
+      n += 1;
+    }
+  }
+  return n ? sum / n : Number.NaN;
+}
+
+/** Per-wavelength spread of the data: where the preprocessing removes or creates variability. */
+export function VarianceBody({ ctx, opts }: { ctx: PlaygroundViewContext; opts: VarianceOptions }) {
+  const { frame, raw, strings } = ctx;
+  const output = useMemo(() => varianceProfile(frame.matrix, ctx.scopeOut, opts.metric), [frame.matrix, ctx.scopeOut, opts.metric]);
+  const input = useMemo(() => {
+    if (!opts.compareInput || raw === frame) return null;
+    return varianceProfile(raw.matrix, datasetRowsOf(frame, ctx.scopeOut), opts.metric);
+  }, [opts.compareInput, opts.metric, raw, frame, ctx.scopeOut]);
+  const selection = useMemo(
+    () => (opts.selection && ctx.selectedOut.length > 1 ? varianceProfile(frame.matrix, ctx.selectedOut, opts.metric) : null),
+    [opts.selection, opts.metric, frame.matrix, ctx.selectedOut],
+  );
+  const series: ProfileSeries[] = [];
+  if (input) series.push({ id: "in", label: strings.input, values: input, x: raw.wavelengths, color: "#94a3b8", dashed: true, width: 1.3 });
+  series.push({ id: "out", label: strings.output, values: output, color: "#0d9488", width: 1.8, area: true });
+  if (selection) series.push({ id: "sel", label: strings.selection, values: selection, color: "#e11d48", width: 1.5 });
+  const avgOut = meanOf(output);
+  const avgIn = input ? meanOf(input) : Number.NaN;
+  return (
+    <>
+      <ProfileView
+        x={frame.wavelengths}
+        series={series}
+        xLabel={`Wavelength (${frame.unit})`}
+        yLabel={VARIANCE_METRIC_LABELS[opts.metric]}
+        invertX={isWavenumber(frame.unit)}
+        icons={ctx.icons}
+        ariaLabel="Per-wavelength variability"
+      />
       <footer className="n4wb-view-foot">
         <span>
-          <strong className="n4wb-mono">{model.ordered.length}</strong> groups
+          mean {opts.metric} <strong className="n4wb-mono">{formatValue(avgOut)}</strong>
+          {Number.isFinite(avgIn) ? <span className="n4wb-muted"> · {strings.input.toLowerCase()} {formatValue(avgIn)}</span> : null}
         </span>
-        {reps.threshold !== undefined ? (
-          <span>
-            <strong className={cx("n4wb-mono", flagged > 0 && "n4pg-text-danger")}>{flagged}</strong> above threshold
-          </span>
-        ) : null}
+      </footer>
+    </>
+  );
+}
+
+export interface GroupMeansOptions {
+  /** Show each group's ±1σ envelope. */
+  bands: boolean;
+  /** Subtract the overall mean spectrum (difference spectra). */
+  centered: boolean;
+}
+
+export const DEFAULT_GROUP_MEANS_OPTIONS: GroupMeansOptions = { bands: true, centered: false };
+
+/** Mean spectrum (± σ) of every category of the color-by column, or of target quintiles. */
+export function GroupMeansBody({ ctx, opts }: { ctx: PlaygroundViewContext; opts: GroupMeansOptions }) {
+  const { frame } = ctx;
+  const series = useMemo((): ProfileSeries[] => {
+    const legend = ctx.mapping.legend;
+    let groups: Array<{ key: string; color: string; rows: number[] }>;
+    if (legend?.kind === "categorical") {
+      groups = bandGroupsFor(ctx, frame, ctx.scopeOut)?.map((g) => ({ ...g, rows: [...g.rows] })) ?? [];
+    } else {
+      // Continuous or no color-by: quintiles of the numeric target (or one global group).
+      const valued = ctx.scopeOut.filter((o) => Number.isFinite(ctx.targetOut[o]!)).sort((a, b) => ctx.targetOut[a]! - ctx.targetOut[b]!);
+      if (valued.length >= 10) {
+        const stops = rampStops("sequential");
+        groups = Array.from({ length: 5 }, (_, k) => {
+          const rows = valued.slice(Math.floor((k * valued.length) / 5), Math.floor(((k + 1) * valued.length) / 5));
+          const lo = ctx.targetOut[rows[0]!]!;
+          const hi = ctx.targetOut[rows[rows.length - 1]!]!;
+          return { key: `${formatValue(lo)}–${formatValue(hi)}`, color: rampAt(ctx.densityStops.length ? ctx.densityStops : stops, k / 4), rows };
+        });
+      } else groups = [{ key: "All", color: "#0d9488", rows: [...ctx.scopeOut] }];
+    }
+    const overall = opts.centered ? wavelengthStats(frame.matrix, ctx.scopeOut).mean : null;
+    return groups
+      .filter((g) => g.rows.length > 0)
+      .map((g) => {
+        const stats = wavelengthStats(frame.matrix, g.rows);
+        const mean = new Float32Array(frame.matrix.cols);
+        const lower = new Float32Array(frame.matrix.cols);
+        const upper = new Float32Array(frame.matrix.cols);
+        for (let c = 0; c < frame.matrix.cols; c += 1) {
+          mean[c] = stats.mean[c]! - (overall ? overall[c]! : 0);
+          lower[c] = mean[c]! - stats.std[c]!;
+          upper[c] = mean[c]! + stats.std[c]!;
+        }
+        return { id: g.key, label: `${g.key} · ${g.rows.length}`, values: mean, color: toHex(g.color), width: 1.8, ...(opts.bands ? { band: { lower, upper } } : {}) };
+      });
+  }, [ctx, frame, opts.centered, opts.bands]);
+  return (
+    <ProfileView
+      x={frame.wavelengths}
+      series={series}
+      zeroLine={opts.centered}
+      xLabel={`Wavelength (${frame.unit})`}
+      yLabel={opts.centered ? `${frame.signal} − overall mean` : frame.signal}
+      invertX={isWavenumber(frame.unit)}
+      icons={ctx.icons}
+      ariaLabel="Group mean spectra"
+    />
+  );
+}
+
+/** `rgb(r, g, b)` (ramp output) → `#rrggbb` so profile envelopes can be tinted. */
+function toHex(color: string): string {
+  const m = /rgb\((\d+), (\d+), (\d+)\)/.exec(color);
+  if (!m) return color;
+  return `#${[m[1], m[2], m[3]].map((v) => Number(v).toString(16).padStart(2, "0")).join("")}`;
+}
+
+export type HeatmapSort = "target" | "pc1" | "color" | "order";
+
+export interface HeatmapOptions {
+  sort: HeatmapSort;
+  /** Subtract the mean spectrum (shows deviations with a diverging scale). */
+  centered: boolean;
+}
+
+export const DEFAULT_HEATMAP_OPTIONS: HeatmapOptions = { sort: "target", centered: false };
+
+/** Samples × wavelengths raster of the output, rows ordered by target, PC1 or color. */
+export function HeatmapBody({ ctx, opts }: { ctx: PlaygroundViewContext; opts: HeatmapOptions }) {
+  const { frame } = ctx;
+  const matrix = frame.matrix;
+  const ordered = useMemo(() => {
+    const scope = [...ctx.scopeOut];
+    const coords = ctx.result?.projection?.coordinates;
+    const key = (o: number): number => {
+      if (opts.sort === "target") return ctx.targetOut[o] ?? Number.NaN;
+      if (opts.sort === "pc1") return coords && coords.length === frame.rows.length ? coords[o]![0] ?? Number.NaN : Number.NaN;
+      if (opts.sort === "color") {
+        const v = ctx.colorColumn?.values[frame.rows[o]!];
+        return typeof v === "number" ? v : ctx.colorsOut.groups[o] ?? 0;
+      }
+      return o;
+    };
+    return scope.sort((a, b) => {
+      const ka = key(a);
+      const kb = key(b);
+      if (!Number.isFinite(ka)) return Number.isFinite(kb) ? 1 : a - b;
+      if (!Number.isFinite(kb)) return -1;
+      return ka - kb || a - b;
+    });
+  }, [ctx.scopeOut, ctx.result, ctx.targetOut, ctx.colorColumn, ctx.colorsOut.groups, frame.rows, opts.sort]);
+  const rankOf = useMemo(() => {
+    const out = new Int32Array(matrix.rows).fill(-1);
+    ordered.forEach((o, rank) => (out[o] = rank));
+    return out;
+  }, [ordered, matrix.rows]);
+  const center = useMemo(() => (opts.centered ? wavelengthStats(matrix, ordered).mean : null), [opts.centered, matrix, ordered]);
+  const range = useMemo(() => {
+    const sample: number[] = [];
+    const step = Math.max(1, Math.floor((ordered.length * matrix.cols) / 20000));
+    let k = 0;
+    for (const o of ordered) {
+      for (let c = 0; c < matrix.cols; c += 1) {
+        k += 1;
+        if (k % step) continue;
+        const v = matrix.data[o * matrix.cols + c]! - (center ? center[c]! : 0);
+        if (Number.isFinite(v)) sample.push(v);
+      }
+    }
+    sample.sort((a, b) => a - b);
+    if (sample.length === 0) return { lo: 0, hi: 1 };
+    let lo = sample[Math.floor(sample.length * 0.01)]!;
+    let hi = sample[Math.floor(sample.length * 0.99)]!;
+    if (center) {
+      const m = Math.max(Math.abs(lo), Math.abs(hi)) || 1;
+      lo = -m;
+      hi = m;
+    }
+    return { lo, hi: hi > lo ? hi : lo + 1 };
+  }, [ordered, matrix, center]);
+  const stops = opts.centered ? rampStops("coolwarm") : ctx.densityStops;
+  const lut = useMemo(
+    () =>
+      Array.from({ length: 256 }, (_, i) => {
+        const m = /rgb\((\d+), (\d+), (\d+)\)/.exec(rampAt(stops, i / 255));
+        return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : [13, 148, 136];
+      }),
+    [stops],
+  );
+  const xDomain = useMemo((): readonly [number, number] => {
+    const w = frame.wavelengths;
+    return w.length ? [Math.min(w[0]!, w[w.length - 1]!), Math.max(w[0]!, w[w.length - 1]!)] : [0, 1];
+  }, [frame.wavelengths]);
+  const n = ordered.length;
+
+  const drawBase = useCallback(
+    (g: CanvasRenderingContext2D, geo: PlotGeometry) => {
+      if (n === 0 || typeof document === "undefined") return;
+      const W = Math.max(1, Math.floor(geo.width));
+      const H = Math.max(1, Math.floor(geo.height));
+      const image = new ImageData(W, H);
+      const colAt = new Int32Array(W);
+      for (let px = 0; px < W; px += 1) colAt[px] = nearestAxisIndex(frame.wavelengths, geo.x.invert(geo.left + px + 0.5));
+      const span = range.hi - range.lo;
+      for (let py = 0; py < H; py += 1) {
+        const rank = Math.floor(geo.y.invert(geo.top + py + 0.5));
+        if (rank < 0 || rank >= n) continue;
+        const offset = ordered[rank]! * matrix.cols;
+        for (let px = 0; px < W; px += 1) {
+          const c = colAt[px]!;
+          const v = matrix.data[offset + c]! - (center ? center[c]! : 0);
+          if (!Number.isFinite(v)) continue;
+          const rgb = lut[Math.max(0, Math.min(255, Math.round(((v - range.lo) / span) * 255)))]!;
+          const i = (py * W + px) * 4;
+          image.data[i] = rgb[0]!;
+          image.data[i + 1] = rgb[1]!;
+          image.data[i + 2] = rgb[2]!;
+          image.data[i + 3] = 255;
+        }
+      }
+      const off = document.createElement("canvas");
+      off.width = W;
+      off.height = H;
+      off.getContext("2d")?.putImageData(image, 0, 0);
+      g.imageSmoothingEnabled = false;
+      g.drawImage(off, geo.left, geo.top, W, H);
+    },
+    [n, frame.wavelengths, range, ordered, matrix, center, lut],
+  );
+  const drawHighlight = useCallback(
+    (g: CanvasRenderingContext2D, geo: PlotGeometry) => {
+      const band = (o: number, color: string, full: boolean) => {
+        const rank = rankOf[o]!;
+        if (rank < 0) return;
+        const y0 = geo.y(rank);
+        const y1 = geo.y(rank + 1);
+        g.fillStyle = color;
+        if (full) g.strokeRect(geo.left + 0.5, Math.min(y0, y1), geo.width - 1, Math.max(1, Math.abs(y1 - y0)));
+        else g.fillRect(geo.left, Math.min(y0, y1), 5, Math.max(1, Math.abs(y1 - y0)));
+      };
+      for (const o of ctx.selectedOut) band(o, "#0f172a", false);
+      if (ctx.hoverOut !== null) {
+        g.strokeStyle = "#0f172a";
+        g.lineWidth = 1.5;
+        band(ctx.hoverOut, "#0f172a", true);
+      }
+    },
+    [rankOf, ctx.selectedOut, ctx.hoverOut],
+  );
+  const hit = (py: number, geo: PlotGeometry) => {
+    const rank = Math.floor(geo.y.invert(py));
+    return rank >= 0 && rank < n ? ordered[rank]! : null;
+  };
+  const legend = `linear-gradient(90deg, ${stops.join(", ")})`;
+  return (
+    <>
+      <CanvasPlot
+        xDomain={xDomain}
+        yDomain={[n, 0]}
+        xLabel={`Wavelength (${frame.unit})`}
+        yLabel={`Samples (by ${opts.sort === "pc1" ? "PC1" : opts.sort === "color" ? ctx.colorColumn?.label ?? "color" : opts.sort === "target" ? ctx.target?.name ?? "target" : "order"})`}
+        formatY={() => ""}
+        invertX={isWavenumber(frame.unit)}
+        zoomAxes="xy"
+        tools={["select", "zoom", "pan"]}
+        drawBase={drawBase}
+        drawHighlight={drawHighlight}
+        hitTest={(_, py, geo) => hit(py, geo)}
+        hoverRow={ctx.hoverOut}
+        onHover={(o) => ctx.setHoverRow(o === null ? null : frame.rows[o] ?? null)}
+        onClickRow={(o, mods) => {
+          const next = clickSelection(ctx.selectedOut, o, mods);
+          if (next) ctx.setSelection(outputToSelection(next, frame));
+        }}
+        onSelectRect={(rect, geo, mods) => {
+          const r = normalizeRect(rect);
+          const a = Math.max(0, Math.floor(geo.y.invert(r.y0)));
+          const b = Math.min(n - 1, Math.floor(geo.y.invert(r.y1)));
+          const hits = ordered.slice(Math.min(a, b), Math.max(a, b) + 1);
+          ctx.setSelection(outputToSelection(combineSelection(ctx.selectedOut, hits, selectionModeFromModifiers(mods)), frame));
+        }}
+        renderTooltip={(o) => <SampleTooltip ctx={ctx} outputRow={o} />}
+        crosshair
+        ariaLabel="Spectral heat map"
+        description={`${n} samples × ${matrix.cols} wavelengths.`}
+        icons={ctx.icons}
+      />
+      <footer className="n4wb-view-foot">
+        <span className="n4wb-mono">{formatValue(range.lo)}</span>
+        <span className="n4pg-heat-ramp" style={{ background: legend }} aria-hidden="true" />
+        <span className="n4wb-mono">{formatValue(range.hi)}</span>
+        <span className="n4wb-muted">{opts.centered ? `${frame.signal} − mean` : frame.signal} · 1–99 % clipped</span>
       </footer>
     </>
   );

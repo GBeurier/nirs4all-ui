@@ -56,7 +56,12 @@ export type WorkbenchIconKey =
   | "redo"
   | "crop"
   | "copy"
-  | "arrowRight";
+  | "arrowRight"
+  | "rotate"
+  | "cube"
+  | "palette"
+  | "pause"
+  | "grid";
 
 export type WorkbenchIcons = Partial<Record<WorkbenchIconKey, ReactNode>>;
 
@@ -233,6 +238,40 @@ export const DEFAULT_WORKBENCH_ICONS: Record<WorkbenchIconKey, ReactNode> = {
   play: (
     <svg {...base}>
       <path d="M7 4.5v15l12-7.5z" />
+    </svg>
+  ),
+  pause: (
+    <svg {...base}>
+      <path d="M8 5v14M16 5v14" />
+    </svg>
+  ),
+  rotate: (
+    <svg {...base}>
+      <ellipse cx="12" cy="12" rx="9" ry="4.2" />
+      <path d="M17.5 5.6 21 8.3l-3.9 1.4" />
+      <path d="M12 3v18" opacity=".45" />
+    </svg>
+  ),
+  cube: (
+    <svg {...base}>
+      <path d="M12 3 20 7.5v9L12 21l-8-4.5v-9z" />
+      <path d="M4 7.5 12 12l8-4.5M12 12v9" />
+    </svg>
+  ),
+  palette: (
+    <svg {...base}>
+      <path d="M12 3a9 9 0 1 0 0 18c1.4 0 2-1 1.5-2.1-.6-1.2.2-2.4 1.5-2.4H18a3 3 0 0 0 3-3c0-5.6-4-10.5-9-10.5z" />
+      <circle cx="7.5" cy="11" r="1.2" fill="currentColor" />
+      <circle cx="10.5" cy="7" r="1.2" fill="currentColor" />
+      <circle cx="15.5" cy="7.5" r="1.2" fill="currentColor" />
+    </svg>
+  ),
+  grid: (
+    <svg {...base}>
+      <rect x="3.5" y="3.5" width="7" height="7" rx="1.2" />
+      <rect x="13.5" y="3.5" width="7" height="7" rx="1.2" />
+      <rect x="3.5" y="13.5" width="7" height="7" rx="1.2" />
+      <rect x="13.5" y="13.5" width="7" height="7" rx="1.2" />
     </svg>
   ),
   pin: (
