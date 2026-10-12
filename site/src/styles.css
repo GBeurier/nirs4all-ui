@@ -453,3 +453,19 @@ button { font-family: inherit; }
   .hero-visual { order: -1; }
   .topbar nav { display: none; }
 }
+
+/* ---------- workbench capsules ---------- */
+.wb-showcase { display: flex; flex-direction: column; gap: 12px; }
+.wb-showcase-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.wb-showcase-bar .filter-bar { margin: 0; }
+.wb-showcase-entry { font-size: 0.78rem; color: var(--text-3); }
+.wb-showcase-grow { flex: 1; }
+.wb-showcase-stage { height: min(900px, calc(100vh - 140px)); min-height: 640px; }
+.wb-showcase.is-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  padding: 12px 14px 14px;
+  background: var(--paper);
+}
+.wb-showcase.is-fullscreen .wb-showcase-stage { flex: 1; height: auto; min-height: 0; }

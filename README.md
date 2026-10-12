@@ -28,6 +28,9 @@ spectra motion asset.
 | `viz` | `nirs4all-ui/viz` | Dependency-free scientific SVG charts. Each chart provides a data-derived accessible description and accepts a `description` override for localized or domain-specific wording. Hosts supply computed values and retain analysis/execution. |
 | `dag` | `nirs4all-ui/dag` | Interactive compiled-DAG explorer (layered layout, pan/zoom, culling/LOD, collapsible clusters) plus the pure engine and a `fromCompiledGraph` adapter for a serialized DAG-ML graph/plan. |
 | `chains` | `nirs4all-ui/chains` | Chain-effect explorer over a corpus of scored pipelines: per-node influence ranking, position (early/mid/late) and predecessor×successor order effects, and with/without distribution shift, with per-dataset rank/z normalization. Pure engine + charts + interactive explorer, plus a `parseChainEffectAnalysis` adapter for the serialized `dag-ml` artifact. |
+| `workbench` | `nirs4all-ui/workbench` | Shared interactive-analysis kit behind the capsules: selection algebra (click / box / lasso, Shift add · Alt subtract · Ctrl toggle), color-by resolution, canvas views (`SpectraView` lines / bands / density, `ScatterView`, `DistributionView`, `ProfileView`) on a layered `CanvasPlot`, view grid with layout presets, panel chrome, virtual table, capsule-scoped shortcuts. |
+| `playground` | `nirs4all-ui/playground` | The **Playground capsule**: dataset exploration and live operator chains (pipeline timeline with preview cursor, operator picker, linked spectra / scores / target / T²–Q / loadings / r(λ) / folds / replicates / samples views, selection drawer). The host executes `PlaygroundRunRequest`s and returns `PlaygroundResult`s. |
+| `inspector` | `nirs4all-ui/inspector` | The **Inspector capsule**: rank and dissect trained chains (leaderboard with ☆ compare, score landscape, pivot heatmap, generalization, hyper-parameters, step effects, parity, residuals, fold stability, confusion, hard samples, chain details with step diff). The host supplies chains, score references and on-demand predictions. |
 | `lab` | `nirs4all-ui/lab` | Quality/lab decision, sample lifecycle, health, model report, worklist, and budget display contracts plus presentational components. |
 | `datasetBuilder` | `nirs4all-ui/datasetBuilder` | Multisource dataset-builder wizard components and pure dataset-config helpers. |
 | `brand` | `nirs4all-ui/brand` | Ecosystem brand definitions, stable asset paths, palettes, and deterministic SVG generators. |
@@ -37,7 +40,7 @@ spectra motion asset.
 The root export also exposes namespace barrels:
 
 ```ts
-import { brand, chains, conformal, dag, dataset, datasetBuilder, keywordRegistry, lab, nodeRegistry, robustness, runtime, score, styles, tuning } from "nirs4all-ui";
+import { brand, chains, conformal, dag, inspector, playground, workbench, dataset, datasetBuilder, keywordRegistry, lab, nodeRegistry, robustness, runtime, score, styles, tuning } from "nirs4all-ui";
 ```
 
 Prefer domain imports when a consumer only needs one area:
@@ -52,6 +55,9 @@ import { createKeywordRegistryFieldViews, createKeywordRegistryWorkspacePredicti
 import { projectN4mManifest } from "nirs4all-ui/nodeRegistry";
 import { createTuningSearchSpacePreview, createTuningStudySummary, createTuningSummaryCard, createTuningTrialRows, parseOrderedTuningSearchSpaceArtifact, parseTuningResultArtifact, parseTuningSummaryArtifact } from "nirs4all-ui/tuning";
 import { DatasetBuilder } from "nirs4all-ui/datasetBuilder";
+import { Playground } from "nirs4all-ui/playground";
+import { Inspector } from "nirs4all-ui/inspector";
+import { SpectraView, ScatterView, combineSelection } from "nirs4all-ui/workbench";
 import { DagGraphView, fromCompiledGraph } from "nirs4all-ui/dag";
 import { ChainExplorer, fromScoredChains, parseChainEffectAnalysis } from "nirs4all-ui/chains";
 import { DecisionBadge } from "nirs4all-ui/lab";
@@ -71,6 +77,7 @@ Static assets are published through the existing `nirs4all-ui/assets/*` export:
 ```css
 @import "nirs4all-ui/assets/styles/nirs4all-default.css";
 @import "nirs4all-ui/assets/datasetBuilder.css";
+@import "nirs4all-ui/assets/workbench.css";
 @import "nirs4all-ui/assets/theme.css";
 ```
 

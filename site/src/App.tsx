@@ -5,6 +5,9 @@ import * as componentsExports from "../../src/components/index.js";
 import * as vizExports from "../../src/viz/index.js";
 import * as dagExports from "../../src/dag/index.js";
 import * as chainsExports from "../../src/chains/index.js";
+import * as workbenchExports from "../../src/workbench/index.js";
+import * as playgroundExports from "../../src/playground/index.js";
+import * as inspectorExports from "../../src/inspector/index.js";
 import * as labExports from "../../src/lab/index.js";
 import * as datasetBuilderExports from "../../src/datasetBuilder/index.js";
 import * as scoreExports from "../../src/score/index.js";
@@ -20,6 +23,7 @@ import { DagGraphView } from "../../src/dag/index.js";
 import { ChainExplorer, ChainNodeHub, ChainNodeOrbit } from "../../src/chains/index.js";
 import packageJson from "../../package.json" with { type: "json" };
 import { CANONICAL_SITE_URL, PUBLICATION_ASSETS } from "./showcaseMetadata.js";
+import { WorkbenchShowcase } from "./demo/WorkbenchShowcase.js";
 import {
   CHAIN_ANALYSIS,
   CHAIN_CORPUS,
@@ -33,6 +37,9 @@ import {
 const packageVersion = packageJson.version;
 
 const EXPORT_SURFACE = [
+  { entry: "nirs4all-ui/playground", title: "Playground capsule", symbols: Object.keys(playgroundExports) },
+  { entry: "nirs4all-ui/inspector", title: "Inspector capsule", symbols: Object.keys(inspectorExports) },
+  { entry: "nirs4all-ui/workbench", title: "Workbench kit", symbols: Object.keys(workbenchExports) },
   { entry: "nirs4all-ui/viz", title: "Scientific charts", symbols: Object.keys(vizExports) },
   { entry: "nirs4all-ui/dag", title: "Compiled-graph explorer", symbols: Object.keys(dagExports) },
   { entry: "nirs4all-ui/chains", title: "Chain-effect explorer", symbols: Object.keys(chainsExports) },
@@ -58,6 +65,7 @@ const ASSET_REFERENCES = [
   "assets/chains.css",
   "assets/datasetBuilder.css",
   "assets/conformal.css",
+  "assets/workbench.css",
   "assets/theme.css",
   "assets/motion/nirs-spectra.svg",
 ] as const;
@@ -259,6 +267,7 @@ export function App() {
           <img src="./logo.svg" alt="nirs4all-ui" />
         </a>
         <nav aria-label="Sections">
+          <a href="#workbench">Workbench</a>
           <a href="#showroom">Showroom</a>
           <a href="#builder">Builder</a>
           <a href="#graph">Graph</a>
@@ -302,6 +311,23 @@ export function App() {
           {SHOWCASE_ENTRIES[0]?.render()}
         </div>
       </section>
+
+      <Section
+        id="workbench"
+        kicker="workbench · capsules"
+        title={<>The <em className="n4-gradient-text">Playground</em> &amp; <em className="n4-gradient-text">Inspector</em> capsules</>}
+        lead={
+          <>
+            Two full analysis surfaces sharing one interaction model: the Playground explores a dataset and tries
+            operator chains live; the Inspector ranks trained chains and dissects their predictions. Same selection
+            gestures, same color-by, same view chrome, same shortcuts — the host only executes requests and returns
+            results. These demos run on synthetic data with an in-browser mock engine.
+          </>
+        }
+        variant="plain"
+      >
+        <WorkbenchShowcase />
+      </Section>
 
       <Section
         id="showroom"

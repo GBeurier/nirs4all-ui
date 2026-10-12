@@ -10,6 +10,7 @@ export type Nirs4allStyleAssetId =
   | "dataset-builder"
   | "viz-charts"
   | "chains-explorer"
+  | "workbench"
   | "conformal-tree"
   | "quality-lab-theme"
   | "spectra-motion";
@@ -52,6 +53,13 @@ export const NIRS4ALL_STYLE_ASSETS = [
     path: "assets/chains.css",
     packageExport: "nirs4all-ui/assets/chains.css",
     description: "Default axis/gridline/baseline chart styling plus explorer chrome (toolbar, filter chips, panels) for the chain-effect explorer.",
+  },
+  {
+    id: "workbench",
+    kind: "css",
+    path: "assets/workbench.css",
+    packageExport: "nirs4all-ui/assets/workbench.css",
+    description: "Workbench shell, linked canvas views, controls and the Playground / Inspector capsule chrome.",
   },
   {
     id: "conformal-tree",
