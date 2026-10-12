@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 import { cx } from "./_cx.js";
 
@@ -212,7 +213,10 @@ export function Chip({
 /**
  * Anchored popover with click-outside and Escape dismissal. Used for view
  * options and menus so panel headers stay one line tall. It is positioned
- * `fixed` against its trigger so scrolling / clipped panels never cut it.
+ * `fixed` against its trigger and portaled to the capsule root (`.n4wb`, else
+ * `document.body`): view panels use CSS containment (`container-type`), which
+ * Firefox treats as the containing block of fixed descendants, so rendering
+ * in place would offset and clip the popover.
  */
 export function Popover({
   trigger,
@@ -221,6 +225,7 @@ export function Popover({
   label,
   className,
   triggerClassName,
+  popoverClassName,
 }: {
   trigger: ReactNode;
   children: ReactNode | ((close: () => void) => ReactNode);
@@ -228,15 +233,19 @@ export function Popover({
   label: string;
   className?: string | undefined;
   triggerClassName?: string | undefined;
+  /** Class on the floating panel itself (it is portaled, so parent selectors do not reach it). */
+  popoverClassName?: string | undefined;
 }) {
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const open = anchor !== null;
   useEffect(() => {
     if (!open) return;
     const onPointer = (event: PointerEvent) => {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setAnchor(null);
+      const target = event.target as Node;
+      if (!rootRef.current?.contains(target) && !popoverRef.current?.contains(target)) setAnchor(null);
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -279,11 +288,14 @@ export function Popover({
       >
         {trigger}
       </button>
-      {open ? (
-        <div className="n4wb-popover" style={style} role="dialog" aria-label={label}>
-          {typeof children === "function" ? children(close) : children}
-        </div>
-      ) : null}
+      {open
+        ? createPortal(
+            <div ref={popoverRef} className={cx("n4wb-popover", popoverClassName)} style={style} role="dialog" aria-label={label}>
+              {typeof children === "function" ? children(close) : children}
+            </div>,
+            triggerRef.current?.closest(".n4wb") ?? document.body,
+          )
+        : null}
     </div>
   );
 }

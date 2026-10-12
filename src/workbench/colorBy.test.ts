@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import { categoriesOf, groupRows, MISSING_COLOR, resolveRowColors, robustRange, type RowColumn } from "./colorBy.js";
+import { N4_PARTITION_COLORS } from "../viz/theme.js";
+import {
+  CATEGORICAL_PALETTES,
+  categoriesOf,
+  colorSchemeOptions,
+  DEFAULT_COLOR_SCHEME,
+  groupRows,
+  MISSING_COLOR,
+  rampStops,
+  resolveRowColors,
+  robustRange,
+  type RowColumn,
+} from "./colorBy.js";
 
 describe("workbench color-by", () => {
   it("colors categorical columns with partition defaults and counts", () => {
@@ -37,4 +49,15 @@ describe("workbench color-by", () => {
     expect(groups.get("a")).toEqual([0, 2]);
     expect(groups.get(null)).toEqual([3]);
   });
+
+  it("applies user palettes, reversed ramps and full-range clipping", () => {
+    const partition: RowColumn = { key: "p", label: "p", kind: "categorical", values: ["train", "test"] };
+    expect(resolveRowColors(2, partition).colors[0]).toBe(N4_PARTITION_COLORS.train);
+    const custom = resolveRowColors(2, partition, colorSchemeOptions({ ...DEFAULT_COLOR_SCHEME, categorical: "okabeIto" }));
+    expect(custom.colors).toEqual([CATEGORICAL_PALETTES.okabeIto[1], CATEGORICAL_PALETTES.okabeIto[0]]);
+    const y: RowColumn = { key: "y", label: "y", kind: "continuous", values: [0, 1] };
+    const reversed = resolveRowColors(2, y, { ramp: "viridis", reverse: true, clip: "full" });
+    expect(reversed.legend).toMatchObject({ min: 0, max: 1, stops: rampStops("viridis", true) });
+  });
 });
+

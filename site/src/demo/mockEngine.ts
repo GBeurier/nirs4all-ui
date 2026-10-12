@@ -727,7 +727,7 @@ export function runDemoRequest(dataset: PlaygroundDataset, request: PlaygroundRu
         method: "umap",
         coordinates: model.scores.map((s) => {
           const r = Math.hypot(s[0]!, s[1]!, s[2]! * 1.5) || 1;
-          return [Math.tanh(s[0]! / 3) * 6 + s[2]! * 0.8, Math.tanh(s[1]! / 3) * 6 + Math.sin(r) * 0.8];
+          return [Math.tanh(s[0]! / 3) * 6 + s[2]! * 0.8, Math.tanh(s[1]! / 3) * 6 + Math.sin(r) * 0.8, Math.tanh(s[2]! / 2) * 4 + Math.cos(r) * 0.6];
         }),
       };
     } else if (needs.projection === "pca") {
@@ -736,23 +736,98 @@ export function runDemoRequest(dataset: PlaygroundDataset, request: PlaygroundRu
     if (needs.outliers) result.outliers = { t2: model.t2, q: model.q, t2Limit: model.t2Limit, qLimit: model.qLimit, confidence: 0.95, components: model.loadings.length };
     if (needs.loadings) result.loadings = { components: model.loadings, explained: model.explained };
   }
-  if (needs.repetitions && dataset.groupColumn) {
-    const groups = frame.rows.map((row) => groupKey(dataset, row));
+  if (needs.repetitions) {
+    const spec = needs.repetitions;
+    const column = dataset.metadata?.find((c) => c.key === spec.groupBy);
+    const groups = frame.rows.map((row) => (column ? String(column.values[row] ?? row) : String(row)));
     const byGroup = new Map<string, number[]>();
     groups.forEach((g, o) => (byGroup.get(g) ?? byGroup.set(g, []).get(g)!).push(o));
-    const p = frame.m.cols;
+    // PCA / Mahalanobis distances run in the (whitened) score space of a 5-component PCA.
+    const space = spec.metric === "pca" || spec.metric === "mahalanobis" ? pca(frame.m, 5) : null;
+    const dims = space ? space.scores[0]?.length ?? 0 : frame.m.cols;
+    const sd = space ? Array.from({ length: dims }, (_, a) => Math.sqrt(space.scores.reduce((s, v) => s + v[a]! ** 2, 0) / Math.max(1, frame.m.rows - 1)) || 1) : null;
+    const vec = (o: number) => {
+      const out = new Float64Array(dims);
+      for (let c = 0; c < dims; c += 1) out[c] = space ? space.scores[o]![c]! / (spec.metric === "mahalanobis" ? sd![c]! : 1) : frame.m.data[o * dims + c]!;
+      return out;
+    };
+    const reference = (rows: number[]) => {
+      const out = new Float64Array(dims);
+      if (spec.reference === "first") return vec(rows[0]!);
+      if (spec.reference === "median") {
+        const vs = rows.map(vec);
+        for (let c = 0; c < dims; c += 1) {
+          const col = vs.map((v) => v[c]!).sort((x, y) => x - y);
+          out[c] = col[Math.floor((col.length - 1) / 2)]! / 2 + col[Math.ceil((col.length - 1) / 2)]! / 2;
+        }
+        return out;
+      }
+      for (const o of rows) {
+        const v = vec(o);
+        for (let c = 0; c < dims; c += 1) out[c]! += v[c]! / rows.length;
+      }
+      return out;
+    };
+    const dist = (a: Float64Array, b: Float64Array) => {
+      let s = 0;
+      let dot = 0;
+      let na = 0;
+      let nb = 0;
+      let ma = 0;
+      let mb = 0;
+      for (let c = 0; c < dims; c += 1) {
+        ma += a[c]! / dims;
+        mb += b[c]! / dims;
+      }
+      let cov = 0;
+      let va = 0;
+      let vb = 0;
+      for (let c = 0; c < dims; c += 1) {
+        const d = a[c]! - b[c]!;
+        s += spec.metric === "manhattan" ? Math.abs(d) : d * d;
+        dot += a[c]! * b[c]!;
+        na += a[c]! ** 2;
+        nb += b[c]! ** 2;
+        cov += (a[c]! - ma) * (b[c]! - mb);
+        va += (a[c]! - ma) ** 2;
+        vb += (b[c]! - mb) ** 2;
+      }
+      const cos = dot / (Math.sqrt(na * nb) || 1);
+      switch (spec.metric) {
+        case "manhattan":
+          return s / dims;
+        case "cosine":
+          return 1 - cos;
+        case "spectralAngle":
+          return Math.acos(Math.max(-1, Math.min(1, cos)));
+        case "correlation":
+          return 1 - cov / (Math.sqrt(va * vb) || 1);
+        case "euclidean":
+          return Math.sqrt(s / dims);
+        default:
+          return Math.sqrt(s);
+      }
+    };
     const distance = new Float64Array(frame.m.rows);
     for (const rows of byGroup.values()) {
-      const mean = new Float64Array(p);
-      for (const o of rows) for (let c = 0; c < p; c += 1) mean[c]! += frame.m.data[o * p + c]! / rows.length;
+      const shared = spec.reference === "leaveOneOut" ? null : reference(rows);
       for (const o of rows) {
-        let s = 0;
-        for (let c = 0; c < p; c += 1) s += (frame.m.data[o * p + c]! - mean[c]!) ** 2;
-        distance[o] = Math.sqrt(s / p);
+        const others = rows.filter((x) => x !== o);
+        const ref = shared ?? (others.length > 0 ? reference(others) : vec(o));
+        distance[o] = dist(vec(o), ref);
       }
     }
     const sorted = [...distance].sort((a, b) => a - b);
-    result.repetitions = { metric: "RMS euclidean", groups, distance, threshold: sorted[Math.floor(sorted.length * 0.95)]! * 1.6 };
+    const metricLabel: Record<typeof spec.metric, string> = {
+      euclidean: "RMS euclidean",
+      manhattan: "mean |Δ|",
+      cosine: "cosine",
+      spectralAngle: "spectral angle (rad)",
+      correlation: "1 − r",
+      mahalanobis: "Mahalanobis (5 PC)",
+      pca: "PCA scores (5 PC)",
+    };
+    result.repetitions = { metric: metricLabel[spec.metric], groups, distance, threshold: sorted[Math.floor(sorted.length * 0.95)]! * 1.6 };
   }
   result.durationMs = performance.now() - t0;
   if (frame.m.rows < base.rows * 0.5) result.warnings = [`Only ${frame.m.rows} of ${base.rows} samples left after filtering.`];

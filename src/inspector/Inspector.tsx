@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 
+import { fromScoredChains } from "../chains/analysis.js";
+import type { ForestSort } from "../chains/NodeEffectForest.js";
+import type { PositionMode, ScoreLens } from "../chains/types.js";
 import { cx } from "../workbench/_cx.js";
 import { resolveRowColors } from "../workbench/colorBy.js";
 import { ColorLegend } from "../workbench/ColorLegend.js";
 import { Button, Chip, EmptyState, IconButton, Segmented, SelectField, StatTile, Toggle } from "../workbench/controls.js";
-import { formatDuration, formatValue } from "../workbench/format.js";
+import { formatDuration, formatPercent, formatValue } from "../workbench/format.js";
 import { useControllable } from "../workbench/hooks.js";
 import { resolveIcons, type WorkbenchIcons } from "../workbench/icons.js";
 import { LayoutPresetPicker, PanelSection, ViewGrid, ViewsMenu, WorkbenchShell, type ViewSpec, type WorkbenchLayout } from "../workbench/layout.js";
@@ -20,17 +23,22 @@ import {
   isBetter,
   rankChains,
   scoreOf,
+  toScoredChains,
   usefulFacets,
   type ChainFilter,
   type PivotAggregate,
 } from "./analysis.js";
+import { buildInsights, factorImportance, foldStats, oneSeTies, selectionProfile, stepShifts } from "./insights.js";
+import { CompareBody, DatasetsBody, OverviewBody, ParetoBody, TopChainsBody } from "./rankingViews.js";
+import { StepEffectsBody, StepFlowBody, StepOrderBody } from "./stepViews.js";
 import { ChainList } from "./ChainList.js";
+import { formatParam } from "./insights.js";
 import { resolveInspectorStrings, type InspectorLocale, type InspectorStrings } from "./locale.js";
 import type { ChainFacet, ChainPredictions, InspectorChain, InspectorViewId, ScoreRef } from "./types.js";
 import {
+  AgreementBody,
   COMPARE_COLORS,
   ConfusionBody,
-  EffectsBody,
   FoldsBody,
   GeneralizationBody,
   HardSamplesBody,
@@ -42,6 +50,8 @@ import {
   StepChips,
   type InspectorViewContext,
   type PointColoring,
+  type PredictionLayout,
+  type ResidualAxis,
 } from "./views.js";
 
 export interface InspectorProps {
@@ -85,11 +95,92 @@ export interface InspectorProps {
 
 export const DEFAULT_INSPECTOR_LAYOUT: WorkbenchLayout = {
   preset: "grid",
-  views: ["landscape", "parity", "heatmap", "residuals"],
+  views: perspectiveViews("verdict", { classification: false, multiDataset: false }),
   maximized: null,
 };
 
+export type InspectorPerspective = "verdict" | "landscape" | "steps" | "predictions" | "tuning" | "compare";
+
+const PERSPECTIVE_ORDER: readonly InspectorPerspective[] = ["verdict", "landscape", "steps", "predictions", "tuning", "compare"];
+
+/** Curated view sets — one click to answer one question. */
+export function perspectiveViews(perspective: InspectorPerspective, context: { classification: boolean; multiDataset: boolean }): InspectorViewId[] {
+  switch (perspective) {
+    case "verdict":
+      return ["overview", "top", "effects", context.classification ? "confusion" : "parity"];
+    case "landscape":
+      return ["landscape", "heatmap", context.multiDataset ? "datasets" : "table", "generalization"];
+    case "steps":
+      return ["effects", "flow", "order", "heatmap"];
+    case "predictions":
+      return context.classification ? ["confusion", "folds", "compare", "top"] : ["parity", "residuals", "samples", "agreement"];
+    case "tuning":
+      return ["hyperparams", "pareto", "generalization", "folds"];
+    case "compare":
+      return context.classification ? ["compare", "confusion", "folds", "top"] : ["compare", "parity", "agreement", "folds"];
+  }
+}
+
 const VIEW_GLYPH: Record<InspectorViewId, ReactNode> = {
+  overview: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" />
+      <path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3" />
+    </svg>
+  ),
+  top: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+      <path d="M4 6h9M7 12h11M5 18h8" opacity=".45" />
+      <circle cx="9" cy="6" r="2" fill="currentColor" />
+      <circle cx="13" cy="12" r="2" fill="currentColor" />
+      <circle cx="9" cy="18" r="2" fill="currentColor" />
+    </svg>
+  ),
+  datasets: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <ellipse cx="12" cy="6" rx="7" ry="2.5" />
+      <path d="M5 6v12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V6M5 12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5" />
+    </svg>
+  ),
+  pareto: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+      <path d="M4 4v16h16" opacity=".5" />
+      <path d="M7 6l3 6 5 3 5 1" />
+      <circle cx="7" cy="6" r="1.5" fill="currentColor" />
+      <circle cx="15" cy="15" r="1.5" fill="currentColor" />
+    </svg>
+  ),
+  compare: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <rect x="3" y="4" width="7.5" height="16" rx="1.5" />
+      <rect x="13.5" y="4" width="7.5" height="16" rx="1.5" />
+      <path d="M5.5 9h3M5.5 13h3M16 9h3M16 13h3" />
+    </svg>
+  ),
+  flow: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <circle cx="12" cy="12" r="3" fill="currentColor" />
+      <path d="M12 3a9 9 0 0 1 9 9M21 12a9 9 0 0 1-9 9" />
+      <path d="M12 21a9 9 0 0 1-9-9M3 12a9 9 0 0 1 9-9" opacity=".45" />
+    </svg>
+  ),
+  order: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <rect x="3" y="3" width="5" height="5" rx="1" opacity=".3" />
+      <rect x="9.5" y="3" width="5" height="5" rx="1" />
+      <rect x="16" y="3" width="5" height="5" rx="1" opacity=".6" />
+      <rect x="3" y="9.5" width="5" height="5" rx="1" opacity=".7" />
+      <rect x="9.5" y="9.5" width="5" height="5" rx="1" opacity=".15" />
+      <rect x="16" y="9.5" width="5" height="5" rx="1" opacity=".4" />
+      <path d="M4 19h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  ),
+  agreement: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <circle cx="9" cy="12" r="5.5" />
+      <circle cx="15" cy="12" r="5.5" />
+    </svg>
+  ),
   landscape: (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <circle cx="6" cy="6" r="1.7" />
@@ -192,6 +283,18 @@ interface InspectorViewOptions {
   param: string | null;
   logParam: boolean;
   normalizeConfusion: boolean;
+  topCount: number;
+  forestSort: ForestSort;
+  flowStyle: "orbit" | "hub";
+  flowDepth: number;
+  positionMode: PositionMode;
+  adjacentOnly: boolean;
+  predLayout: PredictionLayout;
+  residualAxis: ResidualAxis;
+  agreementA: string | null;
+  agreementB: string | null;
+  confusionChain: string | null;
+  datasetFacet: ChainFacet | null;
 }
 
 const DEFAULT_OPTIONS: InspectorViewOptions = {
@@ -205,6 +308,18 @@ const DEFAULT_OPTIONS: InspectorViewOptions = {
   param: null,
   logParam: false,
   normalizeConfusion: true,
+  topCount: 20,
+  forestSort: "delta",
+  flowStyle: "orbit",
+  flowDepth: 2,
+  positionMode: "phase",
+  adjacentOnly: false,
+  predLayout: "overlay",
+  residualAxis: "observed",
+  agreementA: null,
+  agreementB: null,
+  confusionChain: null,
+  datasetFacet: null,
 };
 
 /**
@@ -223,7 +338,11 @@ export function Inspector(props: InspectorProps) {
   const icon = resolveIcons(icons);
 
   const [refKey, setRefKey] = useControllable<string>(props.scoreRef, scoreRefs[0]?.key ?? "", props.onScoreRefChange);
-  const [layout, setLayout] = useControllable<WorkbenchLayout>(props.layout, props.defaultLayout ?? DEFAULT_INSPECTOR_LAYOUT, props.onLayoutChange);
+  const [layout, setLayout] = useControllable<WorkbenchLayout>(
+    props.layout,
+    props.defaultLayout ?? (chains.length > 0 && chains.every((c) => c.task === "classification") ? { ...DEFAULT_INSPECTOR_LAYOUT, views: perspectiveViews("verdict", { classification: true, multiDataset: false }) } : DEFAULT_INSPECTOR_LAYOUT),
+    props.onLayoutChange,
+  );
   const [compareState, setCompare] = useControllable<readonly string[]>(props.compare, props.defaultCompare ?? [], props.onCompareChange);
   const [selectedIds, setSelectedIds] = useControllable<readonly string[]>(props.selection, [], props.onSelectionChange);
   const [filter, setFilter] = useState<ChainFilter>(EMPTY_CHAIN_FILTER);
@@ -318,6 +437,42 @@ export function Inspector(props: InspectorProps) {
   const genY = scoreRefs.find((r) => r.key === options.genY) ?? scoreRefs.find((r) => r.partition === "test" && r.metric === genX?.metric && r.key !== genX?.key) ?? scoreRefs.find((r) => r.key !== genX?.key);
   const landscapeFacet = groupBy ?? (facets.includes("modelFamily") ? "modelFamily" : facets[0] ?? "model");
 
+  // ---------------------------------------------------------------- decision aids
+  const [focusToken, setFocusToken] = useState<string | null>(null);
+  const [lens, setLens] = useState<ScoreLens>("rankByDataset");
+  const ties = useMemo(() => oneSeTies(ranking, ref), [ranking, ref]);
+  const factors = useMemo(() => factorImportance(filtered, ref, facets), [filtered, ref, facets]);
+  const shifts = useMemo(() => stepShifts(filtered, ref), [filtered, ref]);
+  const insights = useMemo(() => buildInsights({ chains: filtered, ref, refs: scoreRefs, ties, factors, shifts }), [filtered, ref, scoreRefs, ties, factors, shifts]);
+  const stepAnalysis = useMemo(() => {
+    const scored = toScoredChains(filtered, ref);
+    return ref && scored.length >= 3 ? fromScoredChains(scored, { metric: { key: ref.key, label: ref.label, lowerIsBetter: ref.lowerIsBetter }, lens }) : null;
+  }, [filtered, ref, lens]);
+  const perspectiveContext = { classification: scoped.length > 0 && scoped.every((c) => c.task === "classification"), multiDataset: datasets.length > 1 };
+  const activePerspective = PERSPECTIVE_ORDER.find((p) => perspectiveViews(p, perspectiveContext).join("|") === layout.views.join("|")) ?? null;
+  // Keep the active perspective meaningful when the scope flips between regression and classification.
+  const classificationScope = perspectiveContext.classification;
+  useEffect(() => {
+    const other = { ...perspectiveContext, classification: !classificationScope };
+    const match = PERSPECTIVE_ORDER.find((p) => perspectiveViews(p, other).join("|") === layout.views.join("|"));
+    if (match) setLayout({ ...layout, views: perspectiveViews(match, perspectiveContext), maximized: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [classificationScope]);
+  const applyPerspective = (perspective: InspectorPerspective) => setLayout({ preset: "grid", views: perspectiveViews(perspective, perspectiveContext), maximized: null });
+  const showView = (id: InspectorViewId) => {
+    if (!layout.views.includes(id)) setLayout({ ...layout, views: [...layout.views, id], maximized: null });
+  };
+  const onFactor = (key: string) => {
+    if (key.startsWith("param:")) {
+      patch({ param: key.slice("param:".length) });
+      showView("hyperparams");
+    } else {
+      setGroupBy(key as ChainFacet);
+      patch({ heatRows: key as ChainFacet });
+      showView("landscape");
+    }
+  };
+
   // ---------------------------------------------------------------- shortcuts
   const bindings: ShortcutBinding[] = [
     {
@@ -382,9 +537,26 @@ export function Inspector(props: InspectorProps) {
     strings,
     icons,
     onToggleCompare: toggleCompare,
+    ranked,
+    ties,
+    factors,
+    insights,
+    allChains: chains,
+    onPickDataset: (dataset) => setDatasetScope(dataset),
+    onFactor,
+    onOpenChain: props.onOpenChain,
+    stepAnalysis,
+    lens,
+    setLens,
+    focusToken,
+    setFocusToken,
   };
 
   const facetOptions = facets.map((f) => ({ value: f, label: facetLabel(f) }));
+  const allFacets = usefulFacets(chains);
+  const allFacetOptions = allFacets.map((f) => ({ value: f, label: facetLabel(f) }));
+  const datasetFacet: ChainFacet = options.datasetFacet ?? (allFacets.includes("modelFamily") ? "modelFamily" : allFacets.find((f) => f !== "dataset") ?? "model");
+  const classifierOptions = compare.filter((c) => c.predictions && c.chain.task === "classification").map((c) => ({ value: c.chain.id, label: chainLabel(c.chain) }));
   const partitionControl = partitions.length > 1 ? (
     <Segmented
       size="xs"
@@ -395,17 +567,91 @@ export function Inspector(props: InspectorProps) {
     />
   ) : undefined;
   const predictionReason = loading ? strings.loadingPredictions : strings.needsPredictions;
+  const coloringControl = (
+    <Segmented
+      ariaLabel={strings.colorPoints}
+      value={options.coloring}
+      onChange={(coloring) => patch({ coloring })}
+      options={[
+        { value: "chain", label: strings.byChain },
+        { value: "partition", label: strings.byPartition },
+        { value: "fold", label: strings.byFold },
+      ]}
+    />
+  );
+  const regressionWithPredictions = compare.filter((c) => c.predictions && c.chain.task === "regression");
+  const layoutControl =
+    regressionWithPredictions.length > 1 ? (
+      <SelectField
+        label={strings.plotLayout}
+        value={options.predLayout}
+        options={[
+          { value: "overlay", label: strings.overlay },
+          { value: "split", label: strings.split },
+        ]}
+        onChange={(v) => patch({ predLayout: v as PredictionLayout })}
+      />
+    ) : null;
+  const lensControl = (
+    <SelectField
+      label={strings.lens}
+      value={lens}
+      options={[
+        { value: "rankByDataset", label: strings.lensRank },
+        { value: "zByDataset", label: strings.lensZ },
+        { value: "raw", label: strings.lensRaw },
+      ]}
+      onChange={(v) => setLens(v as ScoreLens)}
+    />
+  );
+  const scoredCount = ranking.filter((r) => r.rank !== null).length;
+  const compareOptions = regressionWithPredictions.map((c) => ({ value: c.chain.id, label: chainLabel(c.chain) }));
+  const stepsAvailable = Boolean(stepAnalysis && stepAnalysis.tokens.length > 1);
+  const G = { ranking: strings.groupRanking, steps: strings.groupSteps, tuning: strings.groupTuning, predictions: strings.groupPredictions };
   const views: ViewSpec[] = [
     {
+      id: "overview",
+      group: G.ranking,
+      title: strings.viewOverview,
+      icon: VIEW_GLYPH.overview,
+      description: strings.descOverview,
+      subtitle: ref ? `${ref.label} · ${scoredCount} ${strings.chains.toLowerCase()}` : undefined,
+      available: Boolean(ties),
+      unavailableReason: strings.needsSteps,
+      render: () => <OverviewBody ctx={ctx} />,
+    },
+    {
+      id: "top",
+      group: G.ranking,
+      title: strings.viewTop,
+      icon: VIEW_GLYPH.top,
+      description: strings.descTop,
+      subtitle: `${Math.min(options.topCount, scoredCount)} / ${scoredCount}${ties && ties.tied.length > 1 ? ` · ${ties.tied.length} ≈ ${strings.best.toLowerCase()}` : ""}`,
+      available: scoredCount > 0,
+      actions: (
+        <Segmented
+          size="xs"
+          ariaLabel={strings.topCount}
+          value={String(options.topCount)}
+          onChange={(v) => patch({ topCount: Number(v) })}
+          options={[10, 20, 40].map((n) => ({ value: String(n), label: String(n) }))}
+        />
+      ),
+      render: () => <TopChainsBody ctx={ctx} count={options.topCount} />,
+    },
+    {
       id: "landscape",
+      group: G.ranking,
       title: strings.viewLandscape,
       icon: VIEW_GLYPH.landscape,
       description: strings.descLandscape,
       subtitle: `${facetLabel(landscapeFacet)} · ${filtered.length}`,
+      options: <SelectField label={strings.groupBy} value={landscapeFacet} options={facetOptions} onChange={(v) => setGroupBy(v as ChainFacet)} />,
       render: () => <LandscapeBody ctx={ctx} groupFacet={landscapeFacet} />,
     },
     {
       id: "heatmap",
+      group: G.ranking,
       title: strings.viewHeatmap,
       icon: VIEW_GLYPH.heatmap,
       description: strings.descHeatmap,
@@ -421,7 +667,7 @@ export function Inspector(props: InspectorProps) {
             onChange={(aggregate) => patch({ aggregate })}
             options={[
               { value: "best", label: strings.best },
-              { value: "median", label: "median" },
+              { value: "median", label: strings.median },
               { value: "mean", label: "mean" },
             ]}
           />
@@ -430,7 +676,134 @@ export function Inspector(props: InspectorProps) {
       render: () => <HeatmapBody ctx={ctx} rowFacet={heatRows} colFacet={heatCols} aggregate={options.aggregate} />,
     },
     {
+      id: "datasets",
+      group: G.ranking,
+      title: strings.viewDatasets,
+      icon: VIEW_GLYPH.datasets,
+      description: strings.descDatasets,
+      subtitle: `${facetLabel(datasetFacet)} · ${datasets.length}`,
+      available: datasets.length > 1,
+      unavailableReason: strings.needsDatasets,
+      options: <SelectField label={strings.rows} value={datasetFacet} options={allFacetOptions.filter((o) => o.value !== "dataset")} onChange={(v) => patch({ datasetFacet: v as ChainFacet })} />,
+      render: () => <DatasetsBody ctx={ctx} facet={datasetFacet} />,
+    },
+    {
+      id: "compare",
+      group: G.ranking,
+      title: strings.viewCompare,
+      icon: VIEW_GLYPH.compare,
+      description: strings.descCompare,
+      subtitle: `${compare.length} ${strings.chains.toLowerCase()}`,
+      available: compare.length > 0,
+      unavailableReason: strings.needsCompare,
+      render: () => <CompareBody ctx={ctx} />,
+    },
+    {
+      id: "effects",
+      group: G.steps,
+      title: strings.viewEffects,
+      icon: VIEW_GLYPH.effects,
+      description: strings.descEffects,
+      subtitle: stepAnalysis ? `${stepAnalysis.tokens.length} steps · ${lensLabel(lens, strings)}` : undefined,
+      available: stepsAvailable,
+      unavailableReason: strings.needsSteps,
+      options: (
+        <>
+          {lensControl}
+          <Segmented
+            ariaLabel={strings.sortBy}
+            value={options.forestSort}
+            onChange={(forestSort) => patch({ forestSort })}
+            options={[
+              { value: "delta", label: strings.byDelta },
+              { value: "median", label: strings.byMedian },
+              { value: "coverage", label: strings.byCoverage },
+            ]}
+          />
+        </>
+      ),
+      render: () => <StepEffectsBody ctx={ctx} sortBy={options.forestSort} />,
+    },
+    {
+      id: "flow",
+      group: G.steps,
+      title: strings.viewFlow,
+      icon: VIEW_GLYPH.flow,
+      description: strings.descFlow,
+      subtitle: lensLabel(lens, strings),
+      available: stepsAvailable,
+      unavailableReason: strings.needsSteps,
+      actions: (
+        <Segmented
+          size="xs"
+          ariaLabel={strings.flowStyle}
+          value={options.flowStyle}
+          onChange={(flowStyle) => patch({ flowStyle })}
+          options={[
+            { value: "orbit", label: strings.orbit },
+            { value: "hub", label: strings.hub },
+          ]}
+        />
+      ),
+      options: (
+        <>
+          {lensControl}
+          <Segmented
+            ariaLabel={strings.depth}
+            value={String(options.flowDepth)}
+            onChange={(v) => patch({ flowDepth: Number(v) })}
+            options={[1, 2, 3].map((d) => ({ value: String(d), label: `${strings.depth} ${d}` }))}
+          />
+        </>
+      ),
+      render: () => <StepFlowBody ctx={ctx} style={options.flowStyle} depth={options.flowDepth} />,
+    },
+    {
+      id: "order",
+      group: G.steps,
+      title: strings.viewOrder,
+      icon: VIEW_GLYPH.order,
+      description: strings.descOrder,
+      subtitle: lensLabel(lens, strings),
+      available: stepsAvailable,
+      unavailableReason: strings.needsSteps,
+      options: (
+        <>
+          {lensControl}
+          <Segmented
+            ariaLabel={strings.positionMode}
+            value={options.positionMode}
+            onChange={(positionMode) => patch({ positionMode })}
+            options={[
+              { value: "phase", label: strings.phase },
+              { value: "absolute", label: strings.absolute },
+            ]}
+          />
+          <Toggle checked={options.adjacentOnly} onChange={(adjacentOnly) => patch({ adjacentOnly })} label={strings.adjacentOnly} />
+        </>
+      ),
+      render: () => <StepOrderBody ctx={ctx} mode={options.positionMode} adjacentOnly={options.adjacentOnly} />,
+    },
+    {
+      id: "hyperparams",
+      group: G.tuning,
+      title: strings.viewHyperparams,
+      icon: VIEW_GLYPH.hyperparams,
+      description: strings.descHyperparams,
+      subtitle: activeParam?.name,
+      available: Boolean(activeParam),
+      unavailableReason: strings.needsParams,
+      options: (
+        <>
+          <SelectField label={strings.parameter} value={activeParam?.name ?? ""} options={params.map((p) => ({ value: p.name, label: `${p.name} (${p.count})` }))} onChange={(param) => patch({ param })} />
+          {activeParam?.kind === "numeric" ? <Toggle checked={options.logParam} onChange={(logParam) => patch({ logParam })} label={strings.logScale} /> : null}
+        </>
+      ),
+      render: () => (activeParam ? <HyperparamsBody ctx={ctx} param={activeParam.name} kind={activeParam.kind} log={options.logParam} /> : null),
+    },
+    {
       id: "generalization",
+      group: G.tuning,
       title: strings.viewGeneralization,
       icon: VIEW_GLYPH.generalization,
       description: strings.descGeneralization,
@@ -447,53 +820,18 @@ export function Inspector(props: InspectorProps) {
       render: () => (genX && genY ? <GeneralizationBody ctx={ctx} xRef={genX} yRef={genY} /> : null),
     },
     {
-      id: "parity",
-      title: strings.viewParity,
-      icon: VIEW_GLYPH.parity,
-      description: strings.descParity,
-      busy: loading,
-      available: regressionCompare,
-      unavailableReason: hasPredictions ? strings.needsRegression : predictionReason,
-      actions: partitionControl,
-      options: (
-        <Segmented
-          ariaLabel={strings.colorPoints}
-          value={options.coloring}
-          onChange={(coloring) => patch({ coloring })}
-          options={[
-            { value: "chain", label: strings.byChain },
-            { value: "partition", label: strings.byPartition },
-            { value: "fold", label: strings.byFold },
-          ]}
-        />
-      ),
-      render: () => <PredictionBody ctx={ctx} mode="parity" coloring={options.coloring} partition={options.partition} />,
-    },
-    {
-      id: "residuals",
-      title: strings.viewResiduals,
-      icon: VIEW_GLYPH.residuals,
-      description: strings.descResiduals,
-      busy: loading,
-      available: regressionCompare,
-      unavailableReason: hasPredictions ? strings.needsRegression : predictionReason,
-      actions: partitionControl,
-      options: (
-        <Segmented
-          ariaLabel={strings.colorPoints}
-          value={options.coloring}
-          onChange={(coloring) => patch({ coloring })}
-          options={[
-            { value: "chain", label: strings.byChain },
-            { value: "partition", label: strings.byPartition },
-            { value: "fold", label: strings.byFold },
-          ]}
-        />
-      ),
-      render: () => <PredictionBody ctx={ctx} mode="residual" coloring={options.coloring} partition={options.partition} />,
+      id: "pareto",
+      group: G.tuning,
+      title: strings.viewPareto,
+      icon: VIEW_GLYPH.pareto,
+      description: strings.descPareto,
+      available: filtered.filter((c) => Number.isFinite(c.fitTimeMs ?? Number.NaN) && Number.isFinite(scoreOf(c, ref))).length >= 3,
+      unavailableReason: strings.needsFitTime,
+      render: () => <ParetoBody ctx={ctx} />,
     },
     {
       id: "folds",
+      group: G.tuning,
       title: strings.viewFolds,
       icon: VIEW_GLYPH.folds,
       description: strings.descFolds,
@@ -502,44 +840,72 @@ export function Inspector(props: InspectorProps) {
       render: () => <FoldsBody ctx={ctx} />,
     },
     {
-      id: "hyperparams",
-      title: strings.viewHyperparams,
-      icon: VIEW_GLYPH.hyperparams,
-      description: strings.descHyperparams,
-      subtitle: activeParam?.name,
-      available: Boolean(activeParam),
-      unavailableReason: strings.needsParams,
+      id: "parity",
+      group: G.predictions,
+      title: strings.viewParity,
+      icon: VIEW_GLYPH.parity,
+      description: strings.descParity,
+      busy: loading,
+      available: regressionCompare,
+      unavailableReason: hasPredictions ? strings.needsRegression : predictionReason,
+      actions: partitionControl,
       options: (
         <>
-          <SelectField label={strings.parameter} value={activeParam?.name ?? ""} options={params.map((p) => ({ value: p.name, label: `${p.name} (${p.count})` }))} onChange={(param) => patch({ param })} />
-          {activeParam?.kind === "numeric" ? <Toggle checked={options.logParam} onChange={(logParam) => patch({ logParam })} label={strings.logScale} /> : null}
+          {coloringControl}
+          {layoutControl}
         </>
       ),
-      render: () => (activeParam ? <HyperparamsBody ctx={ctx} param={activeParam.name} kind={activeParam.kind} log={options.logParam} /> : null),
+      render: () => <PredictionBody ctx={ctx} mode="parity" coloring={options.coloring} partition={options.partition} layout={options.predLayout} />,
     },
     {
-      id: "effects",
-      title: strings.viewEffects,
-      icon: VIEW_GLYPH.effects,
-      description: strings.descEffects,
-      available: filtered.filter((c) => Number.isFinite(scoreOf(c, ref))).length >= 3,
-      unavailableReason: strings.needsSteps,
-      render: () => <EffectsBody ctx={ctx} />,
-    },
-    {
-      id: "confusion",
-      title: strings.viewConfusion,
-      icon: VIEW_GLYPH.confusion,
-      description: strings.descConfusion,
+      id: "residuals",
+      group: G.predictions,
+      title: strings.viewResiduals,
+      icon: VIEW_GLYPH.residuals,
+      description: strings.descResiduals,
       busy: loading,
-      available: classificationCompare,
-      unavailableReason: hasPredictions ? strings.needsClassification : predictionReason,
+      available: regressionCompare,
+      unavailableReason: hasPredictions ? strings.needsRegression : predictionReason,
       actions: partitionControl,
-      options: <Toggle checked={options.normalizeConfusion} onChange={(normalizeConfusion) => patch({ normalizeConfusion })} label={strings.normalize} />,
-      render: () => <ConfusionBody ctx={ctx} partition={options.partition} normalize={options.normalizeConfusion} />,
+      options: (
+        <>
+          {coloringControl}
+          <SelectField
+            label={strings.xAxis}
+            value={options.residualAxis}
+            options={[
+              { value: "observed", label: strings.observed },
+              { value: "predicted", label: strings.predicted },
+            ]}
+            onChange={(v) => patch({ residualAxis: v as ResidualAxis })}
+          />
+          {layoutControl}
+        </>
+      ),
+      render: () => <PredictionBody ctx={ctx} mode="residual" coloring={options.coloring} partition={options.partition} layout={options.predLayout} xAxis={options.residualAxis} />,
+    },
+    {
+      id: "agreement",
+      group: G.predictions,
+      title: strings.viewAgreement,
+      icon: VIEW_GLYPH.agreement,
+      description: strings.descAgreement,
+      busy: loading,
+      available: regressionWithPredictions.length >= 2,
+      unavailableReason: strings.needsTwoRegression,
+      actions: partitionControl,
+      options:
+        compareOptions.length > 2 ? (
+          <>
+            <SelectField label="A" value={options.agreementA ?? compareOptions[0]!.value} options={compareOptions} onChange={(agreementA) => patch({ agreementA })} />
+            <SelectField label="B" value={options.agreementB ?? compareOptions[1]!.value} options={compareOptions} onChange={(agreementB) => patch({ agreementB })} />
+          </>
+        ) : undefined,
+      render: () => <AgreementBody ctx={ctx} partition={options.partition} pair={[options.agreementA, options.agreementB]} />,
     },
     {
       id: "samples",
+      group: G.predictions,
       title: strings.viewSamples,
       icon: VIEW_GLYPH.samples,
       description: strings.descSamples,
@@ -550,7 +916,28 @@ export function Inspector(props: InspectorProps) {
       render: () => <HardSamplesBody ctx={ctx} partition={options.partition} />,
     },
     {
+      id: "confusion",
+      group: G.predictions,
+      title: strings.viewConfusion,
+      icon: VIEW_GLYPH.confusion,
+      description: strings.descConfusion,
+      busy: loading,
+      available: classificationCompare,
+      unavailableReason: hasPredictions ? strings.needsClassification : predictionReason,
+      actions: partitionControl,
+      options: (
+        <>
+          {classifierOptions.length > 1 ? (
+            <SelectField label={strings.chain} value={options.confusionChain ?? classifierOptions[0]!.value} options={classifierOptions} onChange={(confusionChain) => patch({ confusionChain })} />
+          ) : null}
+          <Toggle checked={options.normalizeConfusion} onChange={(normalizeConfusion) => patch({ normalizeConfusion })} label={strings.normalize} />
+        </>
+      ),
+      render: () => <ConfusionBody ctx={ctx} partition={options.partition} normalize={options.normalizeConfusion} chainId={options.confusionChain} />,
+    },
+    {
       id: "table",
+      group: G.ranking,
       title: strings.viewTable,
       icon: VIEW_GLYPH.table,
       description: strings.descTable,
@@ -652,6 +1039,61 @@ export function Inspector(props: InspectorProps) {
   const selectedChains = selected.map((r) => filtered[r]!);
   const selectedScores = selectedChains.map((c) => scoreOf(c, ref)).filter(Number.isFinite);
   const bestSelected = selectedScores.reduce((b, s) => (isBetter(s, b, ref) ? s : b), Number.NaN);
+  const profile = selected.length >= 2 ? selectionProfile(selectedChains, filtered) : { enriched: [], absent: [] };
+
+  const selectionSection = (
+    <PanelSection title={strings.selection} count={selected.length || undefined}>
+      {selected.length === 0 ? (
+        <p className="n4wb-muted n4pg-hint">{strings.noSelectionHint}</p>
+      ) : (
+        <>
+          <p className="n4pg-sel-headline">{strings.selectedChains(selected.length, filtered.length)}</p>
+          <div className="n4wb-stats">
+            <StatTile label={strings.best} value={formatValue(bestSelected)} tone="accent" />
+            <StatTile label={strings.median} value={formatValue([...selectedScores].sort((a, b) => a - b)[Math.floor(selectedScores.length / 2)])} />
+          </div>
+          {profile.enriched.length > 0 || profile.absent.length > 0 ? (
+            <div className="n4ins-profile">
+              <h5 className="n4ins-sub" title={strings.profileHint}>
+                {strings.profileTitle}
+              </h5>
+              {profile.enriched.map((item) => (
+                <div key={item.key} className={cx("n4ins-profile-row", `is-${item.kind}`)} title={`${formatPercent(item.inSelection, 0)} vs ${formatPercent(item.overall, 0)}`}>
+                  <span className="n4ins-profile-label">{item.label}</span>
+                  <span className="n4ins-profile-bar">
+                    <span className="is-all" style={{ width: `${item.overall * 100}%` }} />
+                    <span className="is-sel" style={{ width: `${item.inSelection * 100}%` }} />
+                  </span>
+                  <span className="n4wb-mono">{formatPercent(item.inSelection, 0)}</span>
+                </div>
+              ))}
+              {profile.absent.length > 0 ? (
+                <p className="n4wb-muted n4ins-profile-absent">
+                  {strings.profileAbsent}: {profile.absent.map((item) => item.label).join(", ")}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </>
+      )}
+      <div className="n4pg-actions">
+        <Button
+          variant="primary"
+          icon={icon.compare}
+          disabled={selected.length === 0}
+          onClick={() => setCompare(rankChains(selectedChains, ref).slice(0, maxCompare).map((r) => r.chain.id))}
+        >
+          {strings.compareSelected}
+        </Button>
+        <Button variant="outline" disabled={selected.length === 0} onClick={() => setSelectedIds([])}>
+          {strings.clear}
+        </Button>
+        <Button variant="outline" onClick={() => setSelected(invertSelection(selected, filtered.length))}>
+          {strings.invert}
+        </Button>
+      </div>
+    </PanelSection>
+  );
 
   const right = (
     <div className="n4ins-drawer">
@@ -659,6 +1101,7 @@ export function Inspector(props: InspectorProps) {
         <h3>{strings.details}</h3>
       </div>
       <div className="n4wb-scroll">
+        {selected.length >= 2 ? selectionSection : null}
         {focus ? (
           <PanelSection title={strings.chain}>
             <ChainDetails
@@ -676,35 +1119,7 @@ export function Inspector(props: InspectorProps) {
             />
           </PanelSection>
         ) : null}
-        <PanelSection title={strings.selection} count={selected.length || undefined}>
-          {selected.length === 0 ? (
-            <p className="n4wb-muted n4pg-hint">{strings.noSelectionHint}</p>
-          ) : (
-            <>
-              <p className="n4pg-sel-headline">{strings.selectedChains(selected.length, filtered.length)}</p>
-              <div className="n4wb-stats">
-                <StatTile label={strings.best} value={formatValue(bestSelected)} tone="accent" />
-                <StatTile label="median" value={formatValue([...selectedScores].sort((a, b) => a - b)[Math.floor(selectedScores.length / 2)])} />
-              </div>
-            </>
-          )}
-          <div className="n4pg-actions">
-            <Button
-              variant="primary"
-              icon={icon.compare}
-              disabled={selected.length === 0}
-              onClick={() => setCompare(rankChains(selectedChains, ref).slice(0, maxCompare).map((r) => r.chain.id))}
-            >
-              {strings.compareSelected}
-            </Button>
-            <Button variant="outline" disabled={selected.length === 0} onClick={() => setSelectedIds([])}>
-              {strings.clear}
-            </Button>
-            <Button variant="outline" onClick={() => setSelected(invertSelection(selected, filtered.length))}>
-              {strings.invert}
-            </Button>
-          </div>
-        </PanelSection>
+        {selected.length < 2 ? selectionSection : null}
         {sampleSelection.size > 0 ? (
           <PanelSection title={strings.samples} count={sampleSelection.size}>
             <p className="n4pg-sel-headline">{strings.sampleSelection(sampleSelection.size)}</p>
@@ -769,6 +1184,25 @@ export function Inspector(props: InspectorProps) {
       onKeyDown={(event) => dispatchShortcut(event, bindings)}
     >
       <div className="n4pg-main">
+        <nav className="n4ins-perspectives" aria-label={strings.perspectives}>
+          {PERSPECTIVE_ORDER.map((perspective) => (
+            <button
+              key={perspective}
+              type="button"
+              className={cx("n4ins-persp", activePerspective === perspective && "is-active")}
+              aria-pressed={activePerspective === perspective}
+              onClick={() => applyPerspective(perspective)}
+            >
+              {perspectiveLabel(perspective, strings)}
+            </button>
+          ))}
+          <span className="n4wb-header-grow" />
+          {!activeDataset && datasets.length > 1 ? (
+            <span className="n4ins-warning" role="note">
+              {strings.mixedScales}
+            </span>
+          ) : null}
+        </nav>
         <div className="n4pg-legendbar n4ins-tray">
           <span className="n4ins-tray-label">{strings.compare}</span>
           {compare.length === 0 ? <span className="n4wb-muted">{strings.compareHint}</span> : null}
@@ -848,6 +1282,7 @@ function ChainDetails({
   onOpenInPlayground: ((chain: InspectorChain) => void) | undefined;
   strings: InspectorStrings;
 }) {
+  const folds = foldStats(chain, activeRef);
   const otherTokens = new Set(other?.steps.map((s) => s.token) ?? []);
   const ownTokens = new Set(chain.steps.map((s) => s.token));
   const onlyHere = new Set(chain.steps.filter((s) => other && !otherTokens.has(s.token)).map((s) => s.token));
@@ -862,7 +1297,12 @@ function ChainDetails({
         <strong>{chainLabel(chain)}</strong>
       </div>
       <div className="n4wb-stats">
-        <StatTile label={activeRef?.label ?? strings.score} value={formatValue(scoreOf(chain, activeRef))} tone="accent" hint={rank ? `${strings.rank}${rank}` : undefined} />
+        <StatTile
+          label={activeRef?.label ?? strings.score}
+          value={formatValue(scoreOf(chain, activeRef))}
+          tone="accent"
+          hint={[rank ? `${strings.rank}${rank}` : null, folds ? `${strings.foldSpread} ${formatValue(folds.sd)}` : null].filter(Boolean).join(" · ") || undefined}
+        />
         {chain.fitTimeMs !== undefined ? <StatTile label="Fit" value={formatDuration(chain.fitTimeMs)} /> : null}
       </div>
       <h5 className="n4ins-sub">{strings.steps}</h5>
@@ -910,7 +1350,7 @@ function ChainDetails({
             {Object.entries(chain.params).map(([k, v]) => (
               <div key={k} style={{ display: "contents" }}>
                 <dt>{k}</dt>
-                <dd>{typeof v === "number" ? formatValue(v) : String(v ?? "—")}</dd>
+                <dd>{formatParam(v)}</dd>
               </div>
             ))}
           </dl>
@@ -918,7 +1358,7 @@ function ChainDetails({
       ) : null}
       <h5 className="n4ins-sub">{strings.allScores}</h5>
       <dl className="n4wb-kv">
-        {refs.map((r) => (
+        {refs.filter((r) => Number.isFinite(scoreOf(chain, r))).map((r) => (
           <div key={r.key} style={{ display: "contents" }}>
             <dt className={r.key === activeRef?.key ? "n4ins-active-score" : undefined}>{r.label}</dt>
             <dd>{formatValue(scoreOf(chain, r))}</dd>
@@ -959,4 +1399,25 @@ function Brand({ title, subtitle }: { title: string; subtitle: string }) {
       </span>
     </div>
   );
+}
+
+function lensLabel(lens: ScoreLens, strings: InspectorStrings): string {
+  return lens === "raw" ? strings.lensRaw : lens === "zByDataset" ? strings.lensZ : strings.lensRank;
+}
+
+function perspectiveLabel(perspective: InspectorPerspective, strings: InspectorStrings): string {
+  switch (perspective) {
+    case "verdict":
+      return strings.perspectiveOverview;
+    case "landscape":
+      return strings.perspectiveLandscape;
+    case "steps":
+      return strings.perspectiveSteps;
+    case "predictions":
+      return strings.perspectivePredictions;
+    case "tuning":
+      return strings.perspectiveTuning;
+    case "compare":
+      return strings.perspectiveCompare;
+  }
 }

@@ -42,7 +42,7 @@ export interface PlaygroundDataset {
   partition?: ReadonlyArray<string | null>;
   /** Extra per-row columns (metadata) for coloring, grouping and tables. */
   metadata?: readonly RowColumn[];
-  /** Metadata key identifying biological replicates (repetitions view). */
+  /** Default metadata key identifying biological replicates (repetitions view). */
   groupColumn?: string;
   /** Free text (origin, instrument, DOI…). */
   description?: string;
@@ -105,11 +105,27 @@ export interface PipelineStep {
   label?: string;
 }
 
+/** Distance between a replicate and its group reference. */
+export type RepetitionMetric = "euclidean" | "manhattan" | "cosine" | "spectralAngle" | "correlation" | "mahalanobis" | "pca";
+
+/** What each replicate is compared to. */
+export type RepetitionReference = "mean" | "median" | "leaveOneOut" | "first";
+
+export interface PlaygroundRepetitionNeeds {
+  /** Metadata key identifying biological replicates. */
+  groupBy: string;
+  metric: RepetitionMetric;
+  reference: RepetitionReference;
+}
+
 /** Which analyses the currently visible views need from the host. */
 export interface PlaygroundAnalysisNeeds {
   /** Score projection for the scores view (and outlier map when PCA). */
   projection: "pca" | "umap" | null;
-  /** Number of components requested for the projection / loadings. */
+  /**
+   * Number of components requested for the projection (UMAP `n_components`)
+   * and the loadings; at least 3 so the scores view can switch to 3D.
+   */
   components: number;
   /** Hotelling T² and Q residuals (SPE) with their confidence limits. */
   outliers: boolean;
@@ -117,8 +133,8 @@ export interface PlaygroundAnalysisNeeds {
   loadings: boolean;
   /** Split / fold assignment when the pipeline contains a splitter. */
   folds: boolean;
-  /** Replicate distances (needs `dataset.groupColumn`). */
-  repetitions: boolean;
+  /** Replicate distances, computed by the host with these settings. */
+  repetitions: PlaygroundRepetitionNeeds | null;
 }
 
 export interface PlaygroundRunRequest {
@@ -187,6 +203,7 @@ export interface PlaygroundFolds {
 }
 
 export interface PlaygroundRepetitions {
+  /** Metric actually used (hosts may fall back when one is unsupported). */
   metric: string;
   /** Replicate group per output row. */
   groups: ReadonlyArray<string | null>;
@@ -227,6 +244,9 @@ export type PlaygroundViewId =
   | "correlation"
   | "folds"
   | "repetitions"
+  | "variance"
+  | "groupMeans"
+  | "heatmap"
   | "samples";
 
 export type PlaygroundScope = "all" | "selection" | `partition:${string}`;

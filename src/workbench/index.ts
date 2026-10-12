@@ -22,6 +22,8 @@ export * from "./colorBy.js";
 export * from "./spatial.js";
 export * from "./matrix.js";
 export * from "./format.js";
+export * from "./sampling.js";
+export * from "./projection3d.js";
 
 // --- React primitives ---
 export * from "./hooks.js";
@@ -30,11 +32,13 @@ export * from "./controls.js";
 export * from "./layout.js";
 export * from "./shortcuts.js";
 export * from "./ColorLegend.js";
+export * from "./ColorSchemePicker.js";
 export * from "./VirtualTable.js";
 
 // --- interactive views ---
 export * from "./CanvasPlot.js";
 export * from "./SpectraView.js";
 export * from "./ScatterView.js";
+export * from "./Scatter3DView.js";
 export * from "./DistributionView.js";
 export * from "./ProfileView.js";

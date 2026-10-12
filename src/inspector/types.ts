@@ -67,7 +67,15 @@ export interface ChainPredictions {
 }
 
 export type InspectorViewId =
+  | "overview"
+  | "top"
   | "landscape"
+  | "datasets"
+  | "pareto"
+  | "compare"
+  | "flow"
+  | "order"
+  | "agreement"
   | "heatmap"
   | "generalization"
   | "parity"

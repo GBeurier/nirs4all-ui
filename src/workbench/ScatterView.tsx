@@ -12,13 +12,23 @@ import {
 } from "./selection.js";
 import { buildGridIndex, nearestPoint, pointsInPolygon, pointsInRect } from "./spatial.js";
 
-/** A reference line in data space (`y = slope·x + intercept`, or vertical/horizontal). */
-export type ScatterGuide =
+/**
+ * A reference mark in data space (`y = slope·x + intercept`, vertical /
+ * horizontal lines, bands, boxes, polylines…). `color` overrides the tone's
+ * stroke (and the fill of a `rect`), e.g. to match a series.
+ */
+export type ScatterGuide = { color?: string } & (
   | { kind: "line"; slope: number; intercept: number; label?: string; tone?: GuideTone }
   | { kind: "hline"; y: number; label?: string; tone?: GuideTone }
   | { kind: "vline"; x: number; label?: string; tone?: GuideTone }
   | { kind: "ellipse"; cx: number; cy: number; rx: number; ry: number; label?: string; tone?: GuideTone }
-  | { kind: "band"; y0: number; y1: number; label?: string; tone?: GuideTone };
+  | { kind: "band"; y0: number; y1: number; label?: string; tone?: GuideTone }
+  | { kind: "segment"; x0: number; y0: number; x1: number; y1: number; label?: string; tone?: GuideTone }
+  /** Polyline through data points (trend curves, Pareto fronts). */
+  | { kind: "path"; points: ReadonlyArray<readonly [number, number]>; label?: string; tone?: GuideTone }
+  /** Filled data-space rectangle (lane IQR boxes, tolerance zones). */
+  | { kind: "rect"; x0: number; x1: number; y0: number; y1: number; label?: string; tone?: GuideTone }
+);
 
 export type GuideTone = "neutral" | "accent" | "warning" | "danger";
 
@@ -255,11 +265,12 @@ export function ScatterView({
         const [y0, y1] = geo.y.domain;
         return guides.map((guide, index) => {
           const cls = TONE_STROKE[guide.tone ?? "neutral"];
+          const paint = guide.color ? { stroke: guide.color, opacity: 1 } : undefined;
           switch (guide.kind) {
             case "line":
               return (
                 <g key={index}>
-                  <line className={cls} x1={geo.x(x0)} y1={geo.y(guide.slope * x0 + guide.intercept)} x2={geo.x(x1)} y2={geo.y(guide.slope * x1 + guide.intercept)} />
+                  <line className={cls} style={paint} x1={geo.x(x0)} y1={geo.y(guide.slope * x0 + guide.intercept)} x2={geo.x(x1)} y2={geo.y(guide.slope * x1 + guide.intercept)} />
                   {guide.label ? (
                     <text className="n4wb-guide-label" x={geo.left + geo.width - 4} y={geo.y(guide.slope * x1 + guide.intercept) + 12} textAnchor="end">
                       {guide.label}
@@ -270,7 +281,7 @@ export function ScatterView({
             case "hline":
               return (
                 <g key={index}>
-                  <line className={cls} x1={geo.left} x2={geo.left + geo.width} y1={geo.y(guide.y)} y2={geo.y(guide.y)} />
+                  <line className={cls} style={paint} x1={geo.left} x2={geo.left + geo.width} y1={geo.y(guide.y)} y2={geo.y(guide.y)} />
                   {guide.label ? (
                     <text className="n4wb-guide-label" x={geo.left + geo.width - 4} y={geo.y(guide.y) - 4} textAnchor="end">
                       {guide.label}
@@ -281,13 +292,44 @@ export function ScatterView({
             case "vline":
               return (
                 <g key={index}>
-                  <line className={cls} x1={geo.x(guide.x)} x2={geo.x(guide.x)} y1={geo.top} y2={geo.top + geo.height} />
+                  <line className={cls} style={paint} x1={geo.x(guide.x)} x2={geo.x(guide.x)} y1={geo.top} y2={geo.top + geo.height} />
                   {guide.label ? (
                     <text className="n4wb-guide-label" x={geo.x(guide.x) + 4} y={geo.top + 11}>
                       {guide.label}
                     </text>
                   ) : null}
                 </g>
+              );
+            case "segment":
+              return <line key={index} className={`${cls} is-segment`} style={paint} x1={geo.x(guide.x0)} y1={geo.y(guide.y0)} x2={geo.x(guide.x1)} y2={geo.y(guide.y1)} />;
+            case "path": {
+              const pts = guide.points.filter(([x, y]) => Number.isFinite(x) && Number.isFinite(y));
+              if (pts.length < 2) return null;
+              const last = pts[pts.length - 1]!;
+              return (
+                <g key={index}>
+                  <polyline className={`${cls} is-path`} style={paint} fill="none" points={pts.map(([x, y]) => `${geo.x(x)},${geo.y(y)}`).join(" ")} />
+                  {guide.label ? (
+                    <text className="n4wb-guide-label" x={geo.x(last[0]) - 4} y={geo.y(last[1]) - 6} textAnchor="end">
+                      {guide.label}
+                    </text>
+                  ) : null}
+                </g>
+              );
+            }
+            case "rect":
+              return (
+                <rect
+                  key={index}
+                  className={`n4wb-guide-rect ${guide.tone ? `is-${guide.tone}` : ""}`}
+                  style={guide.color ? { fill: guide.color, fillOpacity: 0.14, stroke: guide.color, strokeOpacity: 0.5 } : undefined}
+                  x={Math.min(geo.x(guide.x0), geo.x(guide.x1))}
+                  width={Math.abs(geo.x(guide.x1) - geo.x(guide.x0))}
+                  y={Math.min(geo.y(guide.y0), geo.y(guide.y1))}
+                  height={Math.abs(geo.y(guide.y0) - geo.y(guide.y1))}
+                >
+                  {guide.label ? <title>{guide.label}</title> : null}
+                </rect>
               );
             case "band":
               return (
