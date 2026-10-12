@@ -13,7 +13,8 @@ export type Nirs4allStyleAssetId =
   | "workbench"
   | "conformal-tree"
   | "quality-lab-theme"
-  | "spectra-motion";
+  | "spectra-motion"
+  | "qualification";
 
 export type Nirs4allStyleAssetKind = "css" | "svg-motion";
 
@@ -26,6 +27,11 @@ export interface Nirs4allStyleAsset {
 }
 
 export const NIRS4ALL_STYLE_ASSETS = [
+  {
+    id: "qualification", kind: "css", path: "assets/qualification.css",
+    packageExport: "nirs4all-ui/assets/qualification.css",
+    description: "Qualification availability, evidence, findings and capability tables.",
+  },
   {
     id: "default-theme",
     kind: "css",
