@@ -1,7 +1,7 @@
 import { loc, type Locale } from '../lab/locale.js';
 import { cx } from './_cx.js';
 import { AvailabilityBadge } from './Badges.js';
-import { QUALIFICATION_TEXT as T } from './locale.js';
+import { metricLabel, QUALIFICATION_TEXT as T } from './locale.js';
 import { formatDenominators, formatQualificationValue, formatScalarParameters } from './report.js';
 import type { QualificationMetricView, QualificationProvenance } from './types.js';
 
@@ -32,7 +32,7 @@ export function EvidenceTable({ metrics, provenance, locale = 'fr', caption, cla
         <tbody>
           {metrics.map((m, i) => (
             <tr key={`${m.id}:${m.sourceId ?? ''}:${m.targetId ?? ''}:${i}`} data-metric-id={m.id} data-availability={m.status}>
-              <th scope="row"><code>{m.id}</code></th>
+              <th scope="row">{metricLabel(m.id, locale) !== m.id ? <span className="n4q-metric-name">{metricLabel(m.id, locale)}</span> : null}<code>{m.id}</code></th>
               <td><AvailabilityBadge status={m.status} reason={m.reasonCode} locale={locale} /></td>
               <td className="n4q-num">
                 {m.status === 'computed'

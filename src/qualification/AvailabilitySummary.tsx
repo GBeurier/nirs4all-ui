@@ -7,11 +7,13 @@ import { AVAILABILITY_STATUSES, type AvailabilityStatus } from './types.js';
 export interface AvailabilitySummaryProps {
   counts: Readonly<Record<AvailabilityStatus, number>>;
   locale?: Locale;
+  /** list only statuses with at least one metric in the table */
+  hideEmpty?: boolean;
   className?: string;
 }
 
 /** Stacked bar of metric counts per availability status + the equivalent data table. */
-export function AvailabilitySummary({ counts, locale = 'fr', className }: AvailabilitySummaryProps) {
+export function AvailabilitySummary({ counts, locale = 'fr', hideEmpty = false, className }: AvailabilitySummaryProps) {
   const id = useId();
   const total = AVAILABILITY_STATUSES.reduce((n, s) => n + counts[s], 0);
   const present = AVAILABILITY_STATUSES.filter((s) => counts[s] > 0);
@@ -38,7 +40,7 @@ export function AvailabilitySummary({ counts, locale = 'fr', className }: Availa
             <tr><th scope="col">{loc(T.status, locale)}</th><th scope="col">{loc(T.count, locale)}</th></tr>
           </thead>
           <tbody>
-            {AVAILABILITY_STATUSES.map((s) => (
+            {(hideEmpty ? present : AVAILABILITY_STATUSES).map((s) => (
               <tr key={s}><th scope="row"><span className={`n4q-swatch n4q-fill-${s}`} aria-hidden="true" />{loc(AVAILABILITY_LABEL[s], locale)}</th><td className="n4q-num">{counts[s]}</td></tr>
             ))}
           </tbody>

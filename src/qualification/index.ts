@@ -14,6 +14,7 @@
 export * from './types.js';
 export * from './locale.js';
 export * from './report.js';
+export * from './extract.js';
 
 export * from './Badges.js';
 export * from './EvidenceTable.js';
@@ -22,3 +23,12 @@ export * from './CapabilityTable.js';
 export * from './AvailabilitySummary.js';
 export * from './ChartDataTable.js';
 export * from './QualificationOverview.js';
+export * from './StatTile.js';
+export * from './CapabilityGrid.js';
+export * from './PopulationFlow.js';
+export * from './RepeatabilityProfile.js';
+export * from './EigenvalueScree.js';
+export * from './ScoreMap.js';
+export * from './TargetDistribution.js';
+export * from './SpectraExplorer.js';
+export * from './CheckList.js';
