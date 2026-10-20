@@ -39,6 +39,26 @@ function runs(values: readonly (number | null)[], x: (i: number) => number, y: (
   return d;
 }
 
+/** Closed band polygons between two nullable series (one polygon per run where both exist). */
+function bandRuns(lower: readonly (number | null)[], upper: readonly (number | null)[], x: (i: number) => number, y: (v: number) => number): string {
+  let d = '';
+  let run: number[] = [];
+  const flush = () => {
+    if (run.length > 1) {
+      d += run.map((i, k) => `${k ? 'L' : 'M'}${x(i).toFixed(2)},${y(upper[i] as number).toFixed(2)}`).join('');
+      d += [...run].reverse().map((i) => `L${x(i).toFixed(2)},${y(lower[i] as number).toFixed(2)}`).join('') + 'Z';
+    }
+    run = [];
+  };
+  lower.forEach((lo, i) => {
+    const hi = upper[i];
+    if (lo === null || hi === null || hi === undefined || !Number.isFinite(lo) || !Number.isFinite(hi)) flush();
+    else run.push(i);
+  });
+  flush();
+  return d;
+}
+
 const STATUS_TEXT = ['bandNotComputed', 'bandStatus1', 'bandStatus2', 'bandStatus3'] as const;
 
 /**
@@ -60,10 +80,12 @@ export function RepeatabilityProfile({ axis, axisUnit = '', contexts, title, loc
   const xDomain = extentOf(axis as number[]);
   const xs = makeScale(xDomain, x0, x1);
   const xAt = (i: number) => xs(axis[i] as number);
-  const sdValues = contexts.flatMap((c) => c.pooledSd.filter((v): v is number => v !== null));
+  const sdValues = contexts.flatMap((c) => [...c.pooledSd, ...(c.sdInterval?.upper ?? [])].filter((v): v is number => v !== null && Number.isFinite(v)));
   const sdMax = sdValues.length ? Math.max(...sdValues) * 1.1 : 1;
   const sdY = makeScale({ min: 0, max: sdMax }, PAD.top + SD_H, PAD.top);
-  const iccValues = contexts.flatMap((c) => (c.icc ?? []).filter((v): v is number => v !== null));
+  const iccValues = contexts.flatMap((c) => [...(c.icc ?? []), ...(c.iccInterval?.lower ?? [])].filter((v): v is number => v !== null && Number.isFinite(v)));
+  const iccTitle = contexts.some((c) => c.icc !== null && c.iccKind === 'icc_1_reml') ? (contexts.some((c) => c.icc !== null && c.iccKind !== 'icc_1_reml') ? `${t('icc')} / ${t('iccReml')}` : t('iccReml')) : t('icc');
+  const hasInterval = contexts.some((c) => c.sdInterval || c.iccInterval);
   const iccDomain = { min: Math.floor(Math.min(-0.25, ...iccValues) * 4) / 4, max: 1 };
   const iccTop = PAD.top + SD_H + GAP;
   const iccY = makeScale(iccDomain, iccTop + ICC_H, iccTop);
@@ -112,6 +134,7 @@ export function RepeatabilityProfile({ axis, axisUnit = '', contexts, title, loc
             </g>
           ))}
           <text className="n4q-axis-title" x={x0} y={PAD.top - 0} dy={-1}>{t('pooledSd')}{contexts[0]?.unit ? ` (${contexts[0].unit})` : ''}</text>
+          {contexts.map((c, i) => (c.sdInterval ? <path key={`sdb-${c.id}`} d={bandRuns(c.sdInterval.lower, c.sdInterval.upper, xAt, sdY)} className="n4q-band" fill={color(i)} /> : null))}
           {contexts.map((c, i) => <path key={`sd-${c.id}`} d={runs(c.pooledSd, xAt, sdY)} className="n4q-line" stroke={color(i)} />)}
 
           {/* ICC panel */}
@@ -123,7 +146,8 @@ export function RepeatabilityProfile({ axis, axisUnit = '', contexts, title, loc
                   <text className="n4q-tick" x={x0 - 6} y={iccY(v) + 3} textAnchor="end">{fmt(v)}</text>
                 </g>
               ))}
-              <text className="n4q-axis-title" x={x0} y={iccTop - 4}>{t('icc')}</text>
+              <text className="n4q-axis-title" x={x0} y={iccTop - 4}>{iccTitle}</text>
+              {contexts.map((c, i) => (c.iccInterval ? <path key={`iccb-${c.id}`} d={bandRuns(c.iccInterval.lower, c.iccInterval.upper, xAt, iccY)} className="n4q-band" fill={color(i)} /> : null))}
               {contexts.map((c, i) => (c.icc ? <path key={`icc-${c.id}`} d={runs(c.icc, xAt, iccY)} className="n4q-line" stroke={color(i)} /> : null))}
             </>
           ) : null}
@@ -172,7 +196,9 @@ export function RepeatabilityProfile({ axis, axisUnit = '', contexts, title, loc
                 <div key={c.id} className="n4q-tip-block">
                   <div className="n4q-tip-ctx"><span className="n4q-key-line" style={{ background: color(i) }} aria-hidden="true" />{c.id}</div>
                   <TipRow label={t('pooledSd')} value={fmt(c.pooledSd[index] ?? null)} />
-                  {c.icc ? <TipRow label={t('icc')} value={fmt(c.icc[index] ?? null)} /> : null}
+                  {c.sdInterval ? <TipRow label={t('interval95')} value={`${fmt(c.sdInterval.lower[index] ?? null)} – ${fmt(c.sdInterval.upper[index] ?? null)}`} /> : null}
+                  {c.icc ? <TipRow label={c.iccKind === 'icc_1_reml' ? t('iccReml') : t('icc')} value={fmt(c.icc[index] ?? null)} /> : null}
+                  {c.iccInterval ? <TipRow label={t('interval95')} value={`${fmt(c.iccInterval.lower[index] ?? null)} – ${fmt(c.iccInterval.upper[index] ?? null)}`} /> : null}
                   {s !== 0 ? <div className="n4q-tip-sub">{t(STATUS_TEXT[s] ?? 'bandNotComputed')}</div> : null}
                 </div>
               );
@@ -189,6 +215,7 @@ export function RepeatabilityProfile({ axis, axisUnit = '', contexts, title, loc
               {c.physicalGroups !== null ? <span className="n4q-legend-sub"> · {c.physicalGroups} {t('groups')} · {c.observations ?? '—'} {t('observations')}</span> : null}
             </li>
           ))}
+          {hasInterval ? <li><span className="n4q-key-box" aria-hidden="true" />{t('interval95')}</li> : null}
           <li><span className="n4q-key-dot n4q-key-null" aria-hidden="true" />{t('bandNotComputed')}</li>
         </ul>
       </figcaption>

@@ -15,6 +15,8 @@ export * from './types.js';
 export * from './locale.js';
 export * from './report.js';
 export * from './extract.js';
+export * from './extractBlocks.js';
+export * from './engineNumber.js';
 
 export * from './Badges.js';
 export * from './EvidenceTable.js';
@@ -32,3 +34,7 @@ export * from './ScoreMap.js';
 export * from './TargetDistribution.js';
 export * from './SpectraExplorer.js';
 export * from './CheckList.js';
+export * from './MeasureBars.js';
+export * from './HypothesisTestTable.js';
+export * from './ComparisonMatrix.js';
+export * from './ReplicateHistogram.js';

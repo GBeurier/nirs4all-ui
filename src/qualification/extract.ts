@@ -110,6 +110,11 @@ export interface RepeatabilityContext {
   bandStatus: number[];
   observations: number | null;
   physicalGroups: number | null;
+  /** engine interval bands of the SD / ICC (see `withRepeatabilityUncertainty`) */
+  sdInterval?: { lower: readonly (number | null)[]; upper: readonly (number | null)[] } | null;
+  iccInterval?: { lower: readonly (number | null)[]; upper: readonly (number | null)[] } | null;
+  /** which ICC the `icc` series is: balanced ICC(1,1) (default) or REML ICC(1) */
+  iccKind?: 'icc_1_1' | 'icc_1_reml';
 }
 
 const BAND_STATUS_KEY = 'band_status_0_icc_1_insufficient_2_unbalanced_3_zero_total';
