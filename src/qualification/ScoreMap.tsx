@@ -29,6 +29,8 @@ export interface ScoreMapProps {
   locale?: Locale;
   width?: number;
   height?: number;
+  /** fixed colours for some groups (e.g. a neutral grey for HDBSCAN noise); other groups use the palette */
+  groupColors?: Readonly<Record<string, string>> | undefined;
   /** draw the y = x line on a shared axis extent (e.g. predicted vs observed) */
   identityLine?: boolean;
   className?: string;
@@ -41,16 +43,17 @@ const NULL = '#94a3b8';
 const PAD = { left: 52, right: 14, top: 12, bottom: 40 };
 
 /** Group → color in a fixed order (sorted names), so a color follows its group, never its rank. */
-export function scoreGroupColors(points: readonly ScorePoint[]): Map<string, string> {
+export function scoreGroupColors(points: readonly ScorePoint[], fixed: Readonly<Record<string, string>> = {}): Map<string, string> {
   const groups = [...new Set(points.flatMap((p) => (p.group ? [p.group] : [])))].sort((a, b) => a.localeCompare(b));
-  return new Map(groups.map((g, i) => [g, categoricalColor(i)]));
+  const free = groups.filter((g) => !(g in fixed));
+  return new Map(groups.map((g) => [g, fixed[g] ?? categoricalColor(free.indexOf(g))]));
 }
 
 /**
  * Engine score scatter with categorical or sequential coloring, nearest-point hover,
  * keyboard browsing (arrow keys) and a legend / colorbar. Axes scale independently.
  */
-export function ScoreMap({ points, colorBy = 'none', xLabel, yLabel, colorLabel, title, locale = 'fr', width = 560, height = 400, identityLine = false, className }: ScoreMapProps) {
+export function ScoreMap({ points, colorBy = 'none', xLabel, yLabel, colorLabel, title, locale = 'fr', width = 560, height = 400, groupColors, identityLine = false, className }: ScoreMapProps) {
   const id = useId();
   const [hover, setHover] = useState<number | null>(null);
   const valid = points.filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
@@ -62,7 +65,7 @@ export function ScoreMap({ points, colorBy = 'none', xLabel, yLabel, colorLabel,
   const yd = identityLine ? xd : niceExtent(valid.map((p) => p.y), 0.08);
   const xs = makeScale(xd, x0, x1);
   const ys = makeScale(yd, y1, y0);
-  const groups = scoreGroupColors(valid);
+  const groups = scoreGroupColors(valid, groupColors);
   const values = valid.flatMap((p) => (typeof p.value === 'number' && Number.isFinite(p.value) ? [p.value] : []));
   const vd = extentOf(values.length ? values : [0, 1]);
   const colorOf = (p: ScorePoint): string => {

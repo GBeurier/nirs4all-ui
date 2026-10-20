@@ -14,6 +14,7 @@ import {
   ReplicateHistogram,
   ScoreMap,
   buildQualificationReportView,
+  scoreGroupColors,
   engineNumberToDouble,
   extractAssociationFamily,
   extractAssociations,
@@ -35,6 +36,7 @@ import {
   metricHelp,
   metricLabel,
   parseEngineNumber,
+  statisticLabel,
   unavailableMetrics,
   withRepeatabilityUncertainty,
   type EngineReport,
@@ -77,6 +79,12 @@ describe("engine numbers beyond the double range", () => {
 });
 
 describe("labels", () => {
+  it("statistic ids get display names", () => {
+    expect(statisticLabel("eta_squared", "en")).toBe("η²");
+    expect(statisticLabel("cramers_v", "fr")).toBe("V de Cramér");
+    expect(statisticLabel("unknown_stat")).toBe("unknown_stat");
+  });
+
   it("every metric id of the 0.1.0 fixtures has a FR/EN label and a help sentence", () => {
     const ids = [...new Set([...view.metrics, ...extended.metrics].map((m) => m.id))];
     for (const id of ids) {
@@ -239,7 +247,7 @@ describe("block components", () => {
       />,
     );
     expect(html).toContain("H0 rejected");
-    expect(html).toContain("Decision (α = 0.05)");
+    expect(html).toMatch(/\(α = (<!-- -->)?0\.05(<!-- -->)?\)/);
     expect(html).toContain("FACTOR_ALIASED_WITH_OTHER_FACTORS");
     expect(html).toContain('data-rejects="true"');
   });
@@ -266,6 +274,12 @@ describe("block components", () => {
     expect(html).toContain("99 replicates");
     expect(html).toContain("1 no value");
     expect(html).toContain("Observed 0.75");
+  });
+
+  it("score map keeps fixed group colours (noise grey) and palette order for the others", () => {
+    const colors = scoreGroupColors([{ id: "1", x: 0, y: 0, group: "Noise" }, { id: "2", x: 1, y: 1, group: "Group 0" }], { Noise: "#94a3b8" });
+    expect(colors.get("Noise")).toBe("#94a3b8");
+    expect(colors.get("Group 0")).toBe(scoreGroupColors([{ id: "2", x: 1, y: 1, group: "Group 0" }]).get("Group 0"));
   });
 
   it("score map draws the identity line on a shared extent", () => {

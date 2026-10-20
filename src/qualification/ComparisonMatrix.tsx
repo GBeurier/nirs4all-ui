@@ -8,21 +8,21 @@ export interface ComparisonColumn {
   id: string;
   label: string;
   /** short help shown under the header (unit, definition) */
-  hint?: string;
+  hint?: string | undefined;
   /** fraction: % in [0, 1]; number: bar from 0; signed: bar centred on 0; ratio: bar centred on `neutral` (default 1) */
-  format?: 'fraction' | 'number' | 'signed' | 'ratio';
+  format?: 'fraction' | 'number' | 'signed' | 'ratio' | undefined;
   /** neutral level of a ratio column (no change), default 1 */
-  neutral?: number;
+  neutral?: number | undefined;
 }
 
 export interface ComparisonRow {
   id: string;
   label: string;
-  sublabel?: string;
+  sublabel?: string | undefined;
   /** one cell per column id; null = not computed */
   cells: Readonly<Record<string, number | null>>;
   /** optional trailing text (e.g. a test decision) */
-  note?: ReactNode;
+  note?: ReactNode | undefined;
 }
 
 export interface ComparisonMatrixProps {
@@ -30,9 +30,9 @@ export interface ComparisonMatrixProps {
   rows: readonly ComparisonRow[];
   caption: string;
   rowHeader: string;
-  noteHeader?: string;
-  locale?: Locale;
-  className?: string;
+  noteHeader?: string | undefined;
+  locale?: Locale | undefined;
+  className?: string | undefined;
 }
 
 /**

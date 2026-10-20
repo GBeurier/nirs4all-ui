@@ -12,12 +12,12 @@ export interface MeasureRow {
   /** null = not computed for this row (shown as an explicit gap, never 0) */
   value: number | null;
   /** engine interval or spread (e.g. quartiles, confidence bounds) */
-  low?: number | null;
-  high?: number | null;
+  low?: number | null | undefined;
+  high?: number | null | undefined;
   /** comparison value drawn as a hollow marker (e.g. a baseline) */
-  compare?: number | null;
+  compare?: number | null | undefined;
   /** short text after the label (counts, denominators, status) */
-  note?: string;
+  note?: string | undefined;
 }
 
 export interface MeasureBarsProps {
@@ -25,17 +25,17 @@ export interface MeasureBarsProps {
   title: string;
   /** legend names of the bar value, interval and comparison marker */
   valueLabel: string;
-  intervalLabel?: string;
-  compareLabel?: string;
+  intervalLabel?: string | undefined;
+  compareLabel?: string | undefined;
   /** fraction: [0, 1] axis shown in % ; number: axis from 0 (or the lowest value) to the largest value */
-  format?: 'fraction' | 'number';
+  format?: 'fraction' | 'number' | undefined;
   /** fixed axis domain; defaults to [0, 1] for fractions */
-  domain?: { min: number; max: number };
+  domain?: { min: number; max: number } | undefined;
   /** vertical reference line (declared threshold or neutral level) */
-  reference?: { value: number; label: string } | null;
-  locale?: Locale;
-  width?: number;
-  className?: string;
+  reference?: { value: number; label: string } | null | undefined;
+  locale?: Locale | undefined;
+  width?: number | undefined;
+  className?: string | undefined;
 }
 
 const BAR = '#0d9488';
@@ -64,6 +64,8 @@ export function MeasureBars({ rows, title, valueLabel, intervalLabel, compareLab
   const zero = xs(Math.max(lo, Math.min(hi, 0)));
   const hasInterval = rows.some((r) => typeof r.low === 'number' || typeof r.high === 'number');
   const hasCompare = rows.some((r) => typeof r.compare === 'number');
+  /** value text right after the bar (and whisker); after the comparison marker only when it would overlap */
+  const valueX = (end: number, cmp: number | null) => (cmp !== null && cmp >= end - 6 && cmp <= end + 48 ? cmp + 9 : end + 6);
   const tickText = (v: number) => (format === 'fraction' ? `${Math.round(v * 100)}%` : fmt(v));
   const desc = rows.map((r) => `${r.label}: ${show(r.value)}${typeof r.compare === 'number' ? ` (${compareLabel ?? ''} ${show(r.compare)})` : ''}`).join('; ');
 
@@ -73,7 +75,7 @@ export function MeasureBars({ rows, title, valueLabel, intervalLabel, compareLab
         <svg viewBox={`0 0 ${width} ${height}`} className="n4q-svg" role="img" aria-labelledby={`${id}-t ${id}-d`} onMouseLeave={() => setHover(null)}>
           <title id={`${id}-t`}>{title}</title>
           <desc id={`${id}-d`}>{desc}</desc>
-          {ticks({ min: lo, max: hi }, 4).map((v) => (
+          {ticks({ min: lo, max: hi }, Math.max(2, Math.min(5, Math.floor((x1 - x0) / (finite.some((v) => Math.abs(v) >= 1e5 || (v !== 0 && Math.abs(v) < 1e-4)) ? 110 : 70))))).map((v) => (
             <g key={v}>
               <line className={v === 0 ? 'n4q-zero' : 'n4q-grid'} x1={xs(v)} x2={xs(v)} y1={PAD.top} y2={height - PAD.bottom} />
               <text className="n4q-tick" x={xs(v)} y={height - 8} textAnchor="middle">{tickText(v)}</text>
@@ -113,7 +115,7 @@ export function MeasureBars({ rows, title, valueLabel, intervalLabel, compareLab
                   </g>
                 ) : null}
                 {cmp !== null ? <rect x={cmp - 4.5} y={mid - 4.5} width={9} height={9} transform={`rotate(45 ${cmp} ${mid})`} fill="var(--n4q-surface, var(--surface, #fff))" stroke={COMPARE} strokeWidth={2} /> : null}
-                {has ? <text className="n4q-cat-value" x={Math.max(xs(v), zero, high ?? 0, cmp ?? 0) + 8} y={mid + 4}>{show(r.value)}</text> : null}
+                {has ? <text className="n4q-cat-value" x={valueX(Math.max(xs(v), zero, high ?? 0), cmp)} y={mid + 4}>{show(r.value)}</text> : null}
               </g>
             );
           })}

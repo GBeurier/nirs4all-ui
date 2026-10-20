@@ -324,6 +324,23 @@ export function capabilityLabel(id: string, locale: Locale = 'fr'): string {
   return text ? loc(text, locale) : id;
 }
 
+/** Display names of engine statistic / effect-size ids (`statistic_name`, `effect_size_name`). */
+export const STATISTIC_LABEL: Record<string, LocalizedText> = {
+  pseudo_f: { fr: 'pseudo-F', en: 'pseudo-F' },
+  anova_f: { fr: 'F (ANOVA)', en: 'F (ANOVA)' },
+  eta_squared: { fr: 'η²', en: 'η²' },
+  cramers_v: { fr: 'V de Cramér', en: 'Cramér V' },
+  pearson_chi_squared: { fr: 'χ² de Pearson', en: 'Pearson χ²' },
+  spearman_rho: { fr: 'ρ de Spearman', en: 'Spearman ρ' },
+  pearson_r: { fr: 'r de Pearson', en: 'Pearson r' },
+  energy: { fr: 'énergie', en: 'energy' },
+};
+
+export function statisticLabel(id: string, locale: Locale = 'fr'): string {
+  const text = STATISTIC_LABEL[id];
+  return text ? loc(text, locale) : id;
+}
+
 /** Labels of the presentation charts (flows, profiles, scree, score map, distributions). */
 export const CHART_TEXT = {
   observations: { fr: 'observations', en: 'observations' },

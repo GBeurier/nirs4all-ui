@@ -14,28 +14,28 @@ export interface HypothesisTestRow {
   /** test family / variant name (marginal, conditional, Freedman–Lane…) */
   test: string;
   status: AvailabilityStatus;
-  reasonCode?: string | null;
+  reasonCode?: string | null | undefined;
   /** test statistic (pseudo-F, energy…) with its name */
-  statistic?: { label: string; value: number | null } | null;
+  statistic?: { label: string; value: number | null } | null | undefined;
   /** effect size (R², eta², Cramér V…) with its name */
-  effectSize?: { label: string; value: number | null } | null;
-  pValue?: number | null;
+  effectSize?: { label: string; value: number | null } | null | undefined;
+  pValue?: number | null | undefined;
   /** multiplicity-adjusted p-value (Holm), null when multiplicity is unavailable */
-  pAdjusted?: number | null;
+  pAdjusted?: number | null | undefined;
   /** engine decision at the family level; null = no decision published */
-  rejects?: boolean | null;
+  rejects?: boolean | null | undefined;
   /** extra context (permutations executed, resolution…) */
-  note?: ReactNode;
+  note?: ReactNode | undefined;
 }
 
 export interface HypothesisTestTableProps {
   rows: readonly HypothesisTestRow[];
   caption: string;
   /** family alpha, shown in the decision column header when given */
-  alpha?: number | null;
-  adjustedLabel?: string;
-  locale?: Locale;
-  className?: string;
+  alpha?: number | null | undefined;
+  adjustedLabel?: string | undefined;
+  locale?: Locale | undefined;
+  className?: string | undefined;
 }
 
 /** p-values keep their resolution: never rounded to 0, small ones in exponent form. */
@@ -64,7 +64,7 @@ export function HypothesisTestTable({ rows, caption, alpha = null, adjustedLabel
             <th scope="col">{t('effectSize')}</th>
             <th scope="col" className="n4q-num">p</th>
             <th scope="col" className="n4q-num">{adjustedLabel ?? t('pHolm')}</th>
-            <th scope="col">{t('decision')}{alpha !== null ? ` (α = ${alpha})` : ''}</th>
+            <th scope="col">{t('decision')}{alpha !== null ? <span className="n4q-nocase"> (α = {alpha})</span> : null}</th>
           </tr>
         </thead>
         <tbody>

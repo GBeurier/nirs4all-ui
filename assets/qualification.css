@@ -173,3 +173,4 @@ a.n4q-stat:hover{border-color:var(--teal,#0d9488);transform:translateY(-1px);box
 .n4q-matrix-bar[data-below=true]{background:#6366f1}
 :root[data-theme=dark] .n4q-matrix-track{background:rgba(255,255,255,.08)}
 :root[data-theme=dark] .n4q-band{fill-opacity:.22}
+.n4q-table thead .n4q-nocase{text-transform:none;letter-spacing:0}

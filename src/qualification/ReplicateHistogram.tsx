@@ -9,16 +9,16 @@ export interface ReplicateHistogramProps {
   /** engine replicate values (null replicates are counted apart, never binned) */
   values: readonly (number | null)[];
   /** observed engine value, drawn as a vertical line */
-  observed?: number | null;
+  observed?: number | null | undefined;
   title: string;
   valueLabel: string;
   /** e.g. the engine tail fraction, shown next to the observed value */
-  observedNote?: string;
-  bins?: number;
-  locale?: Locale;
-  width?: number;
-  height?: number;
-  className?: string;
+  observedNote?: string | undefined;
+  bins?: number | undefined;
+  locale?: Locale | undefined;
+  width?: number | undefined;
+  height?: number | undefined;
+  className?: string | undefined;
 }
 
 const BAR = '#94a3b8';
