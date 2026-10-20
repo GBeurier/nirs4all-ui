@@ -29,6 +29,8 @@ export interface ScoreMapProps {
   locale?: Locale;
   width?: number;
   height?: number;
+  /** draw the y = x line on a shared axis extent (e.g. predicted vs observed) */
+  identityLine?: boolean;
   className?: string;
 }
 
@@ -48,7 +50,7 @@ export function scoreGroupColors(points: readonly ScorePoint[]): Map<string, str
  * Engine score scatter with categorical or sequential coloring, nearest-point hover,
  * keyboard browsing (arrow keys) and a legend / colorbar. Axes scale independently.
  */
-export function ScoreMap({ points, colorBy = 'none', xLabel, yLabel, colorLabel, title, locale = 'fr', width = 560, height = 400, className }: ScoreMapProps) {
+export function ScoreMap({ points, colorBy = 'none', xLabel, yLabel, colorLabel, title, locale = 'fr', width = 560, height = 400, identityLine = false, className }: ScoreMapProps) {
   const id = useId();
   const [hover, setHover] = useState<number | null>(null);
   const valid = points.filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
@@ -56,8 +58,8 @@ export function ScoreMap({ points, colorBy = 'none', xLabel, yLabel, colorLabel,
   const x1 = width - PAD.right;
   const y0 = PAD.top;
   const y1 = height - PAD.bottom;
-  const xd = niceExtent(valid.map((p) => p.x), 0.08);
-  const yd = niceExtent(valid.map((p) => p.y), 0.08);
+  const xd = niceExtent(identityLine ? valid.flatMap((p) => [p.x, p.y]) : valid.map((p) => p.x), 0.08);
+  const yd = identityLine ? xd : niceExtent(valid.map((p) => p.y), 0.08);
   const xs = makeScale(xd, x0, x1);
   const ys = makeScale(yd, y1, y0);
   const groups = scoreGroupColors(valid);
@@ -116,6 +118,7 @@ export function ScoreMap({ points, colorBy = 'none', xLabel, yLabel, colorLabel,
           ))}
           <text className="n4q-axis-title" x={(x0 + x1) / 2} y={height - 6} textAnchor="middle">{xLabel}</text>
           <text className="n4q-axis-title" transform={`translate(13 ${(y0 + y1) / 2}) rotate(-90)`} textAnchor="middle">{yLabel}</text>
+          {identityLine ? <line className="n4q-identity" x1={xs(xd.min)} y1={ys(xd.min)} x2={xs(xd.max)} y2={ys(xd.max)} /> : null}
           {valid.map((p, i) => (
             <circle
               key={`${p.id}:${i}`}

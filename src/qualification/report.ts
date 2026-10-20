@@ -12,6 +12,7 @@ import {
 } from './types.js';
 import { AVAILABILITY_LABEL, QUALIFICATION_TEXT } from './locale.js';
 import { loc, type Locale } from '../lab/locale.js';
+import { formatEngineNumber, isScaledEngineNumber } from './engineNumber.js';
 
 const PROFILE_STATUSES: readonly ProfileStatus[] = ['exploratory', 'partial', 'complete'];
 const CONFIDENCES: readonly QualificationConfidence[] = ['unknown', 'low', 'medium', 'high'];
@@ -98,6 +99,7 @@ export function formatQualificationValue(value: QualificationValue | undefined, 
   }
   if (typeof value === 'boolean') return loc(value ? QUALIFICATION_TEXT.yes : QUALIFICATION_TEXT.no, locale);
   if (typeof value === 'string') return value;
+  if (isScaledEngineNumber(value)) return formatEngineNumber(value, locale) ?? loc(QUALIFICATION_TEXT.notAvailable, locale);
   const json = JSON.stringify(value);
   return json.length > 120 ? `${json.slice(0, 117)}…` : json;
 }
