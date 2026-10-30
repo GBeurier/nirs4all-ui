@@ -1,6 +1,6 @@
 {
   "name": "nirs4all-ui",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "description": "Shared React UI components, visual assets, and pure view-model helpers for nirs4all apps.",
   "type": "module",
   "license": "(CECILL-2.1 OR AGPL-3.0-or-later)",
@@ -109,6 +109,10 @@
     "./qualification": {
       "types": "./dist/qualification/index.d.ts",
       "import": "./dist/qualification/index.js"
+    },
+    "./pipelines": {
+      "types": "./dist/pipelines/index.d.ts",
+      "import": "./dist/pipelines/index.js"
     }
   },
   "scripts": {
@@ -131,7 +135,8 @@
     "test:watch": "vitest"
   },
   "peerDependencies": {
-    "react": ">=18 <20"
+    "react": ">=18 <20",
+    "react-dom": ">=18 <20"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",
