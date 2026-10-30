@@ -14,7 +14,8 @@ export type Nirs4allStyleAssetId =
   | "conformal-tree"
   | "quality-lab-theme"
   | "spectra-motion"
-  | "qualification";
+  | "qualification"
+  | "pipeline-presets";
 
 export type Nirs4allStyleAssetKind = "css" | "svg-motion";
 
@@ -27,6 +28,11 @@ export interface Nirs4allStyleAsset {
 }
 
 export const NIRS4ALL_STYLE_ASSETS = [
+  {
+    id: "pipeline-presets", kind: "css", path: "assets/pipeline-presets.css",
+    packageExport: "nirs4all-ui/assets/pipeline-presets.css",
+    description: "Studio and repository pipeline preset cards, statistics, preview lists, and task actions.",
+  },
   {
     id: "qualification", kind: "css", path: "assets/qualification.css",
     packageExport: "nirs4all-ui/assets/qualification.css",

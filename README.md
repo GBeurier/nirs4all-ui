@@ -150,3 +150,23 @@ verifies that every public React component, lab, and dataset-builder export
 appears in the page and that the mirrored brand/logo, crawler metadata,
 manifest, default styles, package CSS assets, motion asset, reusable brand kit,
 and canonical URLs stay in sync with the packaged asset set.
+
+### Pipeline preset cards
+
+`PipelinePresetCard` from `nirs4all-ui/components` presents Studio's preset metadata,
+complexity, canonical recipe statistics and preview, with host-provided task actions
+and icons. Import `nirs4all-ui/assets/pipeline-presets.css` for the shared appearance.
+`nirs4all-ui/pipelines` exports the pure canonical preview, statistics and preset
+model helpers. The component supports React server rendering for static catalogues;
+it owns no routing, API access or application state.
+
+The shared preset content is generated from Studio's `api/presets/*.yaml`:
+
+```bash
+python scripts/sync-studio-presets.py --studio ../nirs4all-studio
+# Requires PyYAML; use a Studio or Repository Python environment.
+```
+
+`getStudioPipelinePresets()` returns independent copies of all ten defaults and
+both task variants. Studio checks the snapshot against its authored YAML hashes;
+Repository checks its recipes against the same shared data before rendering.

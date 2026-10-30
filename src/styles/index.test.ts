@@ -16,6 +16,7 @@ const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", ".
 describe("nirs4all-ui/styles", () => {
   it("declares shipped style and motion assets", () => {
     expect(NIRS4ALL_STYLE_ASSETS.map((asset) => asset.id)).toEqual([
+      "pipeline-presets",
       "qualification",
       "default-theme",
       "dataset-builder",
@@ -42,6 +43,7 @@ describe("nirs4all-ui/styles", () => {
 
   it("keeps declared visual assets present and usable", () => {
     const markers = {
+      "pipeline-presets": ".n4-preset",
       qualification: ".n4q",
       "default-theme": "--n4-color-primary",
       "dataset-builder": ".dsb",

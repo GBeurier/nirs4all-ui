@@ -26,3 +26,4 @@ export * as styles from "./styles/index.js";
 export * as lab from "./lab/index.js";
 export * as datasetBuilder from "./datasetBuilder/index.js";
 export * as qualification from "./qualification/index.js";
+export * as pipelines from "./pipelines/index.js";
