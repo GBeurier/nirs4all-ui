@@ -1,0 +1,19 @@
+/* DatasetDropzone — ecosystem drop target (theme.css tokens). */
+.n4dz{display:flex;flex-direction:column;gap:10px;width:100%}
+.n4dz-zone{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:32px 24px;border:2px dashed color-mix(in srgb,var(--teal,#0d9488) 45%,transparent);border-radius:var(--radius,16px);background:color-mix(in srgb,var(--surface,#fff) 85%,transparent);text-align:center;cursor:pointer;outline:none;transition:border-color .2s,background .2s,transform .2s}
+.n4dz-zone:hover,.n4dz-zone[data-active]{border-color:var(--teal,#0d9488);background:color-mix(in srgb,var(--teal,#0d9488) 6%,var(--surface,#fff))}
+.n4dz-zone[data-active]{transform:translateY(-2px)}
+.n4dz-zone:focus-visible{outline:2px solid var(--teal,#0d9488);outline-offset:3px}
+.n4dz-zone[data-busy]{cursor:progress;border-style:solid;border-color:var(--teal,#0d9488)}
+.n4dz-hairline{position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,var(--teal-d,#0f766e),var(--teal-l,#2dd4bf),var(--cyan,#06b6d4),var(--green,#10b981));opacity:.9}
+.n4dz-icon{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:color-mix(in srgb,var(--teal,#0d9488) 12%,transparent);color:var(--teal,#0d9488);transition:background .2s,color .2s}
+.n4dz-zone[data-active] .n4dz-icon{background:var(--teal,#0d9488);color:#fff}
+.n4dz-text{display:flex;flex-direction:column;gap:4px;align-items:center}
+.n4dz-title{font-family:var(--display,inherit);font-size:1.15rem;font-weight:600;color:var(--text,inherit)}
+.n4dz-hint{max-width:480px;font-size:.86rem;line-height:1.5;color:var(--text-2,#475569)}
+.n4dz-link{border:0;background:none;padding:0;font:inherit;font-weight:600;color:var(--teal-d,#0f766e);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.n4dz-spinner{width:28px;height:28px;border-radius:50%;border:3px solid color-mix(in srgb,var(--teal,#0d9488) 25%,transparent);border-top-color:var(--teal,#0d9488);animation:n4dz-spin .8s linear infinite}
+@keyframes n4dz-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.n4dz-spinner{animation-duration:2.4s}}
+.n4dz-error{padding:.7rem 1rem;border-radius:var(--radius-sm,10px);border:1px solid rgba(225,29,72,.3);background:rgba(225,29,72,.07);color:var(--text,inherit);text-align:left;font-size:.88rem}
+.n4dz-note{margin:0;font-size:.78rem;color:var(--text-3,#64748b);text-align:center}
