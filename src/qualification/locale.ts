@@ -75,7 +75,39 @@ export const QUALIFICATION_TEXT = {
   blocking: { fr: 'bloquant', en: 'blocking' },
   nonBlocking: { fr: 'non bloquant', en: 'non-blocking' },
   parameters: { fr: 'Paramètres', en: 'Parameters' },
+  nValues: { fr: '{n} valeurs', en: '{n} values' },
+  nEntries: { fr: '{n} entrées', en: '{n} entries' },
+  nFields: { fr: '{n} champs', en: '{n} fields' },
+  nTable: { fr: 'tableau {n} × {m}', en: '{n} × {m} table' },
+  empty: { fr: 'vide', en: 'empty' },
+  more: { fr: '+{n}', en: '+{n}' },
+  family: { fr: 'Famille', en: 'Family' },
+  nMetrics: { fr: '{n} indicateurs', en: '{n} metrics' },
 } as const satisfies Record<string, { fr: string; en: string }>;
+
+/** Families that group engine metrics by the question they answer. */
+export type MetricFamily = 'data' | 'measurement' | 'structure' | 'target' | 'design' | 'validation' | 'other';
+export const METRIC_FAMILIES: readonly MetricFamily[] = ['data', 'measurement', 'structure', 'target', 'design', 'validation', 'other'];
+
+export const METRIC_FAMILY_LABEL: Record<MetricFamily, LocalizedText> = {
+  data: { fr: 'Intégrité et populations', en: 'Integrity and populations' },
+  measurement: { fr: 'Qualité de mesure', en: 'Measurement quality' },
+  structure: { fr: 'Structure spectrale', en: 'Spectral structure' },
+  target: { fr: 'Cible et relation X → Y', en: 'Target and X → Y relationship' },
+  design: { fr: 'Plan : métadonnées, confusion, domaines', en: 'Design: metadata, confounding, domains' },
+  validation: { fr: 'Sonde de validation', en: 'Validation probe' },
+  other: { fr: 'Autres', en: 'Other' },
+};
+
+export const METRIC_FAMILY_QUESTION: Record<MetricFamily, LocalizedText> = {
+  data: { fr: 'Les données sont-elles complètes, cohérentes et sans doublon ni fuite ?', en: 'Are the data complete, consistent, and free of duplicates or leakage?' },
+  measurement: { fr: 'Les spectres répétés sont-ils reproductibles et peu bruités ?', en: 'Are repeated spectra reproducible and low in noise?' },
+  structure: { fr: 'Comment les spectres se répartissent-ils et forment-ils des groupes ?', en: 'How are the spectra distributed, and do they form groups?' },
+  target: { fr: 'Les références sont-elles exploitables et liées aux spectres ?', en: 'Are the references usable and related to the spectra?' },
+  design: { fr: 'Les métadonnées, instruments ou campagnes biaisent-ils l’analyse ?', en: 'Do metadata, instruments or campaigns bias the analysis?' },
+  validation: { fr: 'Un modèle simple validé par groupes apprend-il quelque chose ?', en: 'Does a simple group-validated model learn anything?' },
+  other: { fr: 'Indicateurs sans famille déclarée.', en: 'Metrics without a declared family.' },
+};
 
 /** Human labels for engine metric ids; unknown ids fall back to the raw id. */
 export const METRIC_LABEL: Record<string, LocalizedText> = {

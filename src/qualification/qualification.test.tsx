@@ -9,7 +9,10 @@ import {
   FindingList,
   QualificationOverview,
   buildQualificationReportView,
+  evidenceCsv,
   formatQualificationValue,
+  groupMetricsByFamily,
+  metricFamily,
   normalizeConfidence,
   normalizeProfileStatus,
   normalizeSeverity,
@@ -103,5 +106,31 @@ describe("qualification components", () => {
     expect(overview).toContain("<table");
     expect(renderToStaticMarkup(<AvailabilitySummary counts={view.availabilityCounts} />)).toContain("<svg");
     expect(renderToStaticMarkup(<ChartDataTable caption="c" columns={["a"]} rows={[[null]]} locale="en" />)).toContain("not available");
+  });
+});
+
+describe("evidence readability", () => {
+  it("summarizes structured values instead of printing JSON", () => {
+    expect(formatQualificationValue([0.0485, 0.0000068, 0.002, 0.001, 0.0003] as never, "en")).toBe("5 values (6.8 × 10⁻⁶ … 0.0485)");
+    expect(formatQualificationValue([1, 2] as never, "en")).toBe("1 ; 2");
+    expect(formatQualificationValue([[1, 2], [3, 4], [5, 6]] as never, "en")).toBe("3 × 2 table");
+    expect(formatQualificationValue({ sum_eigenvalues: 0.04853, trace: 0.05, keys: ["a", "b"], scores: [[1]] } as never, "en")).toBe("sum_eigenvalues: 0.04853 · trace: 0.05 · keys: a, b · +1");
+    expect(formatQualificationValue({ nested: { a: 1 } } as never, "en")).toBe("nested: 1 fields");
+  });
+
+  it("groups metrics by family and exports them as CSV", () => {
+    expect(metricFamily("integrity.missing_cells")).toBe("data");
+    expect(metricFamily("clustering.partition")).toBe("structure");
+    expect(metricFamily("probe.rmse")).toBe("validation");
+    expect(metricFamily("unknown.thing")).toBe("other");
+    const v = buildQualificationReportView(report);
+    const html = renderToStaticMarkup(<EvidenceTable metrics={v.metrics} locale="en" />);
+    expect(html).toContain("n4q-family-row");
+    expect(html).not.toContain("[{");
+    const csv = evidenceCsv(v.metrics, "en");
+    const lines = csv.trimEnd().split("\r\n");
+    expect(lines[0]).toBe("family,metric_id,label,status,reason_code,value,unit,source_id,target_id,population_id,view_id,parameters,denominators,protocol_version");
+    expect(lines).toHaveLength(v.metrics.length + 1);
+    expect(groupMetricsByFamily(v.metrics).reduce((n, g) => n + g.metrics.length, 0)).toBe(v.metrics.length);
   });
 });
