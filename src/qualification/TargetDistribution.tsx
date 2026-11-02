@@ -18,7 +18,7 @@ export interface TargetPoint {
 export interface TargetDistributionProps {
   /** engine (Methods) summary of the eligible exact values */
   summary: ContinuousSummary | null;
-  /** raw declared values shown as a strip under the box (host decides the population) */
+  /** raw declared values shown as a histogram under the box (host decides the population) */
   points?: readonly TargetPoint[];
   unit?: string | null;
   title: string;
@@ -32,40 +32,47 @@ const BOX = '#0d9488';
 const MEAN = '#4f46e5';
 const PAD = { left: 16, right: 16 };
 
-/** Deterministic 0..1 jitter from an id (stable across renders, no randomness). */
-function jitter(id: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619);
-  return ((h >>> 0) % 1000) / 1000;
+/** Equal-width bins over the shown extent (about √n bins, 5 to 40), with counts per status. */
+function binsOf(points: readonly TargetPoint[], lo: number, hi: number) {
+  const k = Math.max(5, Math.min(40, Math.ceil(Math.sqrt(points.length))));
+  const step = hi > lo ? (hi - lo) / k : 1;
+  const bins = Array.from({ length: k }, (_, i) => ({ from: lo + i * step, to: lo + (i + 1) * step, exact: 0, censored: 0, composite: 0 }));
+  for (const p of points) bins[Math.min(k - 1, Math.max(0, Math.floor((p.value - lo) / step)))]![p.status] += 1;
+  return bins;
 }
+
+const STACK: readonly TargetPointStatus[] = ['exact', 'censored', 'composite'];
 
 /**
  * Continuous target: the engine's quartile box (min–max whiskers, Q1–Q3 box, median,
- * mean) above a strip of the raw declared values, censored/composite ones hollow.
+ * mean) above a histogram of the raw declared values; censored/composite counts are
+ * stacked as outlined bars.
  */
 export function TargetDistribution({ summary, points = [], unit, title, locale = 'fr', width = 1000, className }: TargetDistributionProps) {
   const id = useId();
   const [hover, setHover] = useState<number | 'box' | null>(null);
   const t = (k: keyof typeof C) => loc(C[k], locale);
-  const height = points.length ? 196 : 112;
+  const height = points.length ? 236 : 112;
   const x0 = PAD.left;
   const x1 = width - PAD.right;
   const all = [...points.map((p) => p.value), ...(summary ? [summary.min, summary.max] : [])];
+  const range = extentOf(all.length ? all : [0, 1]);
   const xd = niceExtent(all.length ? all : [0, 1], 0.04);
   const xs = makeScale(xd, x0, x1);
   const boxY = 18;
   const boxH = 34;
   const mid = boxY + boxH / 2;
-  const stripY = 76;
-  const stripH = 72;
+  const histTop = 72;
   const axisY = height - 10;
+  const histBottom = axisY - 16;
   const u = unit ? ` ${unit}` : '';
   const desc = summary
     ? `${t('min')} ${fmt(summary.min)}, ${t('q25')} ${fmt(summary.q25)}, ${t('median')} ${fmt(summary.median)}, ${t('q75')} ${fmt(summary.q75)}, ${t('max')} ${fmt(summary.max)}, ${t('mean')} ${fmt(summary.mean)}${u}; n=${summary.count}`
     : `${points.length}`;
-  const hp = typeof hover === 'number' ? points[hover] : undefined;
-  // hollow (excluded) values are drawn last so they are never hidden under exact ones
-  const order = points.map((p, i) => i).sort((a, b) => Number(points[a]!.status !== 'exact') - Number(points[b]!.status !== 'exact'));
+  const bins = points.length ? binsOf(points, range.min, range.max) : [];
+  const top = Math.max(1, ...bins.map((b) => b.exact + b.censored + b.composite));
+  const ys = (v: number) => histBottom - (v / top) * (histBottom - histTop);
+  const hb = typeof hover === 'number' ? bins[hover] : undefined;
   const counts = { exact: 0, censored: 0, composite: 0 };
   for (const p of points) counts[p.status] += 1;
 
@@ -101,23 +108,33 @@ export function TargetDistribution({ summary, points = [], unit, title, locale =
               <path d={`M${xs(summary.mean)},${mid - 6}l6,6l-6,6l-6,-6Z`} fill={MEAN} className="n4q-marker" />
             </g>
           ) : null}
-          {order.map((i) => {
-            const p = points[i]!;
-            const cx0 = xs(p.value);
-            const cy = stripY + 6 + jitter(p.id) * (stripH - 12);
-            const hollow = p.status !== 'exact';
+          {bins.length ? <line className="n4q-whisker" x1={x0} x2={x1} y1={histBottom} y2={histBottom} /> : null}
+          {bins.map((b, i) => {
+            const left = xs(b.from) + 0.5;
+            const w = Math.max(1, xs(b.to) - xs(b.from) - 1);
+            let base = 0;
             return (
-              <g key={`${p.id}:${i}`} onMouseEnter={() => setHover(i)} className="n4q-hit">
-                <circle cx={cx0} cy={cy} r={11} fill="transparent" />
-                <circle
-                  className="n4q-dot"
-                  cx={cx0}
-                  cy={cy}
-                  r={hover === i ? 6 : 4.5}
-                  fill={STATUS_COLOR[p.status]}
-                  fillOpacity={0.85}
-                  style={hollow ? { fill: 'var(--n4q-surface, #fff)', fillOpacity: 1, stroke: STATUS_COLOR[p.status], strokeWidth: 2 } : undefined}
-                />
+              <g key={i} className="n4q-hit" onMouseEnter={() => setHover(i)} onFocus={() => setHover(i)} onBlur={() => setHover(null)} tabIndex={b.exact + b.censored + b.composite ? 0 : -1}>
+                <rect x={left} y={histTop} width={w} height={histBottom - histTop} fill="transparent" />
+                {STACK.map((status) => {
+                  const n = b[status];
+                  if (!n) return null;
+                  const y = ys(base + n);
+                  const h = ys(base) - y;
+                  base += n;
+                  return (
+                    <rect
+                      key={status}
+                      x={left}
+                      y={y}
+                      width={w}
+                      height={h}
+                      fill={STATUS_COLOR[status]}
+                      fillOpacity={hover === i ? 1 : 0.85}
+                      style={status === 'exact' ? undefined : { fill: 'var(--n4q-surface, #fff)', fillOpacity: 1, stroke: STATUS_COLOR[status], strokeWidth: 2 }}
+                    />
+                  );
+                })}
               </g>
             );
           })}
@@ -134,10 +151,10 @@ export function TargetDistribution({ summary, points = [], unit, title, locale =
             <TipRow label={t('sd')} value={fmt(summary.sampleSd)} />
           </ChartTooltip>
         ) : null}
-        {hp ? (
-          <ChartTooltip x={xs(hp.value)} y={stripY} width={width} height={height}>
-            <TipRow color={STATUS_COLOR[hp.status]} label={hp.id} value={`${fmt(hp.value)}${u}`} />
-            <div className="n4q-tip-sub">{t(hp.status)}</div>
+        {hb ? (
+          <ChartTooltip x={xs((hb.from + hb.to) / 2)} y={histTop} width={width} height={height}>
+            <div className="n4q-tip-head">{fmt(hb.from)} – {fmt(hb.to)}{u}</div>
+            {STACK.filter((s) => hb[s] > 0).map((s) => <TipRow key={s} color={STATUS_COLOR[s]} label={t(s)} value={String(hb[s])} />)}
           </ChartTooltip>
         ) : null}
       </div>

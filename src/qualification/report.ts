@@ -142,7 +142,7 @@ function summarizeStructured(value: unknown, locale: Locale, depth: number): str
 export function metricFamily(id: string): MetricFamily {
   const prefix = id.split('.')[0] ?? '';
   if (['population', 'integrity', 'reference'].includes(prefix)) return 'data';
-  if (prefix === 'measurement') return 'measurement';
+  if (prefix === 'measurement' || prefix === 'intrinsic') return 'measurement';
   if (['structure', 'clustering'].includes(prefix)) return 'structure';
   if (['target', 'local'].includes(prefix)) return 'target';
   if (['association', 'confounding', 'domain_shift'].includes(prefix)) return 'design';
