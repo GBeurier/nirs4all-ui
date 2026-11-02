@@ -890,3 +890,56 @@ export function withRepeatabilityUncertainty(contexts: readonly RepeatabilityCon
     };
   });
 }
+
+/** One per-observation intrinsic signature (Methods), with its native median and p95. */
+export interface IntrinsicSignal {
+  /** `<family>.<signal>`, e.g. `pca.pca_t2`, `events.spike_count`, `reference.rms` */
+  id: string;
+  state: MetricState;
+  unit: string | null;
+  /** observation-aligned; a null value is an observation the signal could not use */
+  sampleIds: string[];
+  observationIds: string[];
+  values: (number | null)[];
+  median: number | null;
+  p95: number | null;
+}
+
+/** Intrinsic spectral signatures of one source (`options.intrinsic_qc`), or null when not requested. */
+export interface IntrinsicSignatures {
+  signals: Readonly<Record<string, IntrinsicSignal>>;
+  /** computed dataset-level scalars, keyed `<family>.<name>` (e.g. `events.global_spike_count`) */
+  globals: Readonly<Record<string, number>>;
+}
+
+export function extractIntrinsic(view: QualificationReportView, sourceId: string): IntrinsicSignatures | null {
+  const metrics = view.metrics.filter((m) => m.sourceId === sourceId && m.id.startsWith('intrinsic.') && !m.id.endsWith('.protocol_evidence'));
+  if (!metrics.length) return null;
+  const byId = new Map(metrics.map((m) => [m.id, m]));
+  const signals: Record<string, IntrinsicSignal> = {};
+  const globals: Record<string, number> = {};
+  for (const m of metrics) {
+    const key = m.id.slice('intrinsic.'.length);
+    if (/_(median|p95)$/.test(key)) continue;
+    if (/\.global_|\.observed_extrema_/.test(key)) {
+      if (m.status === 'computed' && isNumber(m.value)) globals[key] = m.value;
+      continue;
+    }
+    const v = rec(m.value);
+    const summary = (suffix: string) => {
+      const s = byId.get(`${m.id}_${suffix}`);
+      return s && s.status === 'computed' ? num(s.value) : null;
+    };
+    signals[key] = {
+      id: key,
+      state: state(m),
+      unit: m.unit,
+      sampleIds: strings(v.sample_ids),
+      observationIds: strings(v.observation_ids),
+      values: numbersOrNull(v.values),
+      median: summary('median'),
+      p95: summary('p95'),
+    };
+  }
+  return { signals, globals };
+}
