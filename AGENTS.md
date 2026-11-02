@@ -24,3 +24,7 @@ Add colocated `*.test.ts` or `*.test.tsx` files for new helpers and components. 
 ## Architecture Notes
 
 This package is shared by `nirs4all-studio` and `nirs4all-web`. Do not import from those apps. If a shared component needs domain data, define a small package-level contract and let each host adapt its local runtime objects to that contract.
+
+## Language Policy
+
+All application and project content must be in English, including UI text, subtitles, tooltips, errors, documentation, comments and docstrings, test and fixture prose, reports, pull requests, commits, and generated content. Conversation with the maintainer may be in French. Preserve proper names, identifiers, filenames, source quotations, and historical or provenance records where translation would change their meaning or provenance.
