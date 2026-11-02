@@ -116,6 +116,20 @@ describe("evidence readability", () => {
     expect(formatQualificationValue([[1, 2], [3, 4], [5, 6]] as never, "en")).toBe("3 × 2 table");
     expect(formatQualificationValue({ sum_eigenvalues: 0.04853, trace: 0.05, keys: ["a", "b"], scores: [[1]] } as never, "en")).toBe("sum_eigenvalues: 0.04853 · trace: 0.05 · keys: a, b · +1");
     expect(formatQualificationValue({ nested: { a: 1 } } as never, "en")).toBe("nested: 1 fields");
+    // larger than the engine's spread-argument limit
+    const large = Array.from({ length: 300_000 }, (_, i) => i);
+    expect(formatQualificationValue(large as never, "en")).toBe("300,000 values (0 … 299,999)");
+  });
+
+  it("keeps formula-like text inert in the CSV export", () => {
+    const [m] = buildQualificationReportView(report).metrics;
+    const row = (patch: object) => evidenceCsv([{ ...m!, ...patch }], "en").split("\r\n")[1]!.split(",");
+    const cells = row({ sourceId: "=HYPERLINK(1)", targetId: "+1", populationId: "@x", value: -2.5 });
+    expect(cells).toContain("'=HYPERLINK(1)");
+    expect(cells).toContain("'+1");
+    expect(cells).toContain("'@x");
+    expect(cells).toContain("-2.5");
+    expect(evidenceCsv([{ ...m!, viewId: 'a "b", c\nd' }], "en")).toContain('"a ""b"", c\nd"');
   });
 
   it("groups metrics by family and exports them as CSV", () => {

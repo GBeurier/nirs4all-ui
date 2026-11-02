@@ -432,6 +432,7 @@ export const CHART_TEXT = {
   mean: { fr: 'Moyenne', en: 'Mean' },
   sd: { fr: 'Écart-type', en: 'SD' },
   count: { fr: 'Effectif', en: 'Count' },
+  range: { fr: 'Intervalle', en: 'Range' },
   exact: { fr: 'Référence exacte', en: 'Exact reference' },
   censored: { fr: 'Censurée (exclue)', en: 'Censored (excluded)' },
   composite: { fr: 'Composite (exclue)', en: 'Composite (excluded)' },

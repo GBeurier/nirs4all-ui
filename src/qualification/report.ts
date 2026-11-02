@@ -118,10 +118,18 @@ function summarizeStructured(value: unknown, locale: Locale, depth: number): str
   if (Array.isArray(value)) {
     if (!value.length) return loc(QUALIFICATION_TEXT.empty, locale);
     if (value.every((v) => typeof v === 'number' || v === null)) {
-      const finite = value.filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
       if (value.length <= MAX_LISTED) return value.map((v) => summarizeStructured(v, locale, depth + 1)).join(' ; ');
-      if (!finite.length) return word('nValues', locale, { n: value.length });
-      return `${word('nValues', locale, { n: value.length })} (${summarizeStructured(Math.min(...finite), locale, depth + 1)} … ${summarizeStructured(Math.max(...finite), locale, depth + 1)})`;
+      // a loop, not Math.min(...values): evidence arrays can exceed the engine's argument limit
+      let lo = Infinity;
+      let hi = -Infinity;
+      for (const v of value) {
+        if (typeof v === 'number' && Number.isFinite(v)) {
+          if (v < lo) lo = v;
+          if (v > hi) hi = v;
+        }
+      }
+      if (lo > hi) return word('nValues', locale, { n: value.length });
+      return `${word('nValues', locale, { n: value.length })} (${summarizeStructured(lo, locale, depth + 1)} … ${summarizeStructured(hi, locale, depth + 1)})`;
     }
     if (value.every(Array.isArray)) return word('nTable', locale, { n: value.length, m: (value[0] as unknown[]).length });
     if (value.every((v) => typeof v === 'string') && value.length <= MAX_LISTED) return value.join(', ');
@@ -156,11 +164,13 @@ export function groupMetricsByFamily<M extends { id: string }>(metrics: readonly
 }
 
 const csvCell = (value: unknown): string => {
-  const text = value === null || value === undefined ? '' : typeof value === 'string' ? value : typeof value === 'number' || typeof value === 'boolean' ? String(value) : JSON.stringify(value);
+  const raw = value === null || value === undefined ? '' : typeof value === 'string' ? value : typeof value === 'number' || typeof value === 'boolean' ? String(value) : JSON.stringify(value);
+  // a text cell starting like a formula is prefixed so spreadsheets keep it as text; numbers stay numeric
+  const text = typeof value === 'string' && /^[=+\-@\t\r]/.test(value) ? `'${raw}` : raw;
   return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 };
 
-/** RFC 4180 CSV of the evidence table: one row per metric, full-precision values, structured values as JSON. */
+/** RFC 4180 CSV of the evidence table: one row per metric, full-precision values, structured values as JSON; formula-like text cells get a leading apostrophe. */
 export function evidenceCsv(metrics: readonly QualificationMetricView[], locale: Locale = 'fr'): string {
   const header = ['family', 'metric_id', 'label', 'status', 'reason_code', 'value', 'unit', 'source_id', 'target_id', 'population_id', 'view_id', 'parameters', 'denominators', 'protocol_version'];
   const rows = groupMetricsByFamily(metrics).flatMap(({ family, metrics: items }) => items.map((m) => [

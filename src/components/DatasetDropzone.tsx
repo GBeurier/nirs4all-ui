@@ -17,6 +17,8 @@ export function pickedFiles(list: ArrayLike<File> | null | undefined): DroppedFi
 async function readEntries(entries: FileSystemEntry[]): Promise<DroppedFile[]> {
   const out: DroppedFile[] = [];
   const walk = async (entry: FileSystemEntry): Promise<void> => {
+    // hidden files and folders are skipped before any read
+    if (entry.name.startsWith(".")) return;
     if (entry.isFile) {
       const file = await new Promise<File>((resolve, reject) => (entry as FileSystemFileEntry).file(resolve, reject));
       out.push({ name: entry.fullPath.replace(/^\//, ""), file });
@@ -30,7 +32,7 @@ async function readEntries(entries: FileSystemEntry[]): Promise<DroppedFile[]> {
     }
   };
   for (const entry of entries) await walk(entry);
-  return out.filter(visible);
+  return out;
 }
 
 /**
@@ -53,7 +55,7 @@ export interface DatasetDropzoneProps {
   title?: ReactNode;
   /** Usually "or browse — formats"; rendered under the title. */
   hint?: ReactNode;
-  /** Shows a folder picker link with this label. */
+  /** Shows a folder picker button with this label under the zone. */
   folderLabel?: string;
   busy?: boolean;
   busyTitle?: ReactNode;
@@ -77,8 +79,9 @@ const UPLOAD_ICON = (
 
 /**
  * Ecosystem dataset drop zone (Studio, Web, QualiNIRS, IO): dashed teal target with a spectral
- * hairline, drag highlight, click/keyboard file picker, optional folder picker and a busy state
- * that replaces the icon by a spinner. Presentational: reading and assembly stay in the host.
+ * hairline, drag highlight, click/keyboard file picker, an optional folder picker button under the
+ * zone, and a busy state (host `busy` or a dropped folder being listed) that replaces the icon by a
+ * spinner. It only lists the files the user hands over; parsing and assembly stay in the host.
  */
 export function DatasetDropzone({
   onFiles, onError, title = "Drop your spectra here", hint, folderLabel, busy = false, busyTitle = "Reading your dataset…",
@@ -87,47 +90,53 @@ export function DatasetDropzone({
   const files = useRef<HTMLInputElement>(null);
   const folder = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
-  const open = () => { if (!busy) files.current?.click(); };
+  // a dropped folder is read asynchronously; overlapping drops are refused until it is done
+  const reading = useRef(false);
+  const [readingDrop, setReadingDrop] = useState(false);
+  const blocked = busy || readingDrop;
+  const open = () => { if (!blocked) files.current?.click(); };
   const onKey = (event: KeyboardEvent) => {
     if (event.key === "Enter" || event.key === " ") { event.preventDefault(); open(); }
   };
-  const highlighted = (dragging || active) && !busy;
+  const highlighted = (dragging || active) && !blocked;
   return (
     <div className={["n4dz", className].filter(Boolean).join(" ")}>
       <div
         className="n4dz-zone"
         role="button"
         tabIndex={0}
-        aria-disabled={busy}
-        aria-busy={busy}
+        aria-disabled={blocked}
+        aria-busy={blocked}
         data-active={highlighted || undefined}
-        data-busy={busy || undefined}
+        data-busy={blocked || undefined}
         onClick={open}
         onKeyDown={onKey}
-        onDragOver={(event) => { event.preventDefault(); if (!busy) setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
+        onDragOver={(event) => { event.preventDefault(); if (!blocked) setDragging(true); }}
+        onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false); }}
         onDrop={(event) => {
           event.preventDefault();
           event.stopPropagation();
           setDragging(false);
-          if (busy) return;
-          droppedFiles(event.dataTransfer).then(onFiles, (cause: unknown) => onError?.(cause));
+          if (busy || reading.current) return;
+          reading.current = true;
+          setReadingDrop(true);
+          droppedFiles(event.dataTransfer)
+            .then(onFiles, (cause: unknown) => onError?.(cause))
+            .finally(() => { reading.current = false; setReadingDrop(false); });
         }}
       >
         <span className="n4dz-hairline" aria-hidden="true" />
-        <span className="n4dz-icon" aria-hidden="true">{busy ? (busyIcon ?? <span className="n4dz-spinner" />) : icon}</span>
-        <span className="n4dz-text" role={busy ? "status" : undefined} aria-live={busy ? "polite" : undefined}>
-          <span className="n4dz-title">{busy ? busyTitle : title}</span>
-          {busy ? (busyHint ? <span className="n4dz-hint">{busyHint}</span> : null) : (
-            <span className="n4dz-hint">
-              {hint}
-              {folderLabel ? <> · <button type="button" className="n4dz-link" onClick={(event) => { event.stopPropagation(); folder.current?.click(); }}>{folderLabel}</button></> : null}
-            </span>
-          )}
+        <span className="n4dz-icon" aria-hidden="true">{blocked ? (busyIcon ?? <span className="n4dz-spinner" />) : icon}</span>
+        <span className="n4dz-text" role={blocked ? "status" : undefined} aria-live={blocked ? "polite" : undefined}>
+          <span className="n4dz-title">{blocked ? busyTitle : title}</span>
+          {blocked ? (busyHint ? <span className="n4dz-hint">{busyHint}</span> : null) : (hint ? <span className="n4dz-hint">{hint}</span> : null)}
         </span>
-        <input ref={files} type="file" multiple accept={accept} hidden tabIndex={-1} onChange={(event) => { onFiles(pickedFiles(event.target.files)); event.target.value = ""; }} />
-        {folderLabel ? <input ref={folder} type="file" multiple hidden tabIndex={-1} {...{ webkitdirectory: "" }} onChange={(event) => { onFiles(pickedFiles(event.target.files)); event.target.value = ""; }} /> : null}
       </div>
+      {folderLabel ? (
+        <button type="button" className="n4dz-link n4dz-folder" disabled={blocked} onClick={() => folder.current?.click()}>{folderLabel}</button>
+      ) : null}
+      <input ref={files} type="file" multiple accept={accept} hidden tabIndex={-1} onChange={(event) => { onFiles(pickedFiles(event.target.files)); event.target.value = ""; }} />
+      {folderLabel ? <input ref={folder} type="file" multiple hidden tabIndex={-1} {...{ webkitdirectory: "" }} onChange={(event) => { onFiles(pickedFiles(event.target.files)); event.target.value = ""; }} /> : null}
       {error ? <div className="n4dz-error" role="alert">{error}</div> : null}
       {note ? <p className="n4dz-note">{note}</p> : null}
     </div>
