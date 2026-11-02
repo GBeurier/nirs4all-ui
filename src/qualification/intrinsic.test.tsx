@@ -36,5 +36,22 @@ describe("intrinsic signatures", () => {
     // √25 = 5 bins, one bar per non-empty bin, no per-sample dots
     expect(html.match(/fill="#0d9488" fill-opacity="0.85"/g)).toHaveLength(5);
     expect(html).not.toContain("n4q-dot");
+    // an accessible table carries the bin counts; bins are not unnamed tab stops
+    expect(html).toContain('<table class="n4q-visually-hidden">');
+    expect(html.match(/<tr><th scope="row">/g)).toHaveLength(5);
+    expect(html).not.toContain('tabindex="-1"');
+  });
+
+  it("ignores non-finite target values instead of crashing or miscounting", () => {
+    const points = [
+      { id: "a", value: 1, status: "exact" as const },
+      { id: "b", value: Number.NaN, status: "exact" as const },
+      { id: "c", value: Number.POSITIVE_INFINITY, status: "censored" as const },
+      { id: "d", value: 3, status: "exact" as const },
+    ];
+    const html = renderToStaticMarkup(<TargetDistribution summary={null} points={points} title="T" locale="en" />);
+    expect(html).toContain("Exact reference <strong>2</strong>");
+    expect(html).not.toContain("Censored (excluded) <strong>");
+    expect(html.match(/<tr><th scope="row">/g)).toHaveLength(2);
   });
 });

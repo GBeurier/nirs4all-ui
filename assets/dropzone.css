@@ -17,3 +17,5 @@
 @media (prefers-reduced-motion:reduce){.n4dz-spinner{animation-duration:2.4s}}
 .n4dz-error{padding:.7rem 1rem;border-radius:var(--radius-sm,10px);border:1px solid rgba(225,29,72,.3);background:rgba(225,29,72,.07);color:var(--text,inherit);text-align:left;font-size:.88rem}
 .n4dz-note{margin:0;font-size:.78rem;color:var(--text-3,#64748b);text-align:center}
+.n4dz-folder{align-self:center;font-size:.86rem}
+.n4dz-link:disabled{cursor:default;opacity:.5}

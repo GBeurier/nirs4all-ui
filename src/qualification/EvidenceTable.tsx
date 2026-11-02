@@ -43,7 +43,7 @@ export function EvidenceTable({ metrics, provenance, locale = 'fr', caption, cla
           <tbody key={group.family ?? 'all'} data-family={group.family ?? undefined}>
             {group.family ? (
               <tr className="n4q-family-row">
-                <th scope="colgroup" colSpan={6}>
+                <th scope="rowgroup" colSpan={6}>
                   {loc(METRIC_FAMILY_LABEL[group.family], locale)}
                   <span className="n4q-family-count">{loc(T.nMetrics, locale).replace('{n}', String(group.metrics.length))}</span>
                   <span className="n4q-sub">{loc(METRIC_FAMILY_QUESTION[group.family], locale)}</span>

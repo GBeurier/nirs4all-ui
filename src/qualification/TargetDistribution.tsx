@@ -48,10 +48,12 @@ const STACK: readonly TargetPointStatus[] = ['exact', 'censored', 'composite'];
  * mean) above a histogram of the raw declared values; censored/composite counts are
  * stacked as outlined bars.
  */
-export function TargetDistribution({ summary, points = [], unit, title, locale = 'fr', width = 1000, className }: TargetDistributionProps) {
+export function TargetDistribution({ summary, points: declared = [], unit, title, locale = 'fr', width = 1000, className }: TargetDistributionProps) {
   const id = useId();
   const [hover, setHover] = useState<number | 'box' | null>(null);
   const t = (k: keyof typeof C) => loc(C[k], locale);
+  // non-finite values cannot be placed on the axis; they are neither binned nor counted
+  const points = declared.filter((p) => Number.isFinite(p.value));
   const height = points.length ? 236 : 112;
   const x0 = PAD.left;
   const x1 = width - PAD.right;
@@ -114,7 +116,7 @@ export function TargetDistribution({ summary, points = [], unit, title, locale =
             const w = Math.max(1, xs(b.to) - xs(b.from) - 1);
             let base = 0;
             return (
-              <g key={i} className="n4q-hit" onMouseEnter={() => setHover(i)} onFocus={() => setHover(i)} onBlur={() => setHover(null)} tabIndex={b.exact + b.censored + b.composite ? 0 : -1}>
+              <g key={i} className="n4q-hit" onMouseEnter={() => setHover(i)}>
                 <rect x={left} y={histTop} width={w} height={histBottom - histTop} fill="transparent" />
                 {STACK.map((status) => {
                   const n = b[status];
@@ -156,6 +158,17 @@ export function TargetDistribution({ summary, points = [], unit, title, locale =
             <div className="n4q-tip-head">{fmt(hb.from)} – {fmt(hb.to)}{u}</div>
             {STACK.filter((s) => hb[s] > 0).map((s) => <TipRow key={s} color={STATUS_COLOR[s]} label={t(s)} value={String(hb[s])} />)}
           </ChartTooltip>
+        ) : null}
+        {bins.length ? (
+          <table className="n4q-visually-hidden">
+            <caption>{title}</caption>
+            <thead><tr><th scope="col">{t('range')}</th>{STACK.map((s) => <th key={s} scope="col">{t(s)}</th>)}</tr></thead>
+            <tbody>
+              {bins.filter((b) => b.exact + b.censored + b.composite).map((b) => (
+                <tr key={b.from}><th scope="row">{fmt(b.from)} – {fmt(b.to)}{u}</th>{STACK.map((s) => <td key={s}>{b[s]}</td>)}</tr>
+              ))}
+            </tbody>
+          </table>
         ) : null}
       </div>
       <figcaption>
