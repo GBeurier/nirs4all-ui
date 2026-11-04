@@ -113,6 +113,10 @@
     "./pipelines": {
       "types": "./dist/pipelines/index.d.ts",
       "import": "./dist/pipelines/index.js"
+    },
+    "./ranking": {
+      "types": "./dist/ranking/index.d.ts",
+      "import": "./dist/ranking/index.js"
     }
   },
   "scripts": {
