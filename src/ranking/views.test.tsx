@@ -25,7 +25,7 @@ describe("ranking views", () => {
     expect(html).toContain("one approximate posterior standard deviation (1 SD), not a confidence interval");
     expect(html).toContain("missing: 1");
     expect(html).toContain("friedman_suppressed");
-    expect(html).toContain("fanova: not_qualified");
+    expect(html).toContain("fanova: not qualified");
     expect(html).toContain("Model B");
   });
   it("projects the same scores and SD into plot and table, without inventing an SD", () => {
@@ -50,8 +50,35 @@ describe("ranking views", () => {
     const unavailable: QualityRanking = { ...ranking, state: "unavailable", reason: "split_requires_matched_external_error", candidates: [], coverage: null,
       provenance: { ...ranking.provenance, candidate_universe: [{ id: "a", label: "Model A", pipelines: ["p"] }] } };
     const html = renderToStaticMarkup(<QualityRankingPanel ranking={unavailable} />);
+    expect(html).toContain("Split strategy rankings require matched external error on a test or final partition.");
     expect(html).toContain("split_requires_matched_external_error");
     expect(html).toContain("Model A");
     expect(html).not.toContain("Candidate ranking values");
   });
+  it("orders native ranks first and unranked candidates by component without deriving ranks", () => {
+    const base = ranking.candidates[0]!;
+    const unsorted: QualityRanking = { ...ranking, dimension: "preprocessing_sequence", candidates: [
+      { ...base, id: "u2", label: "Unranked A", rank: null, component: 2, score: 100 },
+      { ...base, id: "r2", label: "Ranked B", rank: 2 },
+      { ...base, id: "u1", label: "Unranked Z", rank: null, component: 1, score: -100 },
+      { ...base, id: "r1b", label: "Ranked C", rank: 1 },
+      { ...base, id: "r1a", label: "Ranked A", rank: 1 },
+    ], capabilities: { ...ranking.capabilities, deferred: { mixed_effects: "mixed_effects_backend_not_qualified" } } };
+    const plots: RankingPlotProps[] = [];
+    const Plot = (props: RankingPlotProps) => { plots.push(props); return null; };
+    const html = renderToStaticMarkup(<QualityRankingPanel ranking={unsorted} Plot={Plot} />);
+    expect(html).toContain("Observed preprocessing sequence ranking");
+    expect(html).toContain("Mixed effects analysis is not yet qualified.");
+    const order = ["Ranked A", "Ranked C", "Ranked B", "Unranked Z", "Unranked A"];
+    const candidateTable = html.split("Candidate ranking values")[1]!.split("</table>")[0]!;
+    expect(order.every(label => candidateTable.includes(label))).toBe(true);
+    expect(order.map(label => candidateTable.indexOf(label))).toEqual([...order.map(label => candidateTable.indexOf(label))].sort((a, b) => a - b));
+    expect(candidateTable).toContain('<th scope="row">Ranked B</th><td>2</td>');
+    expect(candidateTable).toContain('<th scope="row">Unranked Z</th><td>Not available</td>');
+    for (const plot of plots) expect(plot.layout.yaxis).toMatchObject({
+      categoryorder: "array", categoryarray: ["r1a", "r1b", "r2", "u1", "u2"], autorange: "reversed",
+    });
+    expect(plots[1]!.data[0]!.y).toEqual(["r1a", "r1b", "r2", "u1", "u2"]);
+  });
+
 });
