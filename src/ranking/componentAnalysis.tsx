@@ -78,6 +78,8 @@ export interface ComponentAnalysisViewProps {
 const value = (number: number | null | undefined) => number == null ? "Not available" : String(number);
 const jsonValue = (item: unknown) => item == null ? "Not specified" : JSON.stringify(item);
 const friendly = (code: string) => code.replaceAll("_", " ");
+const flag = (item: unknown) => item === true || item === 1 ? "Yes" : item === false || item === 0 ? "No" : "Not available";
+const diagnostic = (items: Record<string, unknown>, key: string) => typeof items[key] === "number" ? String(items[key]) : "Not available";
 
 /** Shows the exact declared factors, references and domains before any fit. */
 export function AnalysisDesignPreview({ analysis }: { analysis: ComponentAnalysis }) {
@@ -104,12 +106,23 @@ function Evidence({ analysis }: { analysis: ComponentAnalysis }) {
 /** Presents native beta, SE and covariance without computing intervals or tests. */
 export function MixedEffectsView({ analysis, Plot, className }: ComponentAnalysisViewProps) {
   const result = analysis.result?.schema_version === "n4m.mixed_effects/1" ? analysis.result : null;
+  const reml = result?.options.reml;
+  const method = reml === true || reml === 1 ? "REML" : reml === false || reml === 0 ? "ML" : "Not reported";
   const coefficients = result?.beta?.map((beta, index) => ({ name: analysis.design.columns[index]?.name ?? `Column ${index}`, beta, se: result.standard_errors?.[index] ?? null })) ?? [];
   const scored = coefficients.filter(row => row.beta !== null);
   const withSe = scored.filter(row => row.se !== null);
   const withoutSe = scored.filter(row => row.se === null);
   const trace = (rows: typeof coefficients, error: boolean) => ({ type: "scatter", mode: "markers", name: "Adjusted coefficient", x: rows.map(row => row.beta), y: rows.map(row => row.name), ...(error ? { error_x: { type: "data", array: rows.map(row => row.se), visible: true } } : {}) });
   return <section className={className}><h2>Adjusted mixed effects</h2><Evidence analysis={analysis} />
+    {result ? <table><caption>Native mixed effect fit diagnostics</caption><tbody>
+      <tr><th scope="row">Estimation method</th><td>{method}</td></tr>
+      <tr><th scope="row">Fit state</th><td>{typeof result.diagnostics.fit_state === "string" ? friendly(result.diagnostics.fit_state) : "Not available"}</td></tr>
+      <tr><th scope="row">Converged</th><td>{flag(result.diagnostics.converged)}</td></tr>
+      <tr><th scope="row">Boundary variance estimate</th><td>{flag(result.diagnostics.boundary)}</td></tr>
+      <tr><th scope="row">Design rank</th><td>{diagnostic(result.diagnostics, "design_rank")}</td></tr>
+      <tr><th scope="row">Design condition number</th><td>{diagnostic(result.diagnostics, "condition_number")}</td></tr>
+      <tr><th scope="row">{method === "REML" ? "Restricted log likelihood (REML)" : method === "ML" ? "Log likelihood (ML)" : "Log likelihood (method not reported)"}</th><td>{diagnostic(result.diagnostics, "log_likelihood")}</td></tr>
+    </tbody></table> : null}
     {analysis.state !== "ready" || !result ? <p>Analysis unavailable: {analysis.reason ? friendly(analysis.reason) : "Reason not provided"}. {analysis.reason ? <code>{analysis.reason}</code> : null}</p> : <>
       <figure><figcaption><strong>Adjusted coefficients</strong><p>Each categorical coefficient compares its level with the declared reference, conditional on the displayed fixed effects and random intercepts. Numeric coefficients describe one unit of the parameter. Error bars show one native coefficient standard error, not a confidence interval. {analysis.direction === "min" ? "Negative coefficients indicate a lower response." : "Positive coefficients indicate a higher response."}</p></figcaption>
         {Plot && scored.length ? <Plot data={[...(withSe.length ? [trace(withSe, true)] : []), ...(withoutSe.length ? [trace(withoutSe, false)] : [])]} layout={{ xaxis: { title: { text: "Adjusted coefficient in response units" }, zeroline: true }, yaxis: { type: "category", autorange: "reversed" }, showlegend: false }} config={{ staticPlot: true, displayModeBar: false }} /> : null}
@@ -129,6 +142,15 @@ export function FanovaView({ analysis, Plot, className }: ComponentAnalysisViewP
   const scored = main.filter(row => row.fraction !== null);
   return <section className={className}><h2>Surrogate functional ANOVA</h2><Evidence analysis={analysis} />
     <p>Importance describes variation of a fitted surrogate over the declared domain. A larger fraction does not mean a configuration improves performance, and it does not establish causality.</p>
+    {result ? <table><caption>Native surrogate fit and held-out diagnostics</caption><tbody>
+      <tr><th scope="row">Trees</th><td>{diagnostic(result.diagnostics, "trees")}</td></tr>
+      <tr><th scope="row">Informative trees</th><td>{diagnostic(result.diagnostics, "informative_trees")}</td></tr>
+      <tr><th scope="row">Mean tree variance</th><td>{diagnostic(result.diagnostics, "total_variance_mean")}</td></tr>
+      <tr><th scope="row">Unreported variance fraction</th><td>{diagnostic(result.diagnostics, "remaining_fraction")}</td></tr>
+      <tr><th scope="row">Training RMSE</th><td>{diagnostic(result.diagnostics, "train_rmse")}</td></tr>
+      <tr><th scope="row">Held-out RMSE</th><td>{diagnostic(result.diagnostics, "validation_rmse")}</td></tr>
+      <tr><th scope="row">Held-out R²</th><td>{diagnostic(result.diagnostics, "validation_r2")}</td></tr>
+    </tbody></table> : null}
     {analysis.state !== "ready" || !result ? <p>Analysis unavailable: {analysis.reason ? friendly(analysis.reason) : "Reason not provided"}. {analysis.reason ? <code>{analysis.reason}</code> : null}</p> : <>
       <figure><figcaption><strong>Main factor importance</strong><p>Fractions and tree dispersion come from the native backend. Tree SD describes variation between trees; it is not a standard error or confidence interval. Missing values are shown as Not available.</p></figcaption>
         {Plot && scored.length ? <Plot data={[{ type: "bar", orientation: "h", x: scored.map(row => row.fraction), y: scored.map(row => name(row.index)) }]} layout={{ xaxis: { title: { text: "Fraction of surrogate variance" }, rangemode: "tozero" }, yaxis: { type: "category", autorange: "reversed" }, showlegend: false }} config={{ staticPlot: true, displayModeBar: false }} /> : null}
