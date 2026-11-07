@@ -131,7 +131,7 @@
     "brand:sync": "node scripts/sync-ecosystem-brands.mjs",
     "build": "tsc -p tsconfig.build.json && vite build --config vite.browser.config.ts",
     "ci": "npm run prepublishOnly && npm run pack:smoke && npm run release:artifact:test && npm run smoke:react-consumers",
-    "pack:smoke": "npm pack --dry-run",
+    "pack:smoke": "npm pack --dry-run --ignore-scripts",
     "release:artifact": "node scripts/release-artifact.mjs build",
     "release:artifact:test": "node --test scripts/release-artifact.test.mjs",
     "release:artifact:verify": "node scripts/release-artifact.mjs verify",
