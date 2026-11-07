@@ -82,6 +82,15 @@ export interface SpectraViewProps {
   className?: string | undefined;
 }
 
+/** Name the supplied coordinate without inferring physical units from values. */
+export function spectralAxisLabel(unit?: string): string {
+  const coordinateUnit = unit?.trim() ?? "";
+  if (coordinateUnit === "index") return "Feature index (positional)";
+  const name = coordinateUnit === "nm" ? "Wavelength"
+    : ["cm-1", "cm⁻¹", "cm^-1", "1/cm"].includes(coordinateUnit) ? "Wavenumber" : "Spectral coordinate";
+  return coordinateUnit ? `${name} (${coordinateUnit})` : name;
+}
+
 /** Above this many selected curves, non-line modes draw the selection as an envelope. */
 const SELECTION_LINE_LIMIT = 60;
 
@@ -206,7 +215,7 @@ export function SpectraView({
   bandGroups,
   ghost,
   regions,
-  unit = "nm",
+  unit,
   xLabel,
   yLabel = "Absorbance",
   invertX = false,
@@ -573,12 +582,13 @@ export function SpectraView({
   };
 
   const tools: PlotTool[] = ["select", "zoom", "pan"];
+  const axisLabel = xLabel ?? spectralAxisLabel(unit);
   return (
     <CanvasPlot
       className={className}
       xDomain={xDomain}
       yDomain={yDomain}
-      xLabel={xLabel ?? `Wavelength (${unit})`}
+      xLabel={axisLabel}
       yLabel={yLabel}
       formatX={(v) => formatValue(v, 1)}
       invertX={invertX}
@@ -597,7 +607,7 @@ export function SpectraView({
       {...(renderTooltip ? { renderTooltip } : {})}
       crosshair
       ariaLabel={ariaLabel}
-      description={`${universe.length} spectra${curves.length < universe.length ? ` (${curves.length} drawn)` : ""} over ${wavelengths.length} wavelengths, ${mode} mode${hasSelection ? `, ${selected.length} selected` : ""}.`}
+      description={`${universe.length} spectra${curves.length < universe.length ? ` (${curves.length} drawn)` : ""} over ${wavelengths.length} spectral coordinates; ${axisLabel}, ${mode} mode${hasSelection ? `, ${selected.length} selected` : ""}.`}
       icons={icons}
       toolExtras={toolExtras}
     />

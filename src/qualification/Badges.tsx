@@ -1,4 +1,5 @@
 import { loc, type Locale } from '../lab/locale.js';
+import { reasonLabel } from './terminology.js';
 import { cx } from './_cx.js';
 import { AVAILABILITY_LABEL, CONFIDENCE_LABEL, PROFILE_STATUS_HINT, PROFILE_STATUS_LABEL, SEVERITY_LABEL } from './locale.js';
 import type { AvailabilityStatus, ProfileStatus, QualificationConfidence, QualificationSeverity } from './types.js';
@@ -27,7 +28,7 @@ export function AvailabilityBadge({
   return (
     <span className={cx('n4q-badge', `n4q-avail-${status}`, className)} data-availability={status}>
       {loc(AVAILABILITY_LABEL[status], locale)}
-      {reason ? <code className="n4q-reason">{reason}</code> : null}
+      {reason ? <span className="n4q-reason" title={reason}>{reasonLabel(reason)}</span> : null}
     </span>
   );
 }

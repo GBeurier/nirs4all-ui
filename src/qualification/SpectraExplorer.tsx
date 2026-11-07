@@ -1,3 +1,4 @@
+import { ChartDataTable } from './ChartDataTable.js';
 import { useId, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { loc, type Locale } from '../lab/locale.js';
 import { extentOf, makeScale, niceExtent, ticks } from '../viz/geometry.js';
@@ -47,12 +48,18 @@ function path(values: readonly (number | null)[], x: (i: number) => number, y: (
   return d;
 }
 
+/** A plotted/tabulated cell: only finite numbers; null, undefined and NaN/Infinity read as missing. */
+function finiteOrNull(v: number | null | undefined): number | null {
+  return typeof v === 'number' && Number.isFinite(v) ? v : null;
+}
+
 /**
  * Raw spectra explorer: hover finds the nearest curve at the nearest band, click (or
  * ↑/↓) selects it, ←/→ moves along the axis. Missing cells leave gaps and get a mark
  * on the axis. Draws input values only.
  */
 export function SpectraExplorer({ axis, series, axisUnit = '', yLabel = '', title, selected = [], onSelect, locale = 'fr', width = 900, height = 340, className }: SpectraExplorerProps) {
+  const [dataBand, setDataBand] = useState(0);
   const id = useId();
   const [hover, setHover] = useState<{ series: number | null; band: number } | null>(null);
   const t = (k: keyof typeof C) => loc(C[k], locale);
@@ -73,6 +80,8 @@ export function SpectraExplorer({ axis, series, axisUnit = '', yLabel = '', titl
   const focusIdx = hover?.series ?? (selectedIdx >= 0 ? selectedIdx : null);
   const emphasised = (k: number) => k === focusIdx || chosen.has(series[k]!.id);
   const u = axisUnit ? ` ${axisUnit}` : '';
+  // The table band is clamped at render time: `update` may hand over a shorter axis.
+  const tableBand = n ? Math.min(Math.max(dataBand, 0), n - 1) : 0;
 
   const nearestBand = (px: number) => {
     let best = 0;
@@ -126,6 +135,7 @@ export function SpectraExplorer({ axis, series, axisUnit = '', yLabel = '', titl
   const missing = series.flatMap((s, k) => s.values.flatMap((v, i) => (v === null || !Number.isFinite(v) ? [{ k, i }] : [])));
   const focus = focusIdx !== null ? series[focusIdx] : undefined;
   const band = hover?.band ?? null;
+  const focusValue = band !== null && focus ? finiteOrNull(focus.values[band]) : null;
   const desc = `${series.length} ${t('spectra')}, ${n} ${t('band')}; ${fmt(xd.min)}–${fmt(xd.max)}${u}; ${missing.length} ${t('missingValue')}`;
 
   return (
@@ -162,8 +172,8 @@ export function SpectraExplorer({ axis, series, axisUnit = '', yLabel = '', titl
             <path key={`m${k}-${i}`} d={`M${xAt(i)},${y1 - 1}l-4,-7h8Z`} fill={MISSING} className="n4q-explorer-missing" data-active={emphasised(k) || undefined} />
           ))}
           {band !== null ? <line className="n4q-crosshair" x1={xAt(band)} x2={xAt(band)} y1={y0} y2={y1} pointerEvents="none" /> : null}
-          {band !== null && focus && focus.values[band] !== null && focus.values[band] !== undefined ? (
-            <circle className="n4q-marker" cx={xAt(band)} cy={ys(focus.values[band] as number)} r={4.5} fill={focus.color} pointerEvents="none" />
+          {band !== null && focus && focusValue !== null ? (
+            <circle className="n4q-marker" cx={xAt(band)} cy={ys(focusValue)} r={4.5} fill={focus.color} pointerEvents="none" />
           ) : null}
           <rect
             x={x0}
@@ -178,18 +188,42 @@ export function SpectraExplorer({ axis, series, axisUnit = '', yLabel = '', titl
           />
         </svg>
         {band !== null ? (
-          <ChartTooltip x={xAt(band)} y={focus && focus.values[band] != null ? ys(focus.values[band] as number) : y0 + 10} width={width} height={height}>
+          <ChartTooltip x={xAt(band)} y={focusValue !== null ? ys(focusValue) : y0 + 10} width={width} height={height}>
             <div className="n4q-tip-head">{t('band')} {fmt(axis[band] ?? null)}{u}</div>
             {focus ? (
               <>
-                <TipRow line color={focus.color} label={focus.id} value={focus.values[band] == null ? '—' : fmt(focus.values[band] as number)} />
+                <TipRow line color={focus.color} label={focus.id} value={focusValue === null ? '—' : fmt(focusValue)} />
                 {focus.label ? <div className="n4q-tip-sub">{focus.label}</div> : null}
-                {focus.values[band] == null ? <div className="n4q-tip-sub n4q-tip-alert">{t('missingValue')}</div> : null}
+                {focusValue === null ? <div className="n4q-tip-sub n4q-tip-alert">{t('missingValue')}</div> : null}
               </>
             ) : <div className="n4q-tip-sub">{series.length} {t('spectra')}</div>}
           </ChartTooltip>
         ) : null}
       </div>
+      <details className="n4q-datatable">
+        <summary>Spectrum values by band</summary>
+        <label>
+          Band index (1–{n}){' '}
+          <input
+            type="number"
+            min={1}
+            max={Math.max(n, 1)}
+            value={tableBand + 1}
+            disabled={n === 0}
+            onChange={(event) => {
+              const next = Number(event.target.value);
+              if (Number.isFinite(next)) setDataBand(Math.max(0, Math.min(n - 1, Math.trunc(next) - 1)));
+            }}
+          />
+        </label>
+        <ChartDataTable
+          open
+          caption={n ? `${title} · ${axis[tableBand]}${u}` : `${title}: no bands`}
+          locale={locale}
+          columns={['Spectrum', 'Sample / metadata', yLabel || 'Signal']}
+          rows={n ? series.map((s) => [s.id, s.label ?? null, finiteOrNull(s.values[tableBand])]) : []}
+        />
+      </details>
     </figure>
   );
 }

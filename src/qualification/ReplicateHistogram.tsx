@@ -1,3 +1,4 @@
+import { ChartDataTable } from './ChartDataTable.js';
 import { useId, useState } from 'react';
 import { loc, type Locale } from '../lab/locale.js';
 import { makeScale, ticks } from '../viz/geometry.js';
@@ -94,6 +95,7 @@ export function ReplicateHistogram({ values, observed = null, title, valueLabel,
           {observed !== null ? <li><span className="n4q-key-line" style={{ background: OBS }} aria-hidden="true" />{t('observed')} <strong>{fmt(observed)}</strong>{observedNote ? <span className="n4q-legend-sub"> · {observedNote}</span> : null}</li> : null}
         </ul>
       </figcaption>
+      <ChartDataTable caption={title} locale={locale} columns={["Replicate", valueLabel]} rows={[["Observed", observed], ...values.map((v, i) => [String(i + 1), v])]} />
     </figure>
   );
 }

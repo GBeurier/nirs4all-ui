@@ -59,6 +59,10 @@ export interface InspectorStrings {
   needsParams: string;
   needsTwoRefs: string;
   needsSteps: string;
+  /** Shown where a view depends on statistics the UI would have to compute itself. */
+  needsLocalStatistics: string;
+  /** Short chip note for a compared chain whose host declared its predictions unavailable. */
+  predictionsUnavailable: string;
   viewLandscape: string;
   viewHeatmap: string;
   viewGeneralization: string;
@@ -238,6 +242,8 @@ export const INSPECTOR_STRINGS_EN: InspectorStrings = {
   needsParams: "No hyper-parameter varies across these chains.",
   needsTwoRefs: "Needs at least two score references (e.g. validation and test).",
   needsSteps: "Needs scored chains with steps.",
+  needsLocalStatistics: "Not available: this host supplies owner scores only and no statistics are computed in the UI.",
+  predictionsUnavailable: "predictions unavailable",
   viewLandscape: "Score landscape",
   viewHeatmap: "Pivot heatmap",
   viewGeneralization: "Generalization",
@@ -437,6 +443,8 @@ export const INSPECTOR_STRINGS_FR: InspectorStrings = {
   needsParams: "Aucun hyper-paramètre ne varie entre ces chaînes.",
   needsTwoRefs: "Nécessite au moins deux références de score (ex. validation et test).",
   needsSteps: "Nécessite des chaînes scorées avec leurs étapes.",
+  needsLocalStatistics: "Not available: this host supplies owner scores only and no statistics are computed in the UI.",
+  predictionsUnavailable: "predictions unavailable",
   viewLandscape: "Paysage des scores",
   viewHeatmap: "Carte croisée",
   viewGeneralization: "Généralisation",

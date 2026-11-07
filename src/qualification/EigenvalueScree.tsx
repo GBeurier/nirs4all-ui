@@ -1,3 +1,4 @@
+import { ChartDataTable } from './ChartDataTable.js';
 import { useId, useState } from 'react';
 import { loc, type Locale } from '../lab/locale.js';
 import { makeScale, ticks } from '../viz/geometry.js';
@@ -102,6 +103,7 @@ export function EigenvalueScree({ eigenvalues, totalVariance = null, title, loca
           <li className="n4q-legend-sub">{t('component')} 1–{values.length}</li>
         </ul>
       </figcaption>
+      <ChartDataTable caption={title} locale={locale} columns={["Component", "Eigenvalue", share ? "Variance share" : "Value", share ? "Cumulative share" : "Cumulative value"]} rows={eigenvalues.map((v, i) => [`PC${i + 1}`, v, values[i] ?? null, cumulative[i] ?? null])} />
     </figure>
   );
 }

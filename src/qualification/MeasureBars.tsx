@@ -1,3 +1,4 @@
+import { ChartDataTable } from './ChartDataTable.js';
 import { useId, useState } from 'react';
 import { loc, type Locale } from '../lab/locale.js';
 import { makeScale, ticks } from '../viz/geometry.js';
@@ -143,6 +144,7 @@ export function MeasureBars({ rows, title, valueLabel, intervalLabel, compareLab
           {reference ? <li><span className="n4q-key-line" style={{ background: 'var(--text-2, #475569)', height: 2 }} aria-hidden="true" />{reference.label} ({tickText(reference.value)})</li> : null}
         </ul>
       </figcaption>
+      <ChartDataTable caption={title} locale={locale} columns={["Group", valueLabel, intervalLabel ? `${intervalLabel} lower` : "Lower", intervalLabel ? `${intervalLabel} upper` : "Upper", compareLabel ?? "Comparison", "Notes"]} rows={rows.map((row) => [row.label, row.value, row.low ?? null, row.high ?? null, row.compare ?? null, row.note ?? null])} />
     </figure>
   );
 }

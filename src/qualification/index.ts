@@ -38,3 +38,5 @@ export * from './MeasureBars.js';
 export * from './HypothesisTestTable.js';
 export * from './ComparisonMatrix.js';
 export * from './ReplicateHistogram.js';
+
+export * from './terminology.js';

@@ -1,3 +1,4 @@
+import { ChartDataTable } from './ChartDataTable.js';
 import { useId, useState } from 'react';
 import { loc, type Locale } from '../lab/locale.js';
 import { extentOf, makeScale, niceExtent, ticks } from '../viz/geometry.js';
@@ -159,17 +160,7 @@ export function TargetDistribution({ summary, points: declared = [], unit, title
             {STACK.filter((s) => hb[s] > 0).map((s) => <TipRow key={s} color={STATUS_COLOR[s]} label={t(s)} value={String(hb[s])} />)}
           </ChartTooltip>
         ) : null}
-        {bins.length ? (
-          <table className="n4q-visually-hidden">
-            <caption>{title}</caption>
-            <thead><tr><th scope="col">{t('range')}</th>{STACK.map((s) => <th key={s} scope="col">{t(s)}</th>)}</tr></thead>
-            <tbody>
-              {bins.filter((b) => b.exact + b.censored + b.composite).map((b) => (
-                <tr key={b.from}><th scope="row">{fmt(b.from)} – {fmt(b.to)}{u}</th>{STACK.map((s) => <td key={s}>{b[s]}</td>)}</tr>
-              ))}
-            </tbody>
-          </table>
-        ) : null}
+
       </div>
       <figcaption>
         <ul className="n4q-legend">
@@ -183,6 +174,7 @@ export function TargetDistribution({ summary, points: declared = [], unit, title
           ))}
         </ul>
       </figcaption>
+      {bins.length ? <ChartDataTable caption={title} locale={locale} columns={[`${t('range')} from${u}`, `${t('range')} to${u}`, ...STACK.map((s) => t(s))]} rows={bins.filter((b) => b.exact + b.censored + b.composite).map((b) => [b.from, b.to, ...STACK.map((s) => b[s])])} /> : null}
     </figure>
   );
 }
@@ -220,6 +212,7 @@ export function ClassCountBars({ counts, title, width = 640, className }: ClassC
           );
         })}
       </svg>
+      <ChartDataTable caption={title} locale="en" columns={["Class", "Count"]} rows={rows} />
     </figure>
   );
 }

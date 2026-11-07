@@ -117,7 +117,7 @@ describe("chart components", () => {
   it("draws the flow with every segment labelled, zero ones in the legend", () => {
     const stage = samplePopulationStage(extractSamplePopulations(view), "en")!;
     const html = renderToStaticMarkup(<PopulationFlow stages={[stage]} title="Samples" locale="en" />);
-    expect(html).toContain("Real development: 24 samples");
+    expect(html).toContain("Real calibration: 24 samples");
     expect(html).toContain("data-zero=\"true\"");
   });
 

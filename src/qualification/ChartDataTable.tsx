@@ -23,7 +23,7 @@ export function ChartDataTable({ caption, columns, rows, locale = 'fr', open = f
           <thead><tr>{columns.map((c) => <th key={c} scope="col">{c}</th>)}</tr></thead>
           <tbody>
             {rows.map((row, i) => (
-              <tr key={i}>{row.map((cell, j) => <td key={j} className={typeof cell === 'number' ? 'n4q-num' : undefined}>{cell === null ? loc(T.notAvailable, locale) : cell}</td>)}</tr>
+              <tr key={i}>{row.map((cell, j) => <td key={j} data-value={cell === null ? "" : String(cell)} className={typeof cell === 'number' ? 'n4q-num' : undefined}>{cell === null ? loc(T.notAvailable, locale) : cell}</td>)}</tr>
             ))}
           </tbody>
         </table>

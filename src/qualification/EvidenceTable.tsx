@@ -14,6 +14,10 @@ export interface EvidenceTableProps {
   className?: string;
   /** Group rows under their metric family (default true). */
   grouped?: boolean;
+  /** Host-owned selection keys; repeated metrics remain independently selectable. */
+  selected?: ReadonlySet<string>;
+  metricKey?: (metric: QualificationMetricView) => string;
+  onToggle?: (key: string) => void;
 }
 
 const fullValue = (value: unknown) => {
@@ -23,7 +27,7 @@ const fullValue = (value: unknown) => {
 };
 
 /** Evidence availability table: every metric with status, reason, scope, denominators, provenance. Native table = keyboard/AT friendly. */
-export function EvidenceTable({ metrics, provenance, locale = 'fr', caption, className, grouped = true }: EvidenceTableProps) {
+export function EvidenceTable({ metrics, provenance, locale = 'fr', caption, className, grouped = true, selected, metricKey, onToggle }: EvidenceTableProps) {
   const groups = grouped ? groupMetricsByFamily(metrics) : [{ family: null, metrics: [...metrics] }];
   return (
     <div className={cx('n4q-table-wrap', className)} role="region" tabIndex={0} aria-label={caption ?? loc(T.evidence, locale)}>
@@ -31,6 +35,7 @@ export function EvidenceTable({ metrics, provenance, locale = 'fr', caption, cla
         <caption>{caption ?? loc(T.evidence, locale)}</caption>
         <thead>
           <tr>
+            {onToggle ? <th scope="col">Export</th> : null}
             <th scope="col">{loc(T.metric, locale)}</th>
             <th scope="col">{loc(T.status, locale)}</th>
             <th scope="col">{loc(T.value, locale)}</th>
@@ -43,7 +48,7 @@ export function EvidenceTable({ metrics, provenance, locale = 'fr', caption, cla
           <tbody key={group.family ?? 'all'} data-family={group.family ?? undefined}>
             {group.family ? (
               <tr className="n4q-family-row">
-                <th scope="rowgroup" colSpan={6}>
+                <th scope="rowgroup" colSpan={onToggle ? 7 : 6}>
                   {loc(METRIC_FAMILY_LABEL[group.family], locale)}
                   <span className="n4q-family-count">{loc(T.nMetrics, locale).replace('{n}', String(group.metrics.length))}</span>
                   <span className="n4q-sub">{loc(METRIC_FAMILY_QUESTION[group.family], locale)}</span>
@@ -52,6 +57,7 @@ export function EvidenceTable({ metrics, provenance, locale = 'fr', caption, cla
             ) : null}
             {group.metrics.map((m, i) => (
               <tr key={`${m.id}:${m.sourceId ?? ''}:${m.targetId ?? ''}:${i}`} data-metric-id={m.id} data-availability={m.status}>
+                {onToggle && metricKey ? <td><input type="checkbox" aria-label={`Export ${metricLabel(m.id, locale)} ${m.sourceId ?? ""} ${m.targetId ?? ""}`} checked={selected?.has(metricKey(m)) ?? false} onChange={() => onToggle(metricKey(m))} /></td> : null}
                 <th scope="row">{metricLabel(m.id, locale) !== m.id ? <span className="n4q-metric-name">{metricLabel(m.id, locale)}</span> : null}<code>{m.id}</code></th>
                 <td><AvailabilityBadge status={m.status} reason={m.reasonCode} locale={locale} /></td>
                 <td className={m.value !== null && typeof m.value === 'object' && !isScaledEngineNumber(m.value) ? 'n4q-structured' : 'n4q-num'} title={m.status === 'computed' ? fullValue(m.value) : undefined}>
@@ -60,7 +66,6 @@ export function EvidenceTable({ metrics, provenance, locale = 'fr', caption, cla
                     : <span className="n4q-null">{loc(T.notAvailable, locale)}</span>}
                 </td>
                 <td>
-                  {m.scope}
                   <span className="n4q-sub">
                     {[m.sourceId && `${loc(T.source, locale)} ${m.sourceId}`, m.targetId && `${loc(T.target, locale)} ${m.targetId}`, `${loc(T.population, locale)} ${m.populationId}`, `${loc(T.view, locale)} ${m.viewId}`].filter(Boolean).join(' · ')}
                   </span>

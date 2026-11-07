@@ -114,6 +114,19 @@ export interface PlaygroundProps {
   layout?: WorkbenchLayout | undefined;
   defaultLayout?: WorkbenchLayout | undefined;
   onLayoutChange?: ((layout: WorkbenchLayout) => void) | undefined;
+  /**
+   * Views the host supports (menu, layout, shortcuts and analysis `needs`).
+   * Views missing from the list never render, even when a saved layout names
+   * them. Omit to offer every view. Keep `samples` for a text/table equivalent.
+   */
+  availableViews?: readonly PlaygroundViewId[] | undefined;
+  /**
+   * Allow statistics computed in the UI (default `true`). `false` removes the
+   * correlation, variability and group-means views and the 95 % score ellipse
+   * (and the target-axis regression line); projections, outliers and loadings
+   * stay whatever the host supplies.
+   */
+  localStatistics?: boolean | undefined;
   colorBy?: string | null | undefined;
   onColorByChange?: ((key: string | null) => void) | undefined;
   /** Palettes used by every view (controlled when provided). */
@@ -268,6 +281,15 @@ const VIEW_GLYPH: Record<PlaygroundViewId, ReactNode> = {
   ),
 };
 
+/** Views whose numbers the UI computes itself (see `localStatistics`). */
+const LOCAL_STATISTIC_VIEWS: ReadonlySet<string> = new Set<PlaygroundViewId>(["correlation", "variance", "groupMeans"]);
+
+/** Drop views outside `allowed` (and a maximized one) from a layout; `null` allows everything. */
+function restrictLayout(layout: WorkbenchLayout, allowed: ReadonlySet<string> | null): WorkbenchLayout {
+  if (!allowed) return layout;
+  return { ...layout, views: layout.views.filter((id) => allowed.has(id)), maximized: layout.maximized && allowed.has(layout.maximized) ? layout.maximized : null };
+}
+
 let requestCounter = 0;
 
 /**
@@ -287,6 +309,7 @@ export function Playground(props: PlaygroundProps) {
     error,
     onRunRequest,
     runDebounceMs = 120,
+    localStatistics = true,
     locale,
     icons,
   } = props;
@@ -328,7 +351,15 @@ export function Playground(props: PlaygroundProps) {
   }, [cursor, pipeline]);
 
   // ---------------------------------------------------------------- layout, color, scope, selection
-  const [layout, setLayout] = useControllable<WorkbenchLayout>(props.layout, props.defaultLayout ?? DEFAULT_PLAYGROUND_LAYOUT, props.onLayoutChange);
+  const [layoutState, setLayout] = useControllable<WorkbenchLayout>(props.layout, props.defaultLayout ?? DEFAULT_PLAYGROUND_LAYOUT, props.onLayoutChange);
+  const availableKey = props.availableViews ? props.availableViews.join("|") : null;
+  const allowedViews = useMemo<ReadonlySet<string> | null>(() => {
+    if (availableKey === null && localStatistics) return null;
+    const ids = availableKey === null ? Object.keys(VIEW_GLYPH) : availableKey.split("|");
+    return new Set(ids.filter((id) => localStatistics || !LOCAL_STATISTIC_VIEWS.has(id)));
+  }, [availableKey, localStatistics]);
+  // Everything below (needs, shortcuts, menu, grid) sees only the allowed views, whatever a saved layout says.
+  const layout = useMemo(() => restrictLayout(layoutState, allowedViews), [layoutState, allowedViews]);
   const [targetName, setTargetName] = useState<string | null>(dataset?.targets?.[0]?.name ?? null);
   const [colorByState, setColorByState] = useControllable<string | null>(props.colorBy, null, props.onColorByChange);
   const [colorScheme, setColorScheme] = useControllable<ColorScheme>(props.colorScheme, DEFAULT_COLOR_SCHEME, props.onColorSchemeChange);
@@ -525,17 +556,21 @@ export function Playground(props: PlaygroundProps) {
       value: String(k),
       label: options.scores.projection === "pca" ? `${strings.component}${k + 1}` : `${options.scores.projection.toUpperCase()} ${k + 1}`,
     })),
-    ...(target?.kind === "regression" ? [{ value: String(TARGET_AXIS), label: `${strings.target} · ${target.name}` }] : []),
+    // Plotting against the target draws a UI-computed regression line: only with local statistics.
+    ...(localStatistics && target?.kind === "regression" ? [{ value: String(TARGET_AXIS), label: `${strings.target} · ${target.name}` }] : []),
   ];
   const hasTarget = Boolean(target);
   const so = options.spectra;
-  const sc = options.scores;
+  // Without local statistics the ellipse is forced off (never computed) and no axis may be the target.
+  const sc: ScoresOptions = localStatistics
+    ? options.scores
+    : { ...options.scores, ellipse: false, axes: [0, 1, 2].map((i) => (options.scores.axes[i] === TARGET_AXIS ? i : options.scores.axes[i]!)) as [number, number, number] };
   const rp = options.repetitions;
   const nmAxis = /nm/i.test(raw.unit);
   const regions = wavelengthRange && nmAxis ? NIR_REGIONS.filter((r) => r.range[0] < wavelengthRange[1] && r.range[1] > wavelengthRange[0]) : [];
   const replicateCandidates = (dataset.metadata ?? []).filter((c) => c.kind === "categorical");
   const curvesShown = so.sampleCount > 0 ? Math.min(so.sampleCount, scopeOut.length) : scopeOut.length;
-  const views: ViewSpec[] = [
+  const allViews: ViewSpec[] = [
     {
       id: "spectra",
       title: strings.viewSpectra,
@@ -709,7 +744,7 @@ export function Playground(props: PlaygroundProps) {
       id: "scores",
       title: strings.viewScores,
       icon: VIEW_GLYPH.scores,
-      description: strings.descScores,
+      description: localStatistics ? strings.descScores : strings.descScoresPlain,
       subtitle: projection
         ? `${projection.method.toUpperCase()}${sc.view3d ? " · 3D" : ""} · ${sc.axes
             .slice(0, sc.view3d ? 3 : 2)
@@ -788,7 +823,7 @@ export function Playground(props: PlaygroundProps) {
             />
           </div>
           <Toggle checked={sc.equalScale} onChange={(equalScale) => patchView("scores", { equalScale })} label={strings.equalScale} />
-          {!sc.view3d ? <Toggle checked={sc.ellipse} onChange={(ellipse) => patchView("scores", { ellipse })} label={strings.ellipse} /> : null}
+          {localStatistics && !sc.view3d ? <Toggle checked={sc.ellipse} onChange={(ellipse) => patchView("scores", { ellipse })} label={strings.ellipse} /> : null}
         </>
       ),
       render: () => <ScoresBody ctx={ctx} opts={sc} />,
@@ -1031,6 +1066,7 @@ export function Playground(props: PlaygroundProps) {
       render: () => <SamplesBody ctx={ctx} />,
     },
   ];
+  const views = allowedViews ? allViews.filter((view) => allowedViews.has(view.id)) : allViews;
 
   const cursorStep = cursor && cursor !== RAW_CURSOR ? pipeline.find((s) => s.id === cursor) : undefined;
   const cursorLabel = cursor === RAW_CURSOR ? strings.rawData : cursorStep ? cursorStep.label ?? operatorById.get(cursorStep.operatorId)?.name ?? cursorStep.operatorId : null;

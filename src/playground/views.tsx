@@ -22,7 +22,7 @@ import { Scatter3DView } from "../workbench/Scatter3DView.js";
 import { ScatterView, type ScatterGuide } from "../workbench/ScatterView.js";
 import { clickSelection, selectionModeFromModifiers, combineSelection, type Selection } from "../workbench/selection.js";
 import { sampleRows, type SamplingStrategy } from "../workbench/sampling.js";
-import { SpectraView, type SpectraBandGroup, type SpectraBandKind, type SpectraDisplayMode, type SpectraGhost, type SpectraStatLine } from "../workbench/SpectraView.js";
+import { spectralAxisLabel, SpectraView, type SpectraBandGroup, type SpectraBandKind, type SpectraDisplayMode, type SpectraGhost, type SpectraStatLine } from "../workbench/SpectraView.js";
 import { VirtualTable, type VirtualColumn } from "../workbench/VirtualTable.js";
 import type { PlaygroundStrings } from "./locale.js";
 import { outputToSelection, sampleLabel, type PlaygroundFrame } from "./model.js";
@@ -225,6 +225,7 @@ function SpectraPane({
         bandGroups={bandGroups}
         ghost={ghost ?? null}
         unit={frame.unit}
+        xLabel={spectralAxisLabel(frame.unit)}
         yLabel={yLabel}
         invertX={opts.invertX ?? isWavenumber(frame.unit)}
         onHover={(o) => ctx.setHoverRow(o === null ? null : frame.rows[o] ?? null)}
@@ -590,7 +591,7 @@ export function LoadingsBody({ ctx, components }: { ctx: PlaygroundViewContext; 
   const maxExplained = Math.max(...explained, 0.0001);
   return (
     <>
-      <ProfileView x={ctx.frame.wavelengths} series={series} xLabel={`Wavelength (${ctx.frame.unit})`} yLabel="Loading" icons={ctx.icons} ariaLabel="PCA loadings" />
+      <ProfileView x={ctx.frame.wavelengths} series={series} xLabel={spectralAxisLabel(ctx.frame.unit)} yLabel="Loading" icons={ctx.icons} ariaLabel={`PCA loadings · ${spectralAxisLabel(ctx.frame.unit)}`} />
       {explained.length > 0 ? (
         <footer className="n4wb-view-foot n4pg-scree" aria-label="Explained variance">
           {explained.slice(0, 10).map((ratio, k) => (
@@ -641,12 +642,12 @@ export function CorrelationBody({ ctx, showRaw }: { ctx: PlaygroundViewContext; 
         x={ctx.frame.wavelengths}
         series={series}
         yDomain={[-1, 1]}
-        xLabel={`Wavelength (${ctx.frame.unit})`}
+        xLabel={spectralAxisLabel(ctx.frame.unit)}
         yLabel={`r(λ, ${target.name})`}
         regions={range ? [{ from: range[0], to: range[1] }] : undefined}
         {...(ctx.onCropRange ? { onRangeSelect: (r: readonly [number, number]) => setRange(r) } : {})}
         icons={ctx.icons}
-        ariaLabel="Wavelength correlation profile"
+        ariaLabel={`Spectral coordinate correlation profile · ${spectralAxisLabel(ctx.frame.unit)}`}
       />
       <footer className="n4wb-view-foot">
         {bestOut ? (
@@ -1035,11 +1036,11 @@ export function VarianceBody({ ctx, opts }: { ctx: PlaygroundViewContext; opts: 
       <ProfileView
         x={frame.wavelengths}
         series={series}
-        xLabel={`Wavelength (${frame.unit})`}
+        xLabel={spectralAxisLabel(frame.unit)}
         yLabel={VARIANCE_METRIC_LABELS[opts.metric]}
         invertX={isWavenumber(frame.unit)}
         icons={ctx.icons}
-        ariaLabel="Per-wavelength variability"
+        ariaLabel={`Per-feature variability · ${spectralAxisLabel(frame.unit)}`}
       />
       <footer className="n4wb-view-foot">
         <span>
@@ -1102,11 +1103,11 @@ export function GroupMeansBody({ ctx, opts }: { ctx: PlaygroundViewContext; opts
       x={frame.wavelengths}
       series={series}
       zeroLine={opts.centered}
-      xLabel={`Wavelength (${frame.unit})`}
+      xLabel={spectralAxisLabel(frame.unit)}
       yLabel={opts.centered ? `${frame.signal} − overall mean` : frame.signal}
       invertX={isWavenumber(frame.unit)}
       icons={ctx.icons}
-      ariaLabel="Group mean spectra"
+      ariaLabel={`Group mean spectra · ${spectralAxisLabel(frame.unit)}`}
     />
   );
 }
@@ -1260,7 +1261,7 @@ export function HeatmapBody({ ctx, opts }: { ctx: PlaygroundViewContext; opts: H
       <CanvasPlot
         xDomain={xDomain}
         yDomain={[n, 0]}
-        xLabel={`Wavelength (${frame.unit})`}
+        xLabel={spectralAxisLabel(frame.unit)}
         yLabel={`Samples (by ${opts.sort === "pc1" ? "PC1" : opts.sort === "color" ? ctx.colorColumn?.label ?? "color" : opts.sort === "target" ? ctx.target?.name ?? "target" : "order"})`}
         formatY={() => ""}
         invertX={isWavenumber(frame.unit)}
@@ -1285,7 +1286,7 @@ export function HeatmapBody({ ctx, opts }: { ctx: PlaygroundViewContext; opts: H
         renderTooltip={(o) => <SampleTooltip ctx={ctx} outputRow={o} />}
         crosshair
         ariaLabel="Spectral heat map"
-        description={`${n} samples × ${matrix.cols} wavelengths.`}
+        description={`${n} samples × ${matrix.cols} spectral coordinates; ${spectralAxisLabel(frame.unit)}.`}
         icons={ctx.icons}
       />
       <footer className="n4wb-view-foot">
@@ -1413,7 +1414,7 @@ export function SelectionSpectrum({ ctx, height = 150 }: { ctx: PlaygroundViewCo
   if (series.length === 0) return null;
   return (
     <div className="n4pg-mini-chart" style={{ height }}>
-      <ProfileView x={frame.wavelengths} series={series} zeroLine={false} xLabel={undefined} yLabel={undefined} icons={ctx.icons} ariaLabel={strings.meanSpectrum} />
+      <ProfileView x={frame.wavelengths} series={series} zeroLine={false} xLabel={spectralAxisLabel(frame.unit)} yLabel={undefined} icons={ctx.icons} ariaLabel={`${strings.meanSpectrum} · ${spectralAxisLabel(frame.unit)}`} />
     </div>
   );
 }
