@@ -356,7 +356,9 @@ const tempRoot = await mkdtemp(path.join(tmpdir(), "nirs4all-ui-react-smoke-"));
 
 try {
   console.log("Packing nirs4all-ui...");
-  const packOutput = run("npm", ["pack", "--json", "--pack-destination", tempRoot], { capture: true });
+  // --ignore-scripts packs the already built dist: the `prepare` lifecycle would rebuild and
+  // write its progress to stdout, which is not part of the --json output parsed below.
+  const packOutput = run("npm", ["pack", "--json", "--ignore-scripts", "--pack-destination", tempRoot], { capture: true });
   const tarballPath = path.join(tempRoot, parsePackOutput(packOutput));
 
   for (const consumer of consumers) {
