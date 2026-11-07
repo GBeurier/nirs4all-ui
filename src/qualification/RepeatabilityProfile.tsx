@@ -1,3 +1,4 @@
+import { ChartDataTable } from './ChartDataTable.js';
 import { useId, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { loc, type Locale } from '../lab/locale.js';
 import { categoricalColor } from '../viz/theme.js';
@@ -219,6 +220,7 @@ export function RepeatabilityProfile({ axis, axisUnit = '', contexts, title, loc
           <li><span className="n4q-key-dot n4q-key-null" aria-hidden="true" />{t('bandNotComputed')}</li>
         </ul>
       </figcaption>
+      <ChartDataTable caption={title} locale={locale} columns={[`Band (${axisUnit})`, "Context", "Repeatability SD", "ICC", "SD lower", "SD upper", "ICC lower", "ICC upper"]} rows={contexts.flatMap((context) => axis.map((band, i) => [band, context.id, context.pooledSd[i] ?? null, context.icc?.[i] ?? null, context.sdInterval?.lower[i] ?? null, context.sdInterval?.upper[i] ?? null, context.iccInterval?.lower[i] ?? null, context.iccInterval?.upper[i] ?? null]))} />
     </figure>
   );
 }

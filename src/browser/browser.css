@@ -1,0 +1,153 @@
+/* nirs4all-ui optional browser entry styles (emitted once as dist/browser/browser.css).
+ *
+ * Class-scoped only: the shared qualification chart/table styles (all `.n4q-*`) plus
+ * prefixed rules for the mounted card and owner proposal list. No `:root`
+ * tokens, no global element rules, no fonts or remote assets. Host theme tokens such as
+ * `--text` or `--border` are read when present and fall back to the shared palette.
+ */
+@import "../../assets/qualification.css";
+
+.n4ui-b-root {
+  --n4ui-b-text: var(--text, #0f172a);
+  --n4ui-b-text-2: var(--text-2, #475569);
+  --n4ui-b-border: var(--border, #e2e8f0);
+  --n4ui-b-surface: var(--surface, #ffffff);
+  --n4ui-b-accent: var(--teal-d, #0f766e);
+  --n4ui-b-on-accent: #ffffff;
+  --n4ui-b-warning: #b45309;
+  --n4ui-b-danger: #b91c1c;
+  --n4ui-b-radius: var(--radius-sm, 10px);
+  min-width: 0;
+  color: var(--n4ui-b-text);
+  font-family: var(--font, Inter, -apple-system, "Segoe UI", system-ui, sans-serif);
+}
+
+:root[data-theme="dark"] .n4ui-b-root,
+.theme-dark .n4ui-b-root {
+  --n4ui-b-on-accent: #0b1220;
+  --n4ui-b-warning: #fbbf24;
+  --n4ui-b-danger: #fb7185;
+}
+
+.n4ui-b-root :focus-visible {
+  outline: 2px solid var(--n4ui-b-accent);
+  outline-offset: 2px;
+}
+
+/* --- dataset preview card --- */
+.n4ui-b-card {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--n4ui-b-border);
+  border-radius: var(--n4ui-b-radius);
+  background: var(--n4ui-b-surface);
+}
+.n4ui-b-card-header { display: grid; gap: 0.25rem; }
+.n4ui-b-card-title { font-size: 1rem; overflow-wrap: anywhere; }
+.n4ui-b-card-description { margin: 0; color: var(--n4ui-b-text-2); font-size: 0.85rem; }
+.n4ui-b-card-badges { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.n4ui-b-badge {
+  padding: 0.1em 0.55em;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  color: var(--n4ui-b-accent);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.n4ui-b-badge.n4ui-b-tone-muted { color: var(--n4ui-b-text-2); }
+.n4ui-b-badge.n4ui-b-tone-warning { color: var(--n4ui-b-warning); }
+.n4ui-b-card-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+}
+.n4ui-b-stat {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--n4ui-b-border);
+  border-radius: 8px;
+}
+.n4ui-b-stat.n4ui-b-tone-warning { border-color: var(--n4ui-b-warning); }
+.n4ui-b-stat-label {
+  color: var(--n4ui-b-text-2);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.n4ui-b-stat-value {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.n4ui-b-stat.n4ui-b-tone-muted .n4ui-b-stat-value { color: var(--n4ui-b-text-2); }
+.n4ui-b-stat-detail { color: var(--n4ui-b-text-2); font-size: 0.72rem; }
+
+/* --- owner proposal list --- */
+.n4ui-b-root .n4ui-proposals { display: grid; gap: 0.6rem; }
+.n4ui-b-root .n4ui-proposals-title { margin: 0; font-size: 1rem; }
+.n4ui-b-root .n4ui-proposals-empty { margin: 0; color: var(--n4ui-b-text-2); font-size: 0.85rem; }
+.n4ui-b-root .n4ui-proposals-error,
+.n4ui-b-root .n4ui-proposal-error { margin: 0; color: var(--n4ui-b-danger); font-size: 0.85rem; font-weight: 600; }
+.n4ui-b-root .n4ui-proposals-list { display: grid; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+.n4ui-b-root .n4ui-proposal {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--n4ui-b-border);
+  border-radius: var(--n4ui-b-radius);
+  background: var(--n4ui-b-surface);
+}
+.n4ui-b-root .n4ui-proposal[data-ambiguous] { border-color: var(--n4ui-b-warning); }
+.n4ui-b-root .n4ui-proposal[data-error] { border-color: var(--n4ui-b-danger); }
+.n4ui-b-root .n4ui-proposal-head { display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.8rem; }
+.n4ui-b-root .n4ui-proposal-kind { font-weight: 700; }
+.n4ui-b-root .n4ui-proposal-target {
+  color: var(--n4ui-b-text-2);
+  font-family: var(--mono, ui-monospace, monospace);
+  overflow-wrap: anywhere;
+}
+.n4ui-b-root .n4ui-proposal-body { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.35rem 0.75rem; }
+.n4ui-b-root .n4ui-proposal-value { overflow-wrap: anywhere; }
+.n4ui-b-root .n4ui-proposal-score { font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.n4ui-b-root .n4ui-proposal-score-label { color: var(--n4ui-b-text-2); }
+.n4ui-b-root .n4ui-proposal-flag { color: var(--n4ui-b-warning); font-size: 0.8rem; font-weight: 600; }
+.n4ui-b-root .n4ui-proposal-status,
+.n4ui-b-root .n4ui-proposal-confirmed { color: var(--n4ui-b-text-2); font-size: 0.8rem; }
+.n4ui-b-root .n4ui-proposal-evidence { margin: 0; padding-left: 1.1rem; color: var(--n4ui-b-text-2); font-size: 0.8rem; }
+.n4ui-b-root .n4ui-proposal-alternatives { display: grid; gap: 0.25rem; font-size: 0.82rem; }
+.n4ui-b-root .n4ui-proposal-alternatives ul { display: grid; gap: 0.25rem; margin: 0; padding: 0; list-style: none; }
+.n4ui-b-root .n4ui-proposal-section-label,
+.n4ui-b-root .n4ui-proposal-override span {
+  color: var(--n4ui-b-text-2);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.n4ui-b-root .n4ui-proposal-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.n4ui-b-root .n4ui-proposal-override { display: inline-flex; align-items: center; gap: 0.4rem; }
+.n4ui-b-root .n4ui-proposal button,
+.n4ui-b-root .n4ui-proposal select {
+  min-height: 24px;
+  padding: 0.25rem 0.65rem;
+  border: 1px solid var(--n4ui-b-border);
+  border-radius: 6px;
+  background: var(--n4ui-b-surface);
+  color: inherit;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.n4ui-b-root .n4ui-proposal .n4ui-proposal-confirm {
+  border-color: var(--n4ui-b-accent);
+  background: var(--n4ui-b-accent);
+  color: var(--n4ui-b-on-accent);
+  font-weight: 600;
+}
+.n4ui-b-root .n4ui-proposal button:disabled,
+.n4ui-b-root .n4ui-proposal select:disabled { cursor: not-allowed; opacity: 0.55; }

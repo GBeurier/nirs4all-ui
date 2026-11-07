@@ -27,8 +27,11 @@ function refFor(refs: readonly ScoreRef[], ref: ScoreRef | undefined, partition:
 
 export function OverviewBody({ ctx }: { ctx: InspectorViewContext }) {
   const { ties, ref, strings } = ctx;
-  if (!ties || !ref) return null;
-  const best = ties.best;
+  // Without local statistics there are no ties: the verdict is the owner's top-ranked chain.
+  const topRanked = ctx.ranked.find((r) => r.rank !== null);
+  const lead = ties ? { chain: ties.best, score: ties.bestScore } : ctx.localStatistics || !topRanked ? undefined : { chain: topRanked.chain, score: topRanked.score };
+  if (!lead || !ref) return null;
+  const best = lead.chain;
   const folds = foldStats(best, ref);
   const testRef = refFor(ctx.refs, ref, "test");
   const testScore = testRef ? scoreOf(best, testRef) : Number.NaN;
@@ -54,12 +57,12 @@ export function OverviewBody({ ctx }: { ctx: InspectorViewContext }) {
         <h4 className="n4ins-hero-title">{chainLabel(best)}</h4>
         <StepChips chain={best} />
         <div className="n4wb-stats n4ins-hero-stats">
-          <StatTile label={ref.label} value={formatValue(ties.bestScore)} tone="accent" hint={folds ? `${strings.foldSpread} ${formatValue(folds.sd)}` : undefined} />
-          {testRef ? <StatTile label={testRef.label} value={formatValue(testScore)} hint={formatSigned(relativeGain(ties.bestScore, testScore, ref) * 100, 2) + " %"} tone={relativeGain(ties.bestScore, testScore, ref) < -0.1 ? "bad" : undefined} /> : null}
-          {ties.runnerUp ? <StatTile label={strings.runnerUp} value={formatValue(ties.runnerUp.score)} hint={shorten(chainLabel(ties.runnerUp.chain), 22)} /> : null}
+          <StatTile label={ref.label} value={formatValue(lead.score)} tone="accent" hint={folds ? `${strings.foldSpread} ${formatValue(folds.sd)}` : undefined} />
+          {testRef ? <StatTile label={testRef.label} value={formatValue(testScore)} hint={formatSigned(relativeGain(lead.score, testScore, ref) * 100, 2) + " %"} tone={relativeGain(lead.score, testScore, ref) < -0.1 ? "bad" : undefined} /> : null}
+          {ties?.runnerUp ? <StatTile label={strings.runnerUp} value={formatValue(ties.runnerUp.score)} hint={shorten(chainLabel(ties.runnerUp.chain), 22)} /> : null}
           {best.fitTimeMs !== undefined ? <StatTile label={strings.fitTime} value={formatDuration(best.fitTimeMs)} /> : null}
         </div>
-        {Number.isFinite(ties.se) ? (
+        {ties && Number.isFinite(ties.se) ? (
           <button
             type="button"
             className="n4ins-ties"
@@ -214,9 +217,11 @@ export function TopChainsBody({ ctx, count }: { ctx: InspectorViewContext; count
         })}
       </div>
       <footer className="n4wb-view-foot n4ins-top-legend">
-        <span>
-          <span className="n4ins-legend-tie" /> {strings.tieZone}
-        </span>
+        {ties ? (
+          <span>
+            <span className="n4ins-legend-tie" /> {strings.tieZone}
+          </span>
+        ) : null}
         <span>
           <span className="n4ins-legend-range" /> {strings.foldRange}
         </span>
@@ -377,6 +382,8 @@ export function CompareBody({ ctx }: { ctx: InspectorViewContext }) {
                 strings.samples,
                 cols.map(({ chain, predictions }) => {
                   if (!predictions) return <span className="n4wb-muted">—</span>;
+                  // Prediction metrics are not computed here: only the number of predicted samples is shown.
+                  if (!ctx.localStatistics) return <span className="n4wb-mono">{predictions.sampleKeys.length}</span>;
                   if (chain.task === "classification") return <span className="n4wb-mono">acc {formatPercent(confusionCounts(predictions).accuracy, 1)}</span>;
                   const s = regressionSummary(predictions);
                   return s ? (
@@ -404,6 +411,8 @@ export function DatasetsBody({ ctx, facet }: { ctx: InspectorViewContext; facet:
   const { strings } = ctx;
   const table = useMemo(() => crossDatasetTable(ctx.allChains, facet, ctx.refs, ctx.ref), [ctx.allChains, facet, ctx.refs, ctx.ref]);
   if (table.datasets.length < 2) return null;
+  // The helper orders rows by their mean rank (a UI-computed mean): without local statistics order by wins, then name.
+  const tableRows = ctx.localStatistics ? table.rows : [...table.rows].sort((a, b) => b.wins - a.wins || a.value.localeCompare(b.value));
   return (
     <div className="n4ins-heatmap-wrap">
       <table className="n4ins-heatmap n4ins-xds">
@@ -420,12 +429,12 @@ export function DatasetsBody({ ctx, facet }: { ctx: InspectorViewContext; facet:
                 </button>
               </th>
             ))}
-            <th>{strings.meanRank}</th>
+            {ctx.localStatistics ? <th>{strings.meanRank}</th> : null}
             <th>{strings.wins}</th>
           </tr>
         </thead>
         <tbody>
-          {table.rows.map((r) => (
+          {tableRows.map((r) => (
             <tr key={r.value}>
               <th title={r.value}>{shorten(r.value, 22)}</th>
               {table.datasets.map(({ name }) => {
@@ -446,7 +455,7 @@ export function DatasetsBody({ ctx, facet }: { ctx: InspectorViewContext; facet:
                   </td>
                 );
               })}
-              <td className="n4ins-xds-num n4wb-mono">{formatValue(r.meanRank, 2)}</td>
+              {ctx.localStatistics ? <td className="n4ins-xds-num n4wb-mono">{formatValue(r.meanRank, 2)}</td> : null}
               <td className="n4ins-xds-num n4wb-mono">{r.wins || ""}</td>
             </tr>
           ))}

@@ -1,3 +1,4 @@
+import { ChartDataTable } from './ChartDataTable.js';
 import { useId, useState } from 'react';
 import { loc, type Locale } from '../lab/locale.js';
 import { ChartTooltip, pct, TipRow } from './_chart.js';
@@ -46,6 +47,8 @@ export interface PopulationFlowProps {
   barHeight?: number;
   /** hide the per-segment legend (when the host renders its own) */
   legend?: boolean;
+  /** Hide the aggregate total when a title describes per-sample counts. */
+  showTotal?: boolean;
   className?: string;
 }
 
@@ -57,7 +60,7 @@ const GAP = 2;
  * Stage-by-stage accounting funnel: each stage is a full-width stacked bar and the
  * segment that continues fans out into the next stage. Counts come from the engine.
  */
-export function PopulationFlow({ stages, title, locale = 'fr', width = 1080, barHeight = 30, legend = true, className }: PopulationFlowProps) {
+export function PopulationFlow({ stages, title, locale = 'fr', width = 1080, barHeight = 30, legend = true, showTotal = true, className }: PopulationFlowProps) {
   const BAR = barHeight;
   const id = useId();
   const [hover, setHover] = useState<{ stage: number; seg: number } | null>(null);
@@ -102,9 +105,9 @@ export function PopulationFlow({ stages, title, locale = 'fr', width = 1080, bar
             return (
               <g key={stage.id}>
                 <text x={L} y={top + 15} className="n4q-flow-label">
-                  <tspan className="n4q-flow-total">{total}</tspan>
-                  <tspan dx={6}>{stage.unit}</tspan>
-                  <tspan dx={8} className="n4q-flow-stage">{stage.label}</tspan>
+                  <tspan className="n4q-flow-total">{showTotal ? total : null}</tspan>
+                  <tspan dx={showTotal ? 6 : 0}>{showTotal ? stage.unit : null}</tspan>
+                  <tspan dx={showTotal ? 8 : 0} className="n4q-flow-stage">{stage.label}</tspan>
                 </text>
                 {total === 0 ? <rect x={L} y={barY} width={R - L} height={BAR} rx={6} className="n4q-flow-empty" /> : null}
                 {from && i < stages.length - 1 ? (
@@ -165,6 +168,7 @@ export function PopulationFlow({ stages, title, locale = 'fr', width = 1080, bar
         </ul> : null}
         <span className="n4q-visually-hidden">{loc(T.dataTable, locale)}: {desc}</span>
       </figcaption>
+      <ChartDataTable caption={title} locale={locale} columns={["Stage", "Group", "Count", "Unit"]} rows={stages.flatMap((stage) => stage.segments.map((segment) => [stage.label, segment.label, segment.count, stage.unit]))} />
     </figure>
   );
 }

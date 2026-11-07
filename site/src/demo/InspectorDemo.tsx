@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 
 import { Inspector, type ChainPredictions } from "../../../src/inspector/index.js";
-import { DEMO_SCORE_REFS, makeDemoChains, makeDemoPredictions } from "./inspectorDemo.js";
+import { DEMO_SCORE_REFS, makeDemoChains, makeDemoPredictions } from "./inspectorDemoData.js";
 
 /**
  * Showroom host for the Inspector capsule: owns a synthetic chain corpus and

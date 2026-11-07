@@ -25,7 +25,7 @@ export function rawFrame(dataset: PlaygroundDataset): PlaygroundFrame {
     matrix,
     wavelengths: dataset.wavelengths,
     rows: Int32Array.from({ length: matrix.rows }, (_, i) => i),
-    unit: dataset.unit ?? "nm",
+    unit: dataset.unit ?? "",
     signal: dataset.signal ?? "Absorbance",
   };
 }
@@ -39,7 +39,7 @@ export function outputFrame(dataset: PlaygroundDataset, result: PlaygroundResult
     matrix,
     wavelengths: result.wavelengths,
     rows,
-    unit: result.unit ?? dataset.unit ?? "nm",
+    unit: result.unit ?? dataset.unit ?? "",
     signal: result.signal ?? dataset.signal ?? "Absorbance",
   };
 }

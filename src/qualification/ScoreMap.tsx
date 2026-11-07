@@ -1,3 +1,4 @@
+import { ChartDataTable } from './ChartDataTable.js';
 import { useId, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { loc, type Locale } from '../lab/locale.js';
 import { categoricalColor, rampAt } from '../viz/theme.js';
@@ -33,6 +34,9 @@ export interface ScoreMapProps {
   groupColors?: Readonly<Record<string, string>> | undefined;
   /** draw the y = x line on a shared axis extent (e.g. predicted vs observed) */
   identityLine?: boolean;
+  /** Independently labelled inspection limits; included in the plot extent. */
+  xReference?: { value: number; label: string } | null;
+  yReference?: { value: number; label: string } | null;
   className?: string;
 }
 
@@ -53,7 +57,7 @@ export function scoreGroupColors(points: readonly ScorePoint[], fixed: Readonly<
  * Engine score scatter with categorical or sequential coloring, nearest-point hover,
  * keyboard browsing (arrow keys) and a legend / colorbar. Axes scale independently.
  */
-export function ScoreMap({ points, colorBy = 'none', xLabel, yLabel, colorLabel, title, locale = 'fr', width = 560, height = 400, groupColors, identityLine = false, className }: ScoreMapProps) {
+export function ScoreMap({ points, colorBy = 'none', xLabel, yLabel, colorLabel, title, locale = 'fr', width = 560, height = 400, groupColors, identityLine = false, xReference, yReference, className }: ScoreMapProps) {
   const id = useId();
   const [hover, setHover] = useState<number | null>(null);
   const valid = points.filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
@@ -61,8 +65,8 @@ export function ScoreMap({ points, colorBy = 'none', xLabel, yLabel, colorLabel,
   const x1 = width - PAD.right;
   const y0 = PAD.top;
   const y1 = height - PAD.bottom;
-  const xd = niceExtent(identityLine ? valid.flatMap((p) => [p.x, p.y]) : valid.map((p) => p.x), 0.08);
-  const yd = identityLine ? xd : niceExtent(valid.map((p) => p.y), 0.08);
+  const xd = niceExtent(identityLine ? valid.flatMap((p) => [p.x, p.y]) : [...valid.map((p) => p.x), ...(xReference ? [xReference.value] : [])], 0.08);
+  const yd = identityLine ? xd : niceExtent([...valid.map((p) => p.y), ...(yReference ? [yReference.value] : [])], 0.08);
   const xs = makeScale(xd, x0, x1);
   const ys = makeScale(yd, y1, y0);
   const groups = scoreGroupColors(valid, groupColors);
@@ -122,6 +126,8 @@ export function ScoreMap({ points, colorBy = 'none', xLabel, yLabel, colorLabel,
           <text className="n4q-axis-title" x={(x0 + x1) / 2} y={height - 6} textAnchor="middle">{xLabel}</text>
           <text className="n4q-axis-title" transform={`translate(13 ${(y0 + y1) / 2}) rotate(-90)`} textAnchor="middle">{yLabel}</text>
           {identityLine ? <line className="n4q-identity" x1={xs(xd.min)} y1={ys(xd.min)} x2={xs(xd.max)} y2={ys(xd.max)} /> : null}
+          {xReference ? <line data-reference="x" x1={xs(xReference.value)} x2={xs(xReference.value)} y1={y0} y2={y1} stroke="currentColor" strokeDasharray="6 4"><title>{`${xReference.label}: ${fmt(xReference.value)}`}</title></line> : null}
+          {yReference ? <line data-reference="y" x1={x0} x2={x1} y1={ys(yReference.value)} y2={ys(yReference.value)} stroke="currentColor" strokeDasharray="6 4"><title>{`${yReference.label}: ${fmt(yReference.value)}`}</title></line> : null}
           {valid.map((p, i) => (
             <circle
               key={`${p.id}:${i}`}
@@ -147,6 +153,7 @@ export function ScoreMap({ points, colorBy = 'none', xLabel, yLabel, colorLabel,
           </ChartTooltip>
         ) : null}
       </div>
+      {xReference || yReference ? <p className="n4q-reference-notes">{[xReference, yReference].filter(Boolean).map((r) => `${r!.label}: ${fmt(r!.value)}`).join(' · ')} (dashed lines)</p> : null}
       {colorBy !== 'none' ? (
         <figcaption>
           {colorBy === 'group' ? (
@@ -166,6 +173,7 @@ export function ScoreMap({ points, colorBy = 'none', xLabel, yLabel, colorLabel,
           )}
         </figcaption>
       ) : null}
+      <ChartDataTable caption={title} locale={locale} columns={["Sample / unit", xLabel, yLabel, colorLabel ?? "Group / value"]} rows={valid.map((p) => [p.id, p.x, p.y, colorBy === "value" ? p.value ?? null : p.group ?? null])} />
     </figure>
   );
 }

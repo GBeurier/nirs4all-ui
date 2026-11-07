@@ -36,6 +36,7 @@ spectra motion asset.
 | `datasetBuilder` | `nirs4all-ui/datasetBuilder` | Multisource dataset-builder wizard components and pure dataset-config helpers. |
 | `brand` | `nirs4all-ui/brand` | Ecosystem brand definitions, stable asset paths, palettes, and deterministic SVG generators. |
 | `styles` | `nirs4all-ui/styles` | Default theme tokens, CSS/motion asset manifests, and CSS variable helpers. |
+| `browser` | `nirs4all-ui/browser` | Optional self-contained entry for vanilla (non-React) hosts: three mount functions for the dataset preview card, the spectra explorer (whose own accessible band-data table is the only data table), and the controlled owner proposal list. Bundles React; never part of the root barrel. |
 | `assets` | `nirs4all-ui/assets/*` | Package logo kit, ecosystem brand SVGs, default CSS, dataset-builder CSS, quality/lab theme CSS, and animated NIR spectra asset. |
 
 The root export also exposes namespace barrels:
@@ -92,6 +93,61 @@ const animatedIcon = generateNirs4allBrandSvg("nirs4all-ui", {
 });
 ```
 
+## Optional browser entry for vanilla hosts
+
+Pages without their own React tree (Formats and IO demonstrators, for example) can
+mount a few existing components through `nirs4all-ui/browser`. It is a separate
+build that bundles React 19, React DOM (client) and scheduler, so it never shares
+React elements with a host's other React tree. Nothing in the pure view-model or SSR
+entries imports it.
+
+| File (`dist/browser/`) | Export | Use |
+| --- | --- | --- |
+| `nirs4all-ui-browser.iife.js` | `nirs4all-ui/browser/standalone` | Classic `<script>`; defines `globalThis.Nirs4allUIBrowser`. |
+| `nirs4all-ui-browser.mjs` | `nirs4all-ui/browser` | ES module with the same three functions; no global assignment. Types: `index.d.ts`. |
+| `browser.css` | `nirs4all-ui/browser/styles.css` | Class-scoped styles (no `:root` tokens or global element rules). |
+
+```html
+<link rel="stylesheet" href="vendor/ui/browser.css">
+<script src="vendor/ui/nirs4all-ui-browser.iife.js"></script>
+<script>
+  const { mountDatasetPreview, mountSpectraExplorer, mountOwnerProposals } = Nirs4allUIBrowser;
+  const card = mountDatasetPreview(document.getElementById("card"), { view: projectedView });
+  const spectra = mountSpectraExplorer(document.getElementById("plot"), {
+    title: "Raw spectra", axis, axisUnit: "nm", series, onSelect: (id) => hostSelect(id),
+  });
+  const proposals = mountOwnerProposals(document.getElementById("proposals"), {
+    proposals: projected, busy: false,
+    onConfirm: (id) => hostConfirm(id),
+    onAlternative: (id, choiceId) => hostUseAlternative(id, choiceId),
+    onOverride: (id, value) => hostOverride(id, value),
+    onUndo: (kind, target) => hostUndo(kind, target),
+  });
+</script>
+```
+
+- Each `mount*` call creates one React root in a dedicated host child and renders
+  synchronously. `update(nextProps)` replaces the complete props (no merging);
+  `unmount()` releases the root and must run before the host clears or replaces that
+  element (for example before `innerHTML = ""`).
+- `mountDatasetPreview` accepts only `dataset`, `view` and `className`. Hosts that do not
+  hold unique-sample counts pass a projected `view` with truthful labels (such as
+  "Records" or "Rows") rather than a `dataset` input.
+- `mountSpectraExplorer` takes the `SpectraExplorer` props (plain `values` arrays, `null`
+  or `NaN` kept as gaps, unique display ids resolved by the host) and renders the
+  explorer's own accessible band-data table (a native `<details>` with a band-index input;
+  there is exactly one data table, and non-finite cells read "not available"). The locale
+  defaults to English. Remount on axis, signal or series-group changes; use `update` for
+  selection or title changes.
+- `mountOwnerProposals` renders host-projected proposals in the given order, labels
+  scores as uncalibrated and shows a dash for missing scores. Alternatives report
+  their opaque `choiceId`; overrides report the exact host `choice.value`. The host
+  keeps the original owner objects and runs every owner call.
+
+Hosts stage `nirs4all-ui-browser.iife.js` (or the `.mjs`), `browser.css`,
+`THIRD_PARTY_NOTICES.md` and the texts in `LICENSES/THIRD-PARTY/` together, because
+the bundle contains MIT-licensed React code.
+
 ## Development
 
 ```bash
@@ -100,7 +156,8 @@ npm run typecheck
 npm test
 ```
 
-`npm run build` emits ESM JavaScript and declaration files under `dist/`.
+`npm run build` emits ESM JavaScript and declaration files under `dist/`, then
+builds the optional browser entry into `dist/browser/` with `vite.browser.config.ts`.
 
 ## Immutable release artifact
 

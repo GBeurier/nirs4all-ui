@@ -36,3 +36,10 @@ export * from "./ColumnMappingTable.js";
 export * from "./PartitionPreview.js";
 export * from "./DatasetSourceConfigPanel.js";
 export * from "./LiveValidationCard.js";
+export {
+  OwnerProposalList,
+  type OwnerProposalAlternative,
+  type OwnerProposalDisplay,
+  type OwnerProposalListProps,
+  type OwnerProposalOverrideChoice,
+} from "./OwnerProposalList.js";

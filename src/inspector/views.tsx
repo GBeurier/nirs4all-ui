@@ -32,7 +32,7 @@ import {
   scoreOf,
   type PivotAggregate,
 } from "./analysis.js";
-import { foldStats, residualAgreement, trendLine, type FactorEffect, type Insight, type RankedEntry, type TieSummary } from "./insights.js";
+import { foldStats, residualAgreement, trendLine, type FactorEffect, type Insight, type RankedEntry, type ResidualAgreement, type TieSummary } from "./insights.js";
 import type { InspectorStrings } from "./locale.js";
 import type { ChainFacet, ChainPredictions, InspectorChain, ScoreRef } from "./types.js";
 
@@ -53,6 +53,11 @@ export interface InspectorViewContext {
   compare: ReadonlyArray<{ chain: InspectorChain; color: string; predictions: ChainPredictions | undefined }>;
   compareIds: ReadonlySet<string>;
   loadingPredictions: boolean;
+  /**
+   * `false`: views must not compute or show prediction metrics (R², RMSE, RPD,
+   * bias, accuracy, residual statistics, blend, ties, drivers, mean pivots).
+   */
+  localStatistics: boolean;
   sampleSelection: ReadonlySet<string>;
   setSampleSelection: (keys: ReadonlySet<string>) => void;
   hoverSample: string | null;
@@ -419,6 +424,7 @@ function MetricLine({ entry, partition, compact }: { entry: CompareEntry; partit
 }
 
 export function MetricStrip({ ctx, partition }: { ctx: InspectorViewContext; partition: string }) {
+  if (!ctx.localStatistics) return null;
   return (
     <footer className="n4wb-view-foot n4ins-metrics">
       {ctx.compare.map((entry) => (
@@ -450,6 +456,7 @@ function PredictionPlot({
   if (cloud.xs.length === 0) return null;
   let guides: ScatterGuide[];
   if (mode === "parity") guides = [{ kind: "line", slope: 1, intercept: 0, label: "y = x", tone: "accent" }];
+  else if (!ctx.localStatistics) guides = [{ kind: "hline", y: 0, tone: "accent" }];
   else {
     let sum = 0;
     for (const r of cloud.ys) sum += r * r;
@@ -510,7 +517,7 @@ export function PredictionBody({
             <figcaption>
               <span className="n4wb-legend-swatch" style={{ background: entry.color }} aria-hidden="true" />
               <strong title={chainLabel(entry.chain)}>{chainLabel(entry.chain)}</strong>
-              <MetricLine entry={entry} partition={partition} compact />
+              {ctx.localStatistics ? <MetricLine entry={entry} partition={partition} compact /> : null}
             </figcaption>
             <div className="n4ins-multiple-plot">
               <PredictionPlot ctx={ctx} entries={[entry]} mode={mode} coloring={coloring} partition={partition} xAxis={xAxis} />
@@ -528,14 +535,45 @@ export function PredictionBody({
   );
 }
 
+type ResidualPairs = Pick<ResidualAgreement, "n" | "keys" | "residualsA" | "residualsB">;
+
+/** Residuals of two regression chains on their shared samples — chart coordinates only, no statistic. */
+function residualPairs(a: ChainPredictions, b: ChainPredictions, keep?: (pred: ChainPredictions, i: number) => boolean): ResidualPairs | null {
+  const indexB = new Map<string, number>();
+  b.sampleKeys.forEach((key, i) => {
+    if (!keep || keep(b, i)) indexB.set(key, i);
+  });
+  const keys: string[] = [];
+  const ra: number[] = [];
+  const rb: number[] = [];
+  for (let i = 0; i < a.sampleKeys.length; i += 1) {
+    if (keep && !keep(a, i)) continue;
+    const j = indexB.get(a.sampleKeys[i]!);
+    if (j === undefined) continue;
+    const t = a.yTrue[i];
+    const pa = a.yPred[i];
+    const pb = b.yPred[j];
+    if (typeof t !== "number" || typeof pa !== "number" || typeof pb !== "number" || !Number.isFinite(t + pa + pb)) continue;
+    keys.push(a.sampleKeys[i]!);
+    ra.push(pa - t);
+    rb.push(pb - t);
+  }
+  return keys.length < 3 ? null : { n: keys.length, keys, residualsA: Float64Array.from(ra), residualsB: Float64Array.from(rb) };
+}
+
 export function AgreementBody({ ctx, partition, pair }: { ctx: InspectorViewContext; partition: string; pair: readonly [string | null, string | null] }) {
   const regression = ctx.compare.filter((c) => c.predictions && c.chain.task === "regression");
   const a = regression.find((c) => c.chain.id === pair[0]) ?? regression[0];
   const b = regression.find((c) => c.chain.id === pair[1] && c !== a) ?? regression.find((c) => c !== a);
-  const agreement = useMemo(
-    () => (a && b ? residualAgreement(a.predictions!, b.predictions!, partition === "all" ? undefined : (pred, i) => pred.partition?.[i] === partition) : null),
-    [a, b, partition],
-  );
+  const localStatistics = ctx.localStatistics;
+  // `agreement` = residual chart coordinates; `stats` = the UI-computed statistics, only without `localStatistics=false`.
+  const { agreement, stats } = useMemo((): { agreement: ResidualPairs | null; stats: ResidualAgreement | null } => {
+    if (!a || !b) return { agreement: null, stats: null };
+    const keep = partition === "all" ? undefined : (pred: ChainPredictions, i: number) => pred.partition?.[i] === partition;
+    if (!localStatistics) return { agreement: residualPairs(a.predictions!, b.predictions!, keep), stats: null };
+    const full = residualAgreement(a.predictions!, b.predictions!, keep);
+    return { agreement: full, stats: full };
+  }, [a, b, partition, localStatistics]);
   const selected = useMemo(() => (agreement ? agreement.keys.flatMap((k, i) => (ctx.sampleSelection.has(k) ? [i] : [])) : []), [agreement, ctx.sampleSelection]);
   if (!a || !b || !agreement) return null;
   const hoverPoint = ctx.hoverSample ? agreement.keys.indexOf(ctx.hoverSample) : -1;
@@ -578,18 +616,20 @@ export function AgreementBody({ ctx, partition, pair }: { ctx: InspectorViewCont
         icons={ctx.icons}
         ariaLabel={ctx.strings.viewAgreement}
       />
-      <footer className="n4wb-view-foot n4ins-metrics">
-        <span className="n4ins-metric">
-          <strong className="n4wb-mono">
-            {ctx.strings.residualCorr} = {formatValue(agreement.r, 2)}
-          </strong>
-          <span className="n4wb-muted">{ctx.strings.agreementHint(agreement.r)}</span>
-        </span>
-        <span className="n4ins-metric n4wb-mono">
-          RMSE A {formatValue(agreement.rmseA)} · B {formatValue(agreement.rmseB)} · {ctx.strings.blend}{" "}
-          <strong className={agreement.rmseBlend < Math.min(agreement.rmseA, agreement.rmseB) ? "n4ins-good" : undefined}>{formatValue(agreement.rmseBlend)}</strong>
-        </span>
-      </footer>
+      {stats ? (
+        <footer className="n4wb-view-foot n4ins-metrics">
+          <span className="n4ins-metric">
+            <strong className="n4wb-mono">
+              {ctx.strings.residualCorr} = {formatValue(stats.r, 2)}
+            </strong>
+            <span className="n4wb-muted">{ctx.strings.agreementHint(stats.r)}</span>
+          </span>
+          <span className="n4ins-metric n4wb-mono">
+            RMSE A {formatValue(stats.rmseA)} · B {formatValue(stats.rmseB)} · {ctx.strings.blend}{" "}
+            <strong className={stats.rmseBlend < Math.min(stats.rmseA, stats.rmseB) ? "n4ins-good" : undefined}>{formatValue(stats.rmseBlend)}</strong>
+          </span>
+        </footer>
+      ) : null}
     </>
   );
 }
@@ -753,7 +793,7 @@ export function ConfusionBody({ ctx, partition, normalize, chainId }: { ctx: Ins
       <div className="n4ins-confusion-head">
         <span className="n4wb-legend-swatch" style={{ background: entry.color }} aria-hidden="true" />
         <strong>{shorten(chainLabel(entry.chain), 40)}</strong>
-        <span className="n4wb-muted">accuracy {formatValue(counts.accuracy * 100, 3)} %</span>
+        {ctx.localStatistics ? <span className="n4wb-muted">accuracy {formatValue(counts.accuracy * 100, 3)} %</span> : null}
       </div>
       <div className="n4ins-confusion-plot">
         <ConfusionMatrix labels={counts.labels} matrix={counts.matrix} normalize={normalize} width={size} height={size} xLabel="Predicted" yLabel="Observed" title="Confusion matrix" />

@@ -67,6 +67,24 @@ export interface InspectorProps {
   loadingPredictions?: readonly string[] | undefined;
   /** Called with the compared chain ids that have no predictions yet. */
   onRequestPredictions?: ((chainIds: readonly string[]) => void) | undefined;
+  /**
+   * Chain id → reason the host cannot supply that chain's predictions. The
+   * reason is shown as text; such chains are neither "loading" nor requested.
+   */
+  unavailablePredictions?: Readonly<Record<string, string>> | undefined;
+  /**
+   * Views the host supports (menu, layout, shortcuts and perspectives). Views
+   * missing from the list never render, even when a saved layout names them.
+   * Omit to offer every view. Keep `table` for a text/data equivalent.
+   */
+  availableViews?: readonly InspectorViewId[] | undefined;
+  /**
+   * Allow metrics computed in the UI (default `true`). `false` computes and
+   * shows no R², RMSE, RPD, bias, accuracy, blend/residual statistics, 1-SE
+   * ties, factor importance, step shifts/effects or mean pivots; ranking,
+   * filtering, sorting and grouping stay on the owner `scores`.
+   */
+  localStatistics?: boolean | undefined;
   /** Compared chain ids (controlled when provided). Empty = auto (best chain). */
   compare?: readonly string[] | undefined;
   defaultCompare?: readonly string[] | undefined;
@@ -102,6 +120,21 @@ export const DEFAULT_INSPECTOR_LAYOUT: WorkbenchLayout = {
 export type InspectorPerspective = "verdict" | "landscape" | "steps" | "predictions" | "tuning" | "compare";
 
 const PERSPECTIVE_ORDER: readonly InspectorPerspective[] = ["verdict", "landscape", "steps", "predictions", "tuning", "compare"];
+
+/** Compared chain ids to request from the host: no predictions yet, not loading, not declared unavailable. */
+export function predictionsToRequest(
+  ids: readonly string[],
+  predictions: Readonly<Record<string, unknown>>,
+  loading: readonly string[],
+  unavailable: Readonly<Record<string, string>>,
+): string[] {
+  return ids.filter((id) => !predictions[id] && !loading.includes(id) && unavailable[id] === undefined);
+}
+
+/** Keep the view ids in `allowed`; `null` allows everything. */
+function restrictViews<T extends string>(ids: readonly T[], allowed: ReadonlySet<string> | null): T[] {
+  return allowed ? ids.filter((id) => allowed.has(id)) : [...ids];
+}
 
 /** Curated view sets — one click to answer one question. */
 export function perspectiveViews(perspective: InspectorPerspective, context: { classification: boolean; multiDataset: boolean }): InspectorViewId[] {
@@ -333,15 +366,22 @@ const DEFAULT_OPTIONS: InspectorViewOptions = {
  * explicit, separate sets.
  */
 export function Inspector(props: InspectorProps) {
-  const { chains, scoreRefs, predictions = {}, loadingPredictions = [], locale, icons, maxCompare = 6 } = props;
+  const { chains, scoreRefs, predictions = {}, loadingPredictions = [], unavailablePredictions = {}, localStatistics = true, locale, icons, maxCompare = 6 } = props;
   const strings = useMemo(() => resolveInspectorStrings(locale, props.strings), [locale, props.strings]);
   const icon = resolveIcons(icons);
 
   const [refKey, setRefKey] = useControllable<string>(props.scoreRef, scoreRefs[0]?.key ?? "", props.onScoreRefChange);
-  const [layout, setLayout] = useControllable<WorkbenchLayout>(
+  const [layoutState, setLayout] = useControllable<WorkbenchLayout>(
     props.layout,
     props.defaultLayout ?? (chains.length > 0 && chains.every((c) => c.task === "classification") ? { ...DEFAULT_INSPECTOR_LAYOUT, views: perspectiveViews("verdict", { classification: true, multiDataset: false }) } : DEFAULT_INSPECTOR_LAYOUT),
     props.onLayoutChange,
+  );
+  const availableKey = props.availableViews ? props.availableViews.join("|") : null;
+  const allowedViews = useMemo<ReadonlySet<string> | null>(() => (availableKey === null ? null : new Set(availableKey.split("|"))), [availableKey]);
+  // Everything below (shortcuts, menu, grid, perspectives) sees only the allowed views, whatever a saved layout says.
+  const layout = useMemo<WorkbenchLayout>(
+    () => (allowedViews ? { ...layoutState, views: restrictViews(layoutState.views, allowedViews), maximized: layoutState.maximized && allowedViews.has(layoutState.maximized) ? layoutState.maximized : null } : layoutState),
+    [layoutState, allowedViews],
   );
   const [compareState, setCompare] = useControllable<readonly string[]>(props.compare, props.defaultCompare ?? [], props.onCompareChange);
   const [selectedIds, setSelectedIds] = useControllable<readonly string[]>(props.selection, [], props.onSelectionChange);
@@ -412,15 +452,23 @@ export function Inspector(props: InspectorProps) {
     [compareState, setCompare, maxCompare],
   );
 
-  // Ask the host for missing predictions of compared chains.
+  // Chains the host declared without predictions: shown as text, never loading, never requested.
+  const unavailableFor = (id: string): string | undefined => (predictions[id] ? undefined : unavailablePredictions[id]);
+  const unavailableNotes = compareIdsList.flatMap((id) => {
+    const reason = unavailableFor(id);
+    const chain = chainById.get(id);
+    return reason === undefined || !chain ? [] : [`${chainLabel(chain)}: ${reason || strings.predictionsUnavailable}`];
+  });
+
+  // Ask the host for missing predictions of compared chains (from this effect only, never while rendering).
   const onRequestRef = useRef(props.onRequestPredictions);
   onRequestRef.current = props.onRequestPredictions;
-  const missingKey = compareIdsList.filter((id) => !predictions[id] && !loadingPredictions.includes(id)).join("|");
+  const missingKey = predictionsToRequest(compareIdsList, predictions, loadingPredictions, unavailablePredictions).join("|");
   useEffect(() => {
     if (missingKey) onRequestRef.current?.(missingKey.split("|"));
   }, [missingKey]);
 
-  const loading = compareIdsList.some((id) => loadingPredictions.includes(id));
+  const loading = compareIdsList.some((id) => loadingPredictions.includes(id) && unavailableFor(id) === undefined);
   const hasPredictions = compare.some((c) => c.predictions);
   const regressionCompare = compare.some((c) => c.predictions && c.chain.task === "regression");
   const classificationCompare = compare.some((c) => c.predictions && c.chain.task === "classification");
@@ -440,26 +488,34 @@ export function Inspector(props: InspectorProps) {
   // ---------------------------------------------------------------- decision aids
   const [focusToken, setFocusToken] = useState<string | null>(null);
   const [lens, setLens] = useState<ScoreLens>("rankByDataset");
-  const ties = useMemo(() => oneSeTies(ranking, ref), [ranking, ref]);
-  const factors = useMemo(() => factorImportance(filtered, ref, facets), [filtered, ref, facets]);
-  const shifts = useMemo(() => stepShifts(filtered, ref), [filtered, ref]);
-  const insights = useMemo(() => buildInsights({ chains: filtered, ref, refs: scoreRefs, ties, factors, shifts }), [filtered, ref, scoreRefs, ties, factors, shifts]);
+  // Without local statistics none of the helpers below runs: the UI shows owner scores only.
+  const ties = useMemo(() => (localStatistics ? oneSeTies(ranking, ref) : null), [localStatistics, ranking, ref]);
+  const factors = useMemo(() => (localStatistics ? factorImportance(filtered, ref, facets) : []), [localStatistics, filtered, ref, facets]);
+  const shifts = useMemo(() => (localStatistics ? stepShifts(filtered, ref) : []), [localStatistics, filtered, ref]);
+  const insights = useMemo(
+    () => (localStatistics ? buildInsights({ chains: filtered, ref, refs: scoreRefs, ties, factors, shifts }) : []),
+    [localStatistics, filtered, ref, scoreRefs, ties, factors, shifts],
+  );
   const stepAnalysis = useMemo(() => {
+    if (!localStatistics) return null;
     const scored = toScoredChains(filtered, ref);
     return ref && scored.length >= 3 ? fromScoredChains(scored, { metric: { key: ref.key, label: ref.label, lowerIsBetter: ref.lowerIsBetter }, lens }) : null;
-  }, [filtered, ref, lens]);
+  }, [localStatistics, filtered, ref, lens]);
   const perspectiveContext = { classification: scoped.length > 0 && scoped.every((c) => c.task === "classification"), multiDataset: datasets.length > 1 };
-  const activePerspective = PERSPECTIVE_ORDER.find((p) => perspectiveViews(p, perspectiveContext).join("|") === layout.views.join("|")) ?? null;
+  const perspectiveSet = (perspective: InspectorPerspective, context: { classification: boolean; multiDataset: boolean }) => restrictViews(perspectiveViews(perspective, context), allowedViews);
+  const perspectives = PERSPECTIVE_ORDER.filter((p) => perspectiveSet(p, perspectiveContext).length > 0);
+  const activePerspective = perspectives.find((p) => perspectiveSet(p, perspectiveContext).join("|") === layout.views.join("|")) ?? null;
   // Keep the active perspective meaningful when the scope flips between regression and classification.
   const classificationScope = perspectiveContext.classification;
   useEffect(() => {
     const other = { ...perspectiveContext, classification: !classificationScope };
-    const match = PERSPECTIVE_ORDER.find((p) => perspectiveViews(p, other).join("|") === layout.views.join("|"));
-    if (match) setLayout({ ...layout, views: perspectiveViews(match, perspectiveContext), maximized: null });
+    const match = perspectives.find((p) => perspectiveSet(p, other).join("|") === layout.views.join("|"));
+    if (match) setLayout({ ...layout, views: perspectiveSet(match, perspectiveContext), maximized: null });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [classificationScope]);
-  const applyPerspective = (perspective: InspectorPerspective) => setLayout({ preset: "grid", views: perspectiveViews(perspective, perspectiveContext), maximized: null });
+  const applyPerspective = (perspective: InspectorPerspective) => setLayout({ preset: "grid", views: perspectiveSet(perspective, perspectiveContext), maximized: null });
   const showView = (id: InspectorViewId) => {
+    if (allowedViews && !allowedViews.has(id)) return;
     if (!layout.views.includes(id)) setLayout({ ...layout, views: [...layout.views, id], maximized: null });
   };
   const onFactor = (key: string) => {
@@ -530,6 +586,7 @@ export function Inspector(props: InspectorProps) {
     compare,
     compareIds,
     loadingPredictions: loading,
+    localStatistics,
     sampleSelection,
     setSampleSelection,
     hoverSample,
@@ -566,7 +623,11 @@ export function Inspector(props: InspectorProps) {
       options={[{ value: "all", label: strings.all }, ...partitions.map((p) => ({ value: p, label: p }))]}
     />
   ) : undefined;
-  const predictionReason = loading ? strings.loadingPredictions : strings.needsPredictions;
+  const unavailableText = unavailableNotes.join(" · ");
+  const predictionReason = loading ? strings.loadingPredictions : unavailableText || strings.needsPredictions;
+  // "mean" pivots are computed in the UI.
+  const aggregate: PivotAggregate = localStatistics || options.aggregate !== "mean" ? options.aggregate : "best";
+  const statisticsReason = localStatistics ? strings.needsSteps : strings.needsLocalStatistics;
   const coloringControl = (
     <Segmented
       ariaLabel={strings.colorPoints}
@@ -608,7 +669,7 @@ export function Inspector(props: InspectorProps) {
   const compareOptions = regressionWithPredictions.map((c) => ({ value: c.chain.id, label: chainLabel(c.chain) }));
   const stepsAvailable = Boolean(stepAnalysis && stepAnalysis.tokens.length > 1);
   const G = { ranking: strings.groupRanking, steps: strings.groupSteps, tuning: strings.groupTuning, predictions: strings.groupPredictions };
-  const views: ViewSpec[] = [
+  const allViews: ViewSpec[] = [
     {
       id: "overview",
       group: G.ranking,
@@ -616,7 +677,7 @@ export function Inspector(props: InspectorProps) {
       icon: VIEW_GLYPH.overview,
       description: strings.descOverview,
       subtitle: ref ? `${ref.label} · ${scoredCount} ${strings.chains.toLowerCase()}` : undefined,
-      available: Boolean(ties),
+      available: localStatistics ? Boolean(ties) : Boolean(best && ref),
       unavailableReason: strings.needsSteps,
       render: () => <OverviewBody ctx={ctx} />,
     },
@@ -655,7 +716,7 @@ export function Inspector(props: InspectorProps) {
       title: strings.viewHeatmap,
       icon: VIEW_GLYPH.heatmap,
       description: strings.descHeatmap,
-      subtitle: `${facetLabel(heatRows)} × ${facetLabel(heatCols)} · ${options.aggregate}`,
+      subtitle: `${facetLabel(heatRows)} × ${facetLabel(heatCols)} · ${aggregate}`,
       available: facets.length >= 1,
       options: (
         <>
@@ -663,17 +724,17 @@ export function Inspector(props: InspectorProps) {
           <SelectField label={strings.columns} value={heatCols} options={facetOptions} onChange={(v) => patch({ heatCols: v as ChainFacet })} />
           <Segmented
             ariaLabel={strings.aggregate}
-            value={options.aggregate}
+            value={aggregate}
             onChange={(aggregate) => patch({ aggregate })}
             options={[
               { value: "best", label: strings.best },
               { value: "median", label: strings.median },
-              { value: "mean", label: "mean" },
+              ...(localStatistics ? [{ value: "mean" as const, label: "mean" }] : []),
             ]}
           />
         </>
       ),
-      render: () => <HeatmapBody ctx={ctx} rowFacet={heatRows} colFacet={heatCols} aggregate={options.aggregate} />,
+      render: () => <HeatmapBody ctx={ctx} rowFacet={heatRows} colFacet={heatCols} aggregate={aggregate} />,
     },
     {
       id: "datasets",
@@ -706,7 +767,7 @@ export function Inspector(props: InspectorProps) {
       description: strings.descEffects,
       subtitle: stepAnalysis ? `${stepAnalysis.tokens.length} steps · ${lensLabel(lens, strings)}` : undefined,
       available: stepsAvailable,
-      unavailableReason: strings.needsSteps,
+      unavailableReason: statisticsReason,
       options: (
         <>
           {lensControl}
@@ -732,7 +793,7 @@ export function Inspector(props: InspectorProps) {
       description: strings.descFlow,
       subtitle: lensLabel(lens, strings),
       available: stepsAvailable,
-      unavailableReason: strings.needsSteps,
+      unavailableReason: statisticsReason,
       actions: (
         <Segmented
           size="xs"
@@ -766,7 +827,7 @@ export function Inspector(props: InspectorProps) {
       description: strings.descOrder,
       subtitle: lensLabel(lens, strings),
       available: stepsAvailable,
-      unavailableReason: strings.needsSteps,
+      unavailableReason: statisticsReason,
       options: (
         <>
           {lensControl}
@@ -892,7 +953,7 @@ export function Inspector(props: InspectorProps) {
       description: strings.descAgreement,
       busy: loading,
       available: regressionWithPredictions.length >= 2,
-      unavailableReason: strings.needsTwoRegression,
+      unavailableReason: unavailableText && !loading ? unavailableText : strings.needsTwoRegression,
       actions: partitionControl,
       options:
         compareOptions.length > 2 ? (
@@ -910,8 +971,9 @@ export function Inspector(props: InspectorProps) {
       icon: VIEW_GLYPH.samples,
       description: strings.descSamples,
       busy: loading,
-      available: regressionCompare,
-      unavailableReason: hasPredictions ? strings.needsRegression : predictionReason,
+      // Ranks samples by a mean residual computed in the UI.
+      available: regressionCompare && localStatistics,
+      unavailableReason: !localStatistics ? strings.needsLocalStatistics : hasPredictions ? strings.needsRegression : predictionReason,
       actions: partitionControl,
       render: () => <HardSamplesBody ctx={ctx} partition={options.partition} />,
     },
@@ -945,6 +1007,7 @@ export function Inspector(props: InspectorProps) {
       render: () => <LeaderboardBody ctx={ctx} ranks={ranks} />,
     },
   ];
+  const views = allowedViews ? allViews.filter((view) => allowedViews.has(view.id)) : allViews;
 
   // ---------------------------------------------------------------- chrome
   const header = (
@@ -1185,7 +1248,7 @@ export function Inspector(props: InspectorProps) {
     >
       <div className="n4pg-main">
         <nav className="n4ins-perspectives" aria-label={strings.perspectives}>
-          {PERSPECTIVE_ORDER.map((perspective) => (
+          {perspectives.map((perspective) => (
             <button
               key={perspective}
               type="button"
@@ -1206,20 +1269,24 @@ export function Inspector(props: InspectorProps) {
         <div className="n4pg-legendbar n4ins-tray">
           <span className="n4ins-tray-label">{strings.compare}</span>
           {compare.length === 0 ? <span className="n4wb-muted">{strings.compareHint}</span> : null}
-          {compare.map(({ chain, color, predictions: pred }) => (
-            <Chip
-              key={chain.id}
-              color={color}
-              active={hoverId === chain.id}
-              title={`${chainLabel(chain)}${pred ? "" : ` · ${strings.loadingPredictions}`}`}
-              onClick={() => setHoverId(chain.id)}
-              {...(autoCompare ? {} : { onRemove: () => toggleCompare(chain.id) })}
-            >
-              {chainLabel(chain)}
-              {autoCompare ? <em className="n4ins-auto"> · {strings.compareAuto}</em> : null}
-              {!pred && loadingPredictions.includes(chain.id) ? <span className="n4ins-loading" aria-hidden="true" /> : null}
-            </Chip>
-          ))}
+          {compare.map(({ chain, color, predictions: pred }) => {
+            const reason = unavailableFor(chain.id);
+            return (
+              <Chip
+                key={chain.id}
+                color={color}
+                active={hoverId === chain.id}
+                title={`${chainLabel(chain)}${pred ? "" : reason !== undefined ? ` · ${reason || strings.predictionsUnavailable}` : ` · ${strings.loadingPredictions}`}`}
+                onClick={() => setHoverId(chain.id)}
+                {...(autoCompare ? {} : { onRemove: () => toggleCompare(chain.id) })}
+              >
+                {chainLabel(chain)}
+                {autoCompare ? <em className="n4ins-auto"> · {strings.compareAuto}</em> : null}
+                {reason !== undefined ? <em className="n4ins-auto"> · {strings.predictionsUnavailable}</em> : null}
+                {!pred && reason === undefined && loadingPredictions.includes(chain.id) ? <span className="n4ins-loading" aria-hidden="true" /> : null}
+              </Chip>
+            );
+          })}
           <span className="n4wb-header-grow" />
           <ColorLegend
             legend={mapping.legend}

@@ -105,6 +105,12 @@
       "types": "./dist/datasetBuilder/index.d.ts",
       "import": "./dist/datasetBuilder/index.js"
     },
+    "./browser": {
+      "types": "./dist/browser/index.d.ts",
+      "import": "./dist/browser/nirs4all-ui-browser.mjs"
+    },
+    "./browser/standalone": "./dist/browser/nirs4all-ui-browser.iife.js",
+    "./browser/styles.css": "./dist/browser/browser.css",
     "./assets/*": "./assets/*",
     "./qualification": {
       "types": "./dist/qualification/index.d.ts",
@@ -123,7 +129,7 @@
     "brand:generate": "node scripts/generate-brand-assets.mjs",
     "brand:check": "node scripts/generate-brand-assets.mjs --check",
     "brand:sync": "node scripts/sync-ecosystem-brands.mjs",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && vite build --config vite.browser.config.ts",
     "ci": "npm run prepublishOnly && npm run pack:smoke && npm run release:artifact:test && npm run smoke:react-consumers",
     "pack:smoke": "npm pack --dry-run",
     "release:artifact": "node scripts/release-artifact.mjs build",

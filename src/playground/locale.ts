@@ -75,6 +75,8 @@ export interface PlaygroundStrings {
   viewSamples: string;
   descSpectra: string;
   descScores: string;
+  /** Scores description when local statistics (the confidence ellipse) are off. */
+  descScoresPlain: string;
   descTarget: string;
   descOutliers: string;
   descLoadings: string;
@@ -253,6 +255,7 @@ export const PLAYGROUND_STRINGS_EN: PlaygroundStrings = {
   viewSamples: "Samples",
   descSpectra: "All curves, envelopes or density · compare input/output",
   descScores: "PCA / UMAP projection with confidence ellipse",
+  descScoresPlain: "PCA / UMAP projection supplied by the host",
   descTarget: "Target distribution linked to the selection",
   descOutliers: "Hotelling T² vs Q residuals with limits",
   descLoadings: "Component loadings over wavelengths",
@@ -432,6 +435,7 @@ export const PLAYGROUND_STRINGS_FR: PlaygroundStrings = {
   viewSamples: "Échantillons",
   descSpectra: "Courbes, enveloppes ou densité · comparer entrée/sortie",
   descScores: "Projection ACP / UMAP avec ellipse de confiance",
+  descScoresPlain: "PCA / UMAP projection supplied by the host",
   descTarget: "Distribution de la cible liée à la sélection",
   descOutliers: "T² de Hotelling vs résidus Q avec limites",
   descLoadings: "Loadings des composantes sur les longueurs d'onde",
