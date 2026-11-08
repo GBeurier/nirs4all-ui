@@ -568,14 +568,14 @@ export const SHOWCASE_ENTRIES: readonly ShowcaseEntry[] = [
     propsInterface: "SpectraPlotProps",
     mirrors: "Studio SpectraChart · Web DatasetView spectra explorer",
     summary:
-      "The signature absorbance-vs-wavelength chart: per-sample lines colored by partition, an emphasized mean, and a translucent min/max band.",
+      "The signature absorbance-vs-wavelength chart: per-sample lines colored by partition, an emphasized mean, and translucent precomputed bands (min/max or quantile envelopes) with optional median lines. Non-finite values are drawn as gaps.",
     hostOwned: ["spectra decimation", "preprocessing", "unit choice", "legend placement"],
     importLine: 'import { SpectraPlot } from "nirs4all-ui/viz";',
     code: `<SpectraPlot
   wavelengths={wavelengths}
   series={samples.map((s) => ({ id: s.id, values: s.absorbance, partition: s.partition }))}
   mean={meanSpectrum}
-  band={{ lower: minSpectrum, upper: maxSpectrum }}
+  bands={[{ lower: minSpectrum, upper: maxSpectrum, label: "min/max" }]}
   unit="nm"
 />`,
     render: () => (
@@ -583,7 +583,7 @@ export const SHOWCASE_ENTRIES: readonly ShowcaseEntry[] = [
         wavelengths={WAVELENGTHS}
         series={SPECTRA}
         mean={SPECTRA_MEAN}
-        band={{ lower: SPECTRA_LOWER, upper: SPECTRA_UPPER }}
+        bands={[{ lower: SPECTRA_LOWER, upper: SPECTRA_UPPER, label: "min/max" }]}
         width={520}
         height={240}
       />
