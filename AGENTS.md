@@ -25,6 +25,10 @@ Add colocated `*.test.ts` or `*.test.tsx` files for new helpers and components. 
 
 This package is shared by `nirs4all-studio` and `nirs4all-web`. Do not import from those apps. If a shared component needs domain data, define a small package-level contract and let each host adapt its local runtime objects to that contract.
 
-## Language Policy
+## Navigation
 
-All application and project content must be in English, including UI text, subtitles, tooltips, errors, documentation, comments and docstrings, test and fixture prose, reports, pull requests, commits, and generated content. Conversation with the maintainer may be in French. Preserve proper names, identifiers, filenames, source quotations, and historical or provenance records where translation would change their meaning or provenance.
+For indexed code, use CodeGraph first with this checkout's own `.codegraph/` (exact `projectPath`, or its CLI here). Never auto-index or substitute an ancestor or workspace-root index; the workspace index is only for intentional cross-repository tracing of declared included repositories, never Domains. Docs and configs may be read directly. Source, tests and builds are final authority.
+
+## Language and workspace policy
+
+All project content is English (UI text, errors, docs, comments, tests, reports, commits, PRs); converse with the maintainer in French; preserve identifiers, quotations and provenance records. Never commit credentials. Workspace `../AGENTS.md`, when present, adds shared policy on Git identity and release authority. Product frontends, shared UI, browser adapters, pins and generated assets change only in an explicit joint maintainer batch.
