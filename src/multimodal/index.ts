@@ -27,6 +27,45 @@ export {
   sourceRowIndex,
 } from "./data.js";
 export { describeRecipe, type RecipeDescription, type RecipeLine } from "./recipeGraph.js";
+export {
+  MERGE_KIND_LABEL,
+  MULTIMODAL_MODEL_CATALOG,
+  MULTIMODAL_MODEL_IDS,
+  addBranch,
+  branchIdError,
+  chainFor,
+  combinationText,
+  connectSource,
+  copyChainToBranches,
+  defaultStepParams,
+  describePipelineDocument,
+  disconnectSource,
+  duplicateBranch,
+  findBranch,
+  findModelOption,
+  headForModel,
+  insertStep,
+  mergeInputsText,
+  modelParamSummary,
+  modelSummary,
+  moveBranch,
+  moveStep,
+  pipelineIssues,
+  removeBranch,
+  removeStep,
+  resolveTarget,
+  sameTarget,
+  setChainSteps,
+  stepsFor,
+  uniqueBranchId,
+  updateBranch,
+  updateMerge,
+  updateStep,
+  withParam,
+  type PipelineCatalogs,
+  type PipelineOwner,
+} from "./pipelineModel.js";
+export { MultimodalPipelineEditor } from "./PipelineEditor.js";
 
 export { MultimodalWorkbench } from "./MultimodalWorkbench.js";
 export {
@@ -53,11 +92,13 @@ export {
 } from "./SourceViews.js";
 export {
   ModelSettings,
+  ParamField,
   RecipeGraph,
   SourceChainEditor,
   StrategyPanel,
   orderCandidates,
   type ModelSettingsProps,
+  type ParamFieldProps,
   type RecipeGraphProps,
   type SourceChainEditorProps,
   type StrategyPanelProps,

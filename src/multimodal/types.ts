@@ -253,6 +253,124 @@ export interface MultimodalStepOption {
 }
 
 // ---------------------------------------------------------------------------
+// Editable pipeline document (EDITOR_CONTRACT)
+// ---------------------------------------------------------------------------
+
+/**
+ * One model branch. Its connected `sourceIds` (host source IDs, in operator
+ * order) are combined inside one native source operator: concatenated for
+ * PLS/Ridge, kept as blocks for multiblock PLS, or fed to one trained network
+ * branch each for the multibranch regressor. `sourceChains` declares exactly
+ * one preprocessing chain per connected source.
+ */
+export interface MultimodalPipelineBranch {
+  /** Stable, unique within the document. */
+  id: string;
+  label: string;
+  sourceIds: readonly string[];
+  sourceChains: readonly MultimodalSourceChain[];
+  head: MultimodalStep;
+}
+
+/**
+ * `none`: exactly one branch, its prediction is the output.
+ * `mean`: fixed unweighted mean of two or more branch predictions.
+ * `model`: learned meta-model (PLS/Ridge) on nested out-of-fold branch
+ * predictions; optional raw source features (`sourceIds` + `sourceChains`)
+ * make it a hybrid merge.
+ */
+export type MultimodalPipelineMergeKind = "none" | "mean" | "model";
+
+export interface MultimodalPipelineMerge {
+  kind: MultimodalPipelineMergeKind;
+  /** Meta-model head; only used when `kind` is `"model"`. */
+  head: MultimodalStep;
+  /** Raw source feature inputs of the meta-model (hybrid). */
+  sourceIds: readonly string[];
+  sourceChains: readonly MultimodalSourceChain[];
+}
+
+/** Presentational, immutable pipeline document edited by the UI and executed by the host. */
+export interface MultimodalPipelineDocument {
+  label: string;
+  branches: readonly MultimodalPipelineBranch[];
+  merge: MultimodalPipelineMerge;
+}
+
+/** Host-supplied template. Loading it replaces the editor document, never the dataset. */
+export interface MultimodalPipelinePreset {
+  id: string;
+  label: string;
+  description: string;
+  strategy: MultimodalStrategyId;
+  document: MultimodalPipelineDocument;
+}
+
+/** Primitive model parameter; `advanced` parameters are grouped under a disclosure. */
+export interface MultimodalModelParamSpec extends MultimodalStepParamSpec {
+  advanced?: boolean;
+  hint?: string;
+}
+
+/** How a model consumes the sources connected to its branch inside the native source operator. */
+export type MultimodalModelInputMode = "concatenated" | "blocks" | "network";
+
+/** Host-overridable description of an owner model usable as a branch head and/or meta-model. */
+export interface MultimodalModelOption {
+  methodId: string;
+  label: string;
+  /** Compact name for canvas cards, e.g. `"PLS"`. */
+  shortLabel: string;
+  description: string;
+  inputMode: MultimodalModelInputMode;
+  /** `branch`: may head a model branch; `meta`: may be the learned merge meta-model. */
+  roles: readonly ("branch" | "meta")[];
+  params: readonly MultimodalModelParamSpec[];
+}
+
+/** An addressable element of the pipeline document (selection and issue targets). */
+export type MultimodalPipelineTarget =
+  | { kind: "document" }
+  | { kind: "branch"; branchId: string }
+  | { kind: "model"; branchId: string }
+  /** `branchId: null` addresses a raw feature input of the merge meta-model. */
+  | { kind: "source"; branchId: string | null; sourceId: string }
+  | { kind: "step"; branchId: string | null; sourceId: string; index: number }
+  | { kind: "merge" };
+
+export interface MultimodalPipelineIssue {
+  severity: "error" | "warning";
+  message: string;
+  target: MultimodalPipelineTarget;
+}
+
+/** Controlled props of `MultimodalPipelineEditor`. */
+export interface MultimodalPipelineEditorProps {
+  /** Host dataset sources; every source ID in the document must be one of these. */
+  sources: readonly MultimodalSource[];
+  value: MultimodalPipelineDocument;
+  /** Receives a new immutable document for every edit. */
+  onChange: (value: MultimodalPipelineDocument) => void;
+  presets: readonly MultimodalPipelinePreset[];
+  /** Host replaces the document with the preset's document. */
+  onLoadPreset: (presetId: string) => void;
+  disabled?: boolean;
+  /** Host serialises and downloads the current document. */
+  onExport?: () => void;
+  /** UI forwards the chosen file; the host reads and validates it. */
+  onImport?: (file: File) => void;
+  /** Additional host validation messages, displayed with the editor's structural checks. */
+  issues?: readonly MultimodalPipelineIssue[];
+  /** Defaults to `MULTIMODAL_STEP_CATALOG`. */
+  stepCatalog?: readonly MultimodalStepOption[];
+  /** Defaults to `MULTIMODAL_MODEL_CATALOG`. */
+  modelCatalog?: readonly MultimodalModelOption[];
+  /** Host control rendered in the editor toolbar, e.g. "Run this pipeline". */
+  actions?: ReactNode;
+  className?: string;
+}
+
+// ---------------------------------------------------------------------------
 // Run state and results (C5-compatible)
 // ---------------------------------------------------------------------------
 
@@ -396,6 +514,13 @@ export interface MultimodalWorkbenchProps {
   onCandidatesChange: (next: readonly MultimodalCandidate[]) => void;
   /** Defaults to `MULTIMODAL_STEP_CATALOG`. */
   stepCatalog?: readonly MultimodalStepOption[];
+  /**
+   * Host-composed pipeline editor (usually `MultimodalPipelineEditor` plus the
+   * host's run-current control). When provided it replaces the legacy
+   * preprocessing and strategy sections; the legacy batch run stays available
+   * in a collapsed "Compare unedited presets" disclosure.
+   */
+  pipelineEditor?: ReactNode;
 
   // execution
   run: MultimodalRunState;

@@ -210,6 +210,15 @@ export const MULTIMODAL_STEP_CATALOG: readonly MultimodalStepOption[] = [
       { name: "with_std", label: "Scale to unit variance", kind: "bool", default: true },
     ],
   },
+  {
+    methodId: "preprocessing.scaling.block_rms",
+    label: "Block RMS scaling",
+    description:
+      "Divides the whole source block by one root-mean-square scale learned on the training scope, so sources of different width or magnitude contribute comparably once combined.",
+    fitScope: "train-fitted",
+    representations: ALL,
+    params: [],
+  },
 ];
 
 export function stepOptionsFor(
