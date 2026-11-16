@@ -200,8 +200,10 @@ function buildFork(
 }
 
 function isPlainLaneMap(value: unknown): value is Record<string, unknown> {
-  // Named duplication branches only: generator (`_or_`) and separation (`by_*`) branches stay raw.
-  return isRecord(value) && Object.keys(value).length > 0 && Object.keys(value).every((key) => !key.startsWith("_") && !key.startsWith("by_") && key !== "steps" && key !== "values");
+  // Named duplication branches only: generator (`_or_`), separation (`by_*`) and configured
+  // (`parallel`, `n_jobs`) branches stay raw.
+  const reserved = ["steps", "values", "parallel", "n_jobs"];
+  return isRecord(value) && Object.keys(value).length > 0 && Object.keys(value).every((key) => !key.startsWith("_") && !key.startsWith("by_") && !reserved.includes(key));
 }
 
 function buildItem(builder: Builder, raw: unknown, position: Position): ChainItem {

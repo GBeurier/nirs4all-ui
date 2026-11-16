@@ -43,8 +43,9 @@ describe("PipelineChainEditor", () => {
     const html = render({ pipeline: [{ _bypassed_: SNV }, SNV] });
     expect(count(html, "data-bypassed")).toBe(1);
     expect(html).toContain('aria-label="Preprocessing: SNV, bypassed"');
-    expect(html).toContain('aria-label="Enable: SNV"');
-    expect(html).toContain('aria-label="Bypass: SNV"');
+    // One static name per switch; the state is carried by aria-checked.
+    expect(html).toMatch(/role="switch" aria-checked="false" aria-label="Active: SNV" title="Enable"/);
+    expect(html).toMatch(/role="switch" aria-checked="true" aria-label="Active: SNV" title="Bypass"/);
     expect(html).toContain("<dt>bypassed</dt><dd>1</dd>");
   });
 
@@ -74,6 +75,12 @@ describe("PipelineChainEditor", () => {
     expect(html).toContain("Scores");
     expect(html).toContain("12 pipelines");
     expect(html).not.toContain("≈");
+  });
+
+  it("always keeps one tab stop, also when the pipeline has no cell", () => {
+    for (const pipeline of [[], [{ _or_: [null] }], [{ branch: [[], []] }], [{ _cartesian_: [] }]]) {
+      expect(count(render({ pipeline }), 'tabindex="0"')).toBe(1);
+    }
   });
 
   it("lists generators first in the cell summary", () => {

@@ -25,9 +25,9 @@ import {
   nudgeItem,
   removeItem,
   removeLane,
-  setBypassed,
   setDocumentName,
   shiftItemLane,
+  toggleBypass,
 } from "./edit.js";
 import { SelectionInspector, type InspectorContext } from "./Inspector.js";
 import { layoutChain } from "./layout.js";
@@ -134,8 +134,6 @@ export function PipelineChainEditor({
   const stripRef = useRef<HTMLDivElement | null>(null);
   const focusCanvas = useRef(false);
   const browserToken = useRef(0);
-  /** Selection to return to when the operator browser closes. */
-  const anchor = useRef<ChainSelection | null>(null);
 
   const selection = selectionExists(model, rawSelection) ? rawSelection : null;
   const layout = useMemo(() => layoutChain(model, { wrapWidth: wrap ? bayWidth / zoom : null }), [model, wrap, bayWidth, zoom]);
@@ -177,14 +175,22 @@ export function PipelineChainEditor({
   }, [onChange, select, value]);
 
   const openBrowser = (target: ChainSelection) => {
-    if (selection?.kind === "item" || selection?.kind === "lane") anchor.current = selection;
     select(target);
     browserToken.current += 1;
     setBrowserFocus(browserToken.current);
   };
+  /** Closing the browser puts the cursor back next to the insert point it was opened on. */
   const closeBrowser = () => {
+    let next: ChainSelection | null = null;
+    if (selection?.kind === "newLane") next = { kind: "item", id: selection.fork };
+    else if (selection?.kind === "slot") {
+      const chain = model.chains.get(selection.chain);
+      const neighbour = chain?.items[selection.index - 1] ?? chain?.items[selection.index];
+      const lane = chain?.owner ? model.lanes.get(chain.owner) : undefined;
+      next = neighbour ? { kind: "item", id: neighbour.id } : lane ? { kind: "item", id: lane.fork } : chain?.owner ? { kind: "item", id: chain.owner } : null;
+    }
     focusCanvas.current = true;
-    select(selectionExists(model, anchor.current) ? anchor.current : null);
+    select(next);
   };
 
   const addTargetFor = (current: ChainSelection | null, where: "before" | "after"): ChainSelection | null => {
@@ -259,11 +265,7 @@ export function PipelineChainEditor({
       }
       case "bypass": {
         if (selection?.kind !== "item" && selection?.kind !== "lane") return false;
-        const cell = layout.cells.find((candidate) => candidate.id === selection.id);
-        const lane = layout.lanes.find((candidate) => candidate.id === selection.id);
-        const node = selection.kind === "item" ? model.items.get(selection.id) : undefined;
-        const bypassed = selection.kind === "lane" ? lane?.lane.bypassed ?? false : cell ? cell.dimmed : node?.bypassed ?? false;
-        commit(setBypassed(value, selection, !bypassed));
+        commit(toggleBypass(value, selection), true);
         return true;
       }
       case "remove":
@@ -291,6 +293,8 @@ export function PipelineChainEditor({
 
   const onBayKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const command = commandForKey(event);
+    // A held key keeps travelling, but never repeats an edit.
+    if (command && event.repeat && command.type !== "focus") return event.preventDefault();
     if (command && run(command)) {
       event.preventDefault();
       event.stopPropagation();
@@ -325,6 +329,10 @@ export function PipelineChainEditor({
       commit(current.kind === "item" ? moveItem(value, current.id, target.chain, target.index) : insertStep(value, target.chain, target.index, current.value), true);
     } else if (target.kind === "newLane") {
       if (current.kind === "step") return commit(addLane(value, target.fork, current.value), true);
+      // A group cannot move into a lane of its own.
+      const moving = model.items.get(current.id);
+      const fork = model.items.get(target.fork);
+      if (!moving || !fork || moving.path.every((segment, index) => fork.path[index] === segment)) return;
       const created = addLane(value, target.fork);
       if (created.select?.kind === "slot") commit(moveItem(created.document, current.id, created.select.chain, 0), true);
     }
@@ -336,7 +344,11 @@ export function PipelineChainEditor({
     catalog,
     labels,
     readOnly,
-    commit: (result) => commit(result),
+    // A strip button that changes the selection disappears with its panel: hand focus to the rack.
+    commit: (result) => {
+      const active = typeof document === "undefined" ? null : document.activeElement;
+      commit(result, result.select !== undefined && active?.tagName === "BUTTON" && stripRef.current?.contains(active) === true);
+    },
     requestAdd: (target) => {
       if (target.kind === "newLane") return openBrowser({ kind: "newLane", fork: target.fork });
       const next = addTargetFor(target.kind === "lane" ? { kind: "lane", id: target.id } : { kind: "item", id: target.id }, "after");
@@ -411,6 +423,7 @@ export function PipelineChainEditor({
           labels={labels}
           readOnly={readOnly}
           drag={drag}
+          tabStopKey={(targets.find((target) => target.primary) ?? targets[0])?.key ?? ""}
           inputLabel={inputLabel ?? labels.input}
           inputDetail={inputDetail ?? labels.inputDetail}
           outputLabel={outputLabel ?? labels.output}
@@ -419,7 +432,7 @@ export function PipelineChainEditor({
             if (next && (next.kind === "slot" || next.kind === "newLane") && activate) openBrowser(next);
             else select(next);
           }}
-          onToggleBypass={(target, bypassed) => commit(setBypassed(value, target, bypassed))}
+          onToggleBypass={(target) => commit(toggleBypass(value, target), true)}
           onDragItem={(id) => setDrag(id ? { kind: "item", id } : null)}
           onDrop={drop}
         />

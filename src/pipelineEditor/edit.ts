@@ -70,8 +70,16 @@ function chainRemove(draft: Draft, chain: ChainRef, index: number): void {
   list.splice(index, 1);
   if (chain.keepList) return;
   // An option holding one step is stored as that step; an empty option is `null`.
+  // A bypassed step stays in its list: stored bare it would read as a bypassed option.
   if (list.length === 0) setAt(draft, chain.path, null);
-  else if (list.length === 1 && !Array.isArray(list[0])) setAt(draft, chain.path, list[0]);
+  else if (list.length === 1 && !Array.isArray(list[0]) && !isBypassWrapper(list[0])) setAt(draft, chain.path, list[0]);
+}
+
+/** `_weights_` of an `_or_` step, when it is index-aligned with the options. */
+function alignedWeights(draft: Draft, fork: Extract<ChainItem, { kind: "fork" }>): unknown[] | null {
+  const record = getAt(draft, fork.valuePath);
+  const weights = isRecord(record) ? record._weights_ : undefined;
+  return fork.keyword === "_or_" && Array.isArray(weights) && weights.length === fork.lanes.length ? weights : null;
 }
 
 function nearestInChain(chainId: string, index: number): (model: ChainModel) => ChainSelection {
@@ -136,11 +144,15 @@ export function moveItem(document: PipelineChainDocument, id: string, chainId: s
     if (!item || !target || isInside(target.path, item.path)) return UNCHANGED;
     if (target.id === item.chain && (index === item.index || index === item.index + 1)) return UNCHANGED;
     // Markers keep every path valid while the two chains are rewritten.
-    const value = getAt(draft, item.path);
+    const source = model.chains.get(item.chain);
+    const sourceLane = source?.form === "single" ? model.lanes.get(source.owner ?? "") : undefined;
+    const stored = getAt(draft, item.path);
+    // The only step of a bypassed option carries its bypass with it.
+    const value = sourceLane?.bypassed && !isBypassWrapper(stored) ? { [BYPASS_KEY]: stored } : stored;
     setAt(draft, item.path, { [MOVE_SOURCE]: true });
     chainInsert(draft, target, index, { [MOVE_TARGET]: value });
-    const source = findMarked(parsePipeline(draft), MOVE_SOURCE);
-    if (source) chainRemove(draft, parsePipeline(draft).chains.get(source.chain)!, source.index);
+    const marker = findMarked(parsePipeline(draft), MOVE_SOURCE);
+    if (marker) chainRemove(draft, parsePipeline(draft).chains.get(marker.chain)!, marker.index);
     const moved = findMarked(parsePipeline(draft), MOVE_TARGET);
     if (!moved) return null;
     setAt(draft, moved.path, value);
@@ -187,29 +199,73 @@ export function replaceItemValue(document: PipelineChainDocument, id: string, va
 // Bypass
 // ---------------------------------------------------------------------------
 
-function bypassTarget(model: ChainModel, selection: { kind: "item" | "lane"; id: string }): { path: JsonPath } | undefined {
+type BypassSelection = { kind: "item" | "lane"; id: string };
+
+function bypassTarget(model: ChainModel, selection: BypassSelection): { path: JsonPath; lane?: LaneNode } | undefined {
   if (selection.kind === "lane") return model.lanes.get(selection.id);
   const item = model.items.get(selection.id);
   const chain = item && model.chains.get(item.chain);
   // The only step of an alternative is the alternative: bypass the lane itself.
   const lane = chain && chain.form === "single" ? model.lanes.get(chain.owner ?? "") : undefined;
-  return lane ?? item;
+  return lane ? { path: lane.path, lane } : item;
+}
+
+/**
+ * The bypassed element that switches the selection off: itself, or the nearest
+ * enclosing lane or group. `null` when the selection is active.
+ */
+export function bypassSource(model: ChainModel, selection: BypassSelection): BypassSelection | null {
+  let lane = selection.kind === "lane" ? model.lanes.get(selection.id) : undefined;
+  let item = selection.kind === "item" ? model.items.get(selection.id) : undefined;
+  while (lane || item) {
+    if (lane) {
+      if (lane.bypassed) return { kind: "lane", id: lane.id };
+      item = model.items.get(lane.fork);
+      lane = undefined;
+    } else if (item) {
+      if (item.bypassed) return { kind: "item", id: item.id };
+      const owner: string | null = model.chains.get(item.chain)?.owner ?? null;
+      lane = owner ? model.lanes.get(owner) : undefined;
+      item = owner && !lane ? model.items.get(owner) : undefined;
+    }
+  }
+  return null;
+}
+
+/** Bypass an active element, or re-enable whatever currently switches it off. */
+export function toggleBypass(document: PipelineChainDocument, selection: BypassSelection): EditResult {
+  const model = parsePipeline(document);
+  const source = bypassSource(model, selection);
+  if (!source) return setBypassed(document, selection, true);
+  const result = setBypassed(document, source, false);
+  // Unwrapping a lane renumbers the paths under it: keep pointing at the same step.
+  const item = selection.kind === "item" ? model.items.get(selection.id) : undefined;
+  const lane = source.kind === "lane" && item ? model.lanes.get(source.id) : undefined;
+  if (!item || !lane || lane.chain !== item.chain) return result;
+  const moved = parsePipeline(result.document).lanes.get(lane.id)?.items[item.index];
+  return moved ? { document: result.document, select: { kind: "item", id: moved.id } } : result;
 }
 
 /** Whether an item or lane is currently bypassed (directly or through its lane). */
-export function isBypassed(document: PipelineChainDocument, selection: { kind: "item" | "lane"; id: string }): boolean {
+export function isBypassed(document: PipelineChainDocument, selection: BypassSelection): boolean {
   const target = bypassTarget(parsePipeline(document), selection);
   return target ? isBypassWrapper(getAt(document, target.path)) : false;
 }
 
-export function setBypassed(document: PipelineChainDocument, selection: { kind: "item" | "lane"; id: string }, bypassed: boolean): EditResult {
+export function setBypassed(document: PipelineChainDocument, selection: BypassSelection, bypassed: boolean): EditResult {
   return apply(document, (draft, model) => {
     const target = bypassTarget(model, selection);
     if (!target) return UNCHANGED;
     const raw = getAt(draft, target.path);
     if (bypassed === isBypassWrapper(raw)) return UNCHANGED;
     setAt(draft, target.path, bypassed ? { [BYPASS_KEY]: raw } : (raw as Record<string, unknown>)[BYPASS_KEY]);
-    return undefined;
+    // Wrapping an option moves its only step one level down: follow it.
+    const laneId = selection.kind === "item" ? target.lane?.id : undefined;
+    if (!laneId) return undefined;
+    return (next) => {
+      const first = next.lanes.get(laneId)?.items[0];
+      return first ? { kind: "item", id: first.id } : { kind: "lane", id: laneId };
+    };
   });
 }
 
@@ -299,10 +355,12 @@ export function setSweep(document: PipelineChainDocument, id: string, param: str
       writeParam(draft, step, param, fixed === undefined ? undefined : structuredClone(fixed));
       return undefined;
     }
-    // Keep generator modifiers (count, _seed_, ...) written next to the payload.
+    // Keep generator modifiers (count, pick, _seed_, ...) while the generator keeps its kind.
     const previous = existing?.location === "param" ? step.params[param] : undefined;
     const extras: Record<string, unknown> = {};
-    if (isRecord(previous)) for (const [key, value] of Object.entries(previous)) if (!/^_(or|range|log_range)_$/.test(key)) extras[key] = value;
+    if (isRecord(previous) && entry[0] in previous) {
+      for (const [key, value] of Object.entries(previous)) if (key !== entry[0]) extras[key] = value;
+    }
     writeParam(draft, step, param, { ...extras, [entry[0]]: entry[1] });
     return undefined;
   });
@@ -418,6 +476,7 @@ export function removeLane(document: PipelineChainDocument, laneId: string): Edi
   return apply(document, (draft, model) => {
     const found = laneOf(model, laneId);
     if (!found) return UNCHANGED;
+    alignedWeights(draft, found.fork)?.splice(found.lane.index, 1);
     deleteAt(draft, found.lane.path);
     return { kind: "item", id: found.fork.id };
   });
@@ -432,6 +491,8 @@ export function moveLane(document: PipelineChainDocument, laneId: string, direct
     if (Array.isArray(container)) {
       const a = found.lane.index;
       const b = target.index;
+      const weights = alignedWeights(draft, found.fork);
+      if (weights) [weights[a], weights[b]] = [weights[b], weights[a]];
       [container[a], container[b]] = [container[b], container[a]];
       return { kind: "lane", id: laneIdAt([...found.fork.lanesPath, b]) };
     }
@@ -443,13 +504,18 @@ export function moveLane(document: PipelineChainDocument, laneId: string, direct
   });
 }
 
-/** Rename a named branch lane. Empty or duplicate names are refused. */
+/** Names the runtime reads as branch configuration, a generator or a separation rule. */
+function isReservedLaneName(name: string): boolean {
+  return name.startsWith("_") || name.startsWith("by_") || /^\d+$/.test(name) || ["steps", "values", "parallel", "n_jobs"].includes(name);
+}
+
+/** Rename a named branch lane. Empty, duplicate and reserved names are refused. */
 export function renameLane(document: PipelineChainDocument, laneId: string, name: string): EditResult {
   return apply(document, (draft, model) => {
     const found = laneOf(model, laneId);
     const container = found && getAt(draft, found.fork.lanesPath);
     const key = found?.lane.key;
-    if (!found || !isRecord(container) || typeof key !== "string" || !name || name === key || name in container) return UNCHANGED;
+    if (!found || !isRecord(container) || typeof key !== "string" || !name || name === key || name in container || isReservedLaneName(name)) return UNCHANGED;
     overwriteRecord(container, replaceKey(container, key, name, container[key]));
     return { kind: "lane", id: laneIdAt([...found.fork.lanesPath, name]) };
   });
@@ -478,7 +544,8 @@ export function dissolveFork(document: PipelineChainDocument, forkId: string, la
     if (chain.form === "list") {
       (getAt(draft, chain.path) as unknown[]).splice(fork.index, 1, ...steps);
     } else {
-      setAt(draft, chain.path, steps.length === 1 && !chain.keepList ? steps[0] : steps.length === 0 && !chain.keepList ? null : steps);
+      const bare = steps.length === 1 && !chain.keepList && !Array.isArray(steps[0]) && !isBypassWrapper(steps[0]);
+      setAt(draft, chain.path, bare ? steps[0] : steps.length === 0 && !chain.keepList ? null : steps);
     }
     return nearestInChain(chain.id, fork.index);
   });

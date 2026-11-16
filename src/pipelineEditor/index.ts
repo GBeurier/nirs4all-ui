@@ -35,6 +35,7 @@ export {
 export { ROOT_CHAIN_PATH, chainIdAt, chainOwnerItem, flattenItems, itemIdAt, laneIdAt, parsePipeline } from "./model.js";
 export {
   addLane,
+  bypassSource,
   dissolveFork,
   duplicateItem,
   insertStep,
@@ -55,6 +56,7 @@ export {
   setTuning,
   setTuningOption,
   shiftItemLane,
+  toggleBypass,
   wrapItem,
   type SweepDraft,
 } from "./edit.js";

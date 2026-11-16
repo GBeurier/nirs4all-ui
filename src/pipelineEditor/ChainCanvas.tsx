@@ -51,7 +51,9 @@ export interface ChainCanvasProps {
   outputLabel: string;
   outputDetail: string;
   onSelect: (selection: ChainSelection | null, activate: boolean) => void;
-  onToggleBypass: (target: { kind: "item" | "lane"; id: string }, bypassed: boolean) => void;
+  /** Key of the element holding the rack's single tab stop when nothing is selected. */
+  tabStopKey: string;
+  onToggleBypass: (target: { kind: "item" | "lane"; id: string }) => void;
   onDragItem: (id: string | null) => void;
   onDrop: (target: ChainSelection) => void;
 }
@@ -98,6 +100,7 @@ export function ChainCanvas({
   labels,
   readOnly,
   drag,
+  tabStopKey,
   inputLabel,
   inputDetail,
   outputLabel,
@@ -108,8 +111,7 @@ export function ChainCanvas({
   onDrop,
 }: ChainCanvasProps) {
   const selectedKey = selectionKey(selection);
-  const firstKey = layout.cells[0] ? selectionKey({ kind: "item", id: layout.cells[0].id }) : layout.slots[0] ? selectionKey({ kind: "slot", chain: layout.slots[0].chain, index: layout.slots[0].index }) : "";
-  const tabStop = selectedKey || firstKey;
+  const tabStop = selectedKey || tabStopKey;
   const focusProps = (target: ChainSelection) => {
     const key = selectionKey(target);
     return { "data-n4rack-key": key, tabIndex: key === tabStop ? 0 : -1, "aria-current": key === selectedKey ? ("true" as const) : undefined };
@@ -194,10 +196,11 @@ export function ChainCanvas({
             type="button"
             className="n4rack__led"
             tabIndex={-1}
-            aria-pressed={!cell.dimmed}
-            aria-label={`${cell.dimmed ? labels.enable : labels.bypass}: ${title}`}
+            role="switch"
+            aria-checked={!cell.dimmed}
+            aria-label={`${labels.active}: ${title}`}
             title={cell.dimmed ? labels.enable : labels.bypass}
-            onClick={() => onToggleBypass(target, !cell.dimmed)}
+            onClick={() => onToggleBypass(target)}
           />
         )}
       </div>

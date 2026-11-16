@@ -53,9 +53,11 @@ describe("parsePipeline", () => {
     const separation = { branch: { by_metadata: "site" } };
     const generatorBranch = { branch: { _or_: [SNV, MSC] } };
     const augmentation = { sample_augmentation: { transformers: [SNV], count: 2 } };
-    const model = parsePipeline({ pipeline: [separation, generatorBranch, augmentation, null, "chart_2d", { _comment: "hello" }, { class: "pkg.Unknown", params: { a: 1 } }] }, index);
+    const configured = { branch: { a: [SNV], b: [MSC], parallel: true, n_jobs: 2 } };
+    const model = parsePipeline({ pipeline: [separation, generatorBranch, augmentation, null, "chart_2d", { _comment: "hello" }, { class: "pkg.Unknown", params: { a: 1 } }, configured] }, index);
     const items = model.root.items;
-    expect(kinds(items)).toEqual(["raw", "raw", "raw", "raw", "raw", "note", "step"]);
+    expect(kinds(items)).toEqual(["raw", "raw", "raw", "raw", "raw", "note", "step", "raw"]);
+    expect(items[7]).toMatchObject({ value: configured });
     expect(items[0]).toMatchObject({ value: separation, label: "Branch", detail: "by_metadata site" });
     expect(items[2]).toMatchObject({ value: augmentation, label: "Sample augmentation", detail: "transformers, count 2" });
     expect(items[4]).toMatchObject({ role: "chart" });

@@ -44,6 +44,8 @@ describe("generator summaries", () => {
     expect(stats({ pipeline: [{ _or_: [SNV, MSC, SCALER], pick: 2, count: 2 }] }).variants).toBe(2);
     expect(stats({ pipeline: [{ _sample_: { distribution: "uniform", from: 0, to: 1 } }] }).variants).toBeNull();
     expect(stats({ pipeline: [{ class: SAVGOL, params: { window_length: { _or_: [11, 21] }, deriv: { _range_: [0, 2, 1] } } }] }).variants).toBe(6);
+    // A generator nested inside an estimator parameter is not read as a sweep: unknown, not 1.
+    expect(stats({ pipeline: [{ model: { class: "pkg.Meta", params: { model: { class: PLS, params: { n_components: { _range_: [1, 5, 1] } } } } } }] }).variants).toBeNull();
   });
 
   it("reads the Studio presets: 3 alternatives x 8 components, and a capped cartesian product", () => {

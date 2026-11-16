@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { toCanonicalPipeline } from "./document.js";
 import {
   addLane,
+  bypassSource,
   dissolveFork,
   duplicateItem,
   insertStep,
@@ -22,10 +23,11 @@ import {
   setTuning,
   setTuningOption,
   shiftItemLane,
+  toggleBypass,
   wrapItem,
 } from "./edit.js";
 import { parsePipeline } from "./model.js";
-import { KFOLD, MSC, PLS, SNV, branchDocument, pls, savgol, searchDocument } from "./__fixtures__/pipelines.js";
+import { KFOLD, MSC, PLS, SAVGOL, SNV, branchDocument, pls, savgol, searchDocument } from "./__fixtures__/pipelines.js";
 import type { ChainItem, ChainSelection, ForkNode, PipelineChainDocument } from "./types.js";
 
 const root = (document: PipelineChainDocument) => parsePipeline(document).root;
@@ -134,6 +136,44 @@ describe("bypass", () => {
     expect(toCanonicalPipeline(off.document).pipeline[0]).toEqual({ _or_: [null, savgol(21)], count: 2 });
   });
 
+  it("keeps the selection on an alternative when its bypass wraps it", () => {
+    const source = searchDocument();
+    const step = forkAt(source, 0).lanes[1]!.items[0]!;
+    const off = setBypassed(source, { kind: "item", id: step.id }, true);
+    expect(selectedPath(off.document, off.select)).toEqual(["pipeline", 0, "_or_", 1, "_bypassed_"]);
+    const on = toggleBypass(off.document, off.select as { kind: "item"; id: string });
+    expect(on.document).toEqual(source);
+    expect(selectedPath(on.document, on.select)).toEqual(["pipeline", 0, "_or_", 1]);
+  });
+
+  it("re-enables the enclosing lane or group when toggling a step it switches off", () => {
+    const source: PipelineChainDocument = { pipeline: [{ branch: [{ _bypassed_: [SNV, MSC] }, [SNV]] }] };
+    const model = parsePipeline(source);
+    const lane = forkAt(source, 0).lanes[0]!;
+    const inner = { kind: "item" as const, id: lane.items[1]!.id };
+    expect(bypassSource(model, inner)).toEqual({ kind: "lane", id: lane.id });
+    expect(bypassSource(model, { kind: "item", id: forkAt(source, 0).lanes[1]!.items[0]!.id })).toBeNull();
+    expect(toggleBypass(source, inner).document.pipeline[0]).toEqual({ branch: [[SNV, MSC], [SNV]] });
+
+    const group: PipelineChainDocument = { pipeline: [{ _bypassed_: { _or_: [SNV, MSC] } }] };
+    const option = (parsePipeline(group).root.items[0] as ForkNode).lanes[0]!.items[0]!;
+    expect(toggleBypass(group, { kind: "item", id: option.id }).document.pipeline[0]).toEqual({ _or_: [SNV, MSC] });
+  });
+
+  it("does not let list normalisation or a move change what is bypassed", () => {
+    // Removing MSC must leave a list: a bare wrapper would read as a bypassed option.
+    const chained: PipelineChainDocument = { pipeline: [{ _or_: [[{ _bypassed_: SNV }, MSC], SNV] }] };
+    const removed = removeItem(chained, forkAt(chained, 0).lanes[0]!.items[1]!.id);
+    expect(removed.document.pipeline[0]).toEqual({ _or_: [[{ _bypassed_: SNV }], SNV] });
+    expect(toCanonicalPipeline(removed.document).pipeline[0]).toEqual({ _or_: [[], SNV] });
+
+    // The only step of a bypassed option stays bypassed when it is moved out.
+    const option: PipelineChainDocument = { pipeline: [{ _or_: [{ _bypassed_: SNV }, MSC] }] };
+    const moved = moveItem(option, forkAt(option, 0).lanes[0]!.items[0]!.id, root(option).id, 0);
+    expect(moved.document.pipeline[0]).toEqual({ _bypassed_: SNV });
+    expect(toCanonicalPipeline(moved.document).pipeline).toEqual([{ _or_: [MSC] }]);
+  });
+
   it("bypasses a whole lane", () => {
     const source = branchDocument();
     const off = setBypassed(source, { kind: "lane", id: forkAt(source, 1).lanes[0]!.id }, true);
@@ -159,6 +199,10 @@ describe("step content", () => {
     expect(swept.document.pipeline[0]).toMatchObject({ params: { window_length: { _range_: [11, 31, 10] } } });
     const values = setSweep(swept.document, id, "window_length", { kind: "values", values: [11, 21] });
     expect(values.document.pipeline[0]).toMatchObject({ params: { window_length: { _or_: [11, 21] } } });
+    // Modifiers stay while the generator keeps its kind, and go when it changes kind.
+    const picked: PipelineChainDocument = { pipeline: [{ class: SAVGOL, params: { window_length: { _or_: [11, 21], pick: 1, _seed_: 3 } } }] };
+    expect(setSweep(picked, id, "window_length", { kind: "values", values: [11, 31] }).document.pipeline[0]).toEqual({ class: SAVGOL, params: { window_length: { pick: 1, _seed_: 3, _or_: [11, 31] } } });
+    expect(setSweep(picked, id, "window_length", { kind: "range", from: 11, to: 31, step: 10 }).document.pipeline[0]).toEqual({ class: SAVGOL, params: { window_length: { _range_: [11, 31, 10] } } });
     expect(setSweep(values.document, id, "window_length", null, 11).document).toEqual(source);
   });
 
@@ -227,12 +271,25 @@ describe("lanes and groups", () => {
     expect(addLane(choice, forkAt(choice, 0).id, MSC).document.pipeline[0]).toEqual({ _or_: [null, SNV, savgol(21), MSC], count: 2 });
   });
 
+  it("keeps _weights_ aligned with the alternatives", () => {
+    const source: PipelineChainDocument = { pipeline: [{ _or_: [SNV, MSC, KFOLD], count: 2, _weights_: [0.5, 0.3, 0.2] }] };
+    const fork = forkAt(source, 0);
+    expect(moveLane(source, fork.lanes[0]!.id, 1).document.pipeline[0]).toEqual({ _or_: [MSC, SNV, KFOLD], count: 2, _weights_: [0.3, 0.5, 0.2] });
+    expect(removeLane(source, fork.lanes[1]!.id).document.pipeline[0]).toEqual({ _or_: [SNV, KFOLD], count: 2, _weights_: [0.5, 0.2] });
+    const off = setBypassed(source, { kind: "lane", id: fork.lanes[2]!.id }, true);
+    expect(toCanonicalPipeline(off.document).pipeline[0]).toEqual({ _or_: [SNV, MSC], count: 2, _weights_: [0.5, 0.3] });
+  });
+
   it("renames and reorders named lanes, keeping key order", () => {
     const source: PipelineChainDocument = { pipeline: [{ branch: { a: [SNV], b: [MSC], c: [] } }] };
     const fork = forkAt(source, 0);
     const renamed = renameLane(source, fork.lanes[1]!.id, "msc");
     expect(Object.keys((renamed.document.pipeline[0] as { branch: object }).branch)).toEqual(["a", "msc", "c"]);
     expect(renameLane(source, fork.lanes[1]!.id, "a").document).toBe(source);
+    // Names the runtime reads as configuration, generators or separation rules are refused.
+    for (const reserved of ["_or_", "by_metadata", "steps", "parallel", "n_jobs", "1", ""]) {
+      expect(renameLane(source, fork.lanes[1]!.id, reserved).document).toBe(source);
+    }
     const moved = moveLane(source, fork.lanes[2]!.id, -1);
     expect(Object.keys((moved.document.pipeline[0] as { branch: object }).branch)).toEqual(["a", "c", "b"]);
     const added = addLane(source, fork.id);

@@ -38,8 +38,11 @@ export interface PipelineChainLabels {
   emptyLane: string;
   skipOption: string;
   notInCatalog: string;
+  rawHint: string;
   lanes: string;
   options: string;
+  lane: string;
+  option: string;
   keeps: string;
   combinations: string;
   // inspector
@@ -138,8 +141,11 @@ export const DEFAULT_PIPELINE_CHAIN_LABELS: PipelineChainLabels = {
   emptyLane: "empty lane",
   skipOption: "skip",
   notInCatalog: "Not in the catalogue",
+  rawHint: "Kept exactly as written. Edit it as JSON.",
   lanes: "lanes",
   options: "options",
+  lane: "Lane",
+  option: "Option",
   keeps: "keeps",
   combinations: "combinations",
   moveLeft: "Move earlier",

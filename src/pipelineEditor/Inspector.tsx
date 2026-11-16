@@ -16,6 +16,7 @@ import {
   parseJson,
   parseLoose,
   parseNumber,
+  looseText,
   parseValueList,
   valueListText,
   valueText,
@@ -30,6 +31,7 @@ import {
   removeLane,
   renameLane,
   replaceItemValue,
+  bypassSource,
   setBypassed,
   setModifier,
   setParam,
@@ -37,6 +39,7 @@ import {
   setSweep,
   setTuning,
   setTuningOption,
+  toggleBypass,
   wrapItem,
   type SweepDraft,
 } from "./edit.js";
@@ -121,16 +124,18 @@ function Identity({ glyph, color, title, subtitle, note, children }: { glyph: Ch
 
 function ItemActions({ ctx, item, jsonOpen, onToggleJson, extra }: { ctx: InspectorContext; item: ChainItem; jsonOpen: boolean; onToggleJson: () => void; extra?: ReactNode }) {
   const { document, labels, commit, readOnly } = ctx;
-  const lane = ctx.model.lanes.get(ctx.model.chains.get(item.chain)?.owner ?? "");
-  const bypassed = item.bypassed || (lane?.bypassed ?? false);
+  const bypassed = bypassSource(ctx.model, { kind: "item", id: item.id }) !== null;
   return (
     <div className="n4rack__actions" role="toolbar" aria-label={labels.role[item.kind === "step" ? item.role : "operator"]}>
       <button
         type="button"
         className="n4rack__power"
-        aria-pressed={!bypassed}
+        role="switch"
+        aria-checked={!bypassed}
+        aria-label={labels.active}
+        title={bypassed ? labels.enable : labels.bypass}
         disabled={readOnly}
-        onClick={() => commit(setBypassed(document, { kind: "item", id: item.id }, !bypassed))}
+        onClick={() => commit(toggleBypass(document, { kind: "item", id: item.id }))}
       >
         <span className="n4rack__power-led" aria-hidden="true" />
         {bypassed ? labels.bypassed : labels.active}
@@ -233,6 +238,7 @@ function FixedControl({ ctx, step, param, value }: { ctx: InspectorContext; step
   const kind = controlKind(param, value);
   const label = param.label ?? param.name;
   const set = (next: unknown) => commit(setParam(document, step.id, param.name, next));
+  const text = kind === "json" && value !== undefined ? JSON.stringify(value) : valueText(value);
   const placeholder = param.default !== undefined ? `${labels.defaultValue} ${formatValue(param.default, 14)}` : labels.unset;
   if (kind === "bool" || kind === "select") {
     const options = kind === "bool" ? [{ value: true, label: "true" }, { value: false, label: "false" }] : param.options ?? [];
@@ -263,7 +269,7 @@ function FixedControl({ ctx, step, param, value }: { ctx: InspectorContext; step
   };
   return (
     <DraftField
-      text={valueText(value)}
+      text={text}
       parse={parse}
       onCommit={set}
       label={label}
@@ -509,14 +515,16 @@ function StepInspector({ ctx, step }: { ctx: InspectorContext; step: StepNode })
 // Groups, lanes and other cells
 // ---------------------------------------------------------------------------
 
-function LaneRow({ ctx, lane, fork }: { ctx: InspectorContext; lane: LaneNode; fork: ForkNode }) {
-  const { document, labels, commit, readOnly } = ctx;
+function LaneRow({ ctx, lane, fork, inGroup }: { ctx: InspectorContext; lane: LaneNode; fork: ForkNode; inGroup?: boolean }) {
+  const { document, labels, readOnly } = ctx;
+  // Inside the group inspector the group stays selected, so its lanes can be reordered in a row.
+  const commit = (result: EditResult) => ctx.commit(inGroup ? { document: result.document } : result);
   const summary = lane.items.length === 0
     ? (fork.mode === "choice" ? labels.skipOption : labels.emptyLane)
     : lane.items.map((item) => (item.kind === "step" ? [item.customName ?? item.label, stepLines(item).map((line) => line.text).join(", ")].filter(Boolean).join(" ") : item.kind === "fork" ? labels.fork[item.mode] : item.kind === "frame" ? labels.frame[item.mode] : item.kind === "note" ? labels.noteText : item.label)).join(" → ");
   return (
     <li className="n4rack__lane-row" data-bypassed={lane.bypassed || undefined}>
-      <button type="button" className="n4rack__led n4rack__led--inline" aria-pressed={!lane.bypassed} aria-label={`${lane.bypassed ? labels.enable : labels.bypass}: ${lane.label}`} disabled={readOnly}
+      <button type="button" className="n4rack__led n4rack__led--inline" role="switch" aria-checked={!lane.bypassed} aria-label={`${labels.active}: ${lane.label}`} title={lane.bypassed ? labels.enable : labels.bypass} disabled={readOnly}
         onClick={() => commit(setBypassed(document, { kind: "lane", id: lane.id }, !lane.bypassed))} />
       {fork.named ? (
         <DraftField className="n4rack__input--lane" text={String(lane.key)} parse={(draft) => draft.trim() || INVALID} label={labels.laneName} disabled={readOnly}
@@ -540,7 +548,7 @@ function ModifierTiles({ ctx, item, primary }: { ctx: InspectorContext; item: Fo
       {names.map((name) => (
         <Tile key={name} title={name}>
           <DraftField
-            text={valueText(item.modifiers[name])}
+            text={looseText(item.modifiers[name])}
             parse={(draft) => (draft.trim() === "" ? undefined : parseLoose(draft))}
             label={name}
             placeholder={labels.unset}
@@ -573,7 +581,7 @@ function GroupInspector({ ctx, item }: { ctx: InspectorContext; item: ForkNode |
           {item.kind === "fork" ? (
             <Tile title={item.mode === "choice" ? labels.options : labels.lanes} wide>
               <ul className="n4rack__lane-list">
-                {item.lanes.map((lane) => <LaneRow key={lane.id} ctx={ctx} lane={lane} fork={item} />)}
+                {item.lanes.map((lane) => <LaneRow key={lane.id} ctx={ctx} lane={lane} fork={item} inGroup />)}
               </ul>
               <div className="n4rack__wrap-actions">
                 <button type="button" className="n4rack__btn n4rack__btn--text" disabled={readOnly} onClick={() => commit(addLane(document, item.id))}>
@@ -600,7 +608,7 @@ function LaneInspector({ ctx, lane }: { ctx: InspectorContext; lane: LaneNode })
   if (fork?.kind !== "fork") return null;
   return (
     <div className="n4rack__inspector">
-      <Identity glyph={fork.mode} color={CHAIN_GROUP_COLORS[fork.mode]} title={`${labels.fork[fork.mode]} · ${lane.label}`} note={labels.forkHint[fork.mode]}>
+      <Identity glyph={fork.mode} color={CHAIN_GROUP_COLORS[fork.mode]} title={`${fork.mode === "choice" ? labels.option : labels.lane} ${lane.label}`} note={labels.forkHint[fork.mode]}>
         <div className="n4rack__wrap-actions">
           <button type="button" className="n4rack__btn n4rack__btn--text n4rack__btn--primary" disabled={ctx.readOnly} onClick={() => ctx.requestAdd({ kind: "lane", id: lane.id })}>
             {labels.addStep}
@@ -627,7 +635,7 @@ function LeafInspector({ ctx, item }: { ctx: InspectorContext; item: Exclude<Cha
   return (
     <div className="n4rack__inspector">
       <Identity glyph={item.role} color={CHAIN_ROLE_COLORS[item.role]} title={title} subtitle={item.kind === "merge" ? "merge" : item.kind === "note" ? "_comment" : null}
-        note={item.kind === "raw" ? labels.role.raw : null}>
+        note={item.kind === "raw" ? labels.rawHint : null}>
         <ItemActions ctx={ctx} item={item} jsonOpen={jsonOpen} onToggleJson={() => setJsonOpen((open) => !open)} />
         {item.kind !== "note" ? <WrapButtons ctx={ctx} item={item} /> : null}
       </Identity>
@@ -644,7 +652,7 @@ function LeafInspector({ ctx, item }: { ctx: InspectorContext; item: Exclude<Cha
                   {strategies.map((option) => <option key={String(option.value)} value={String(option.value)}>{option.label}</option>)}
                 </select>
               ) : (
-                <DraftField text={valueText(item.value)} parse={parseLoose} label={labels.strategy} disabled={readOnly} onCommit={(next) => commit(replaceItemValue(document, item.id, { merge: next }))} />
+                <DraftField text={looseText(item.value)} parse={parseLoose} label={labels.strategy} disabled={readOnly} onCommit={(next) => commit(replaceItemValue(document, item.id, { merge: next }))} />
               )}
               <p className="n4rack__tile-foot">
                 {typeof item.value === "string" ? strategies.find((option) => option.value === item.value)?.description ?? "" : ""}

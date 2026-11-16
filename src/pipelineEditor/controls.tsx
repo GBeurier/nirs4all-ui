@@ -143,8 +143,15 @@ export function parseValueList(draft: string): unknown {
   return trimmed.split(",").map((token) => parseLoose(token));
 }
 
+/** Text that `parseLoose` reads back as the same value: strings are quoted only when they must be. */
+export function looseText(value: unknown): string {
+  if (value === undefined) return "";
+  if (typeof value !== "string") return JSON.stringify(value);
+  return value !== "" && !value.includes(",") && value === value.trim() && parseLoose(value) === value ? value : JSON.stringify(value);
+}
+
 export function valueListText(values: readonly unknown[]): string {
-  return values.map((value) => valueText(value)).join(", ");
+  return values.map((value) => looseText(value)).join(", ");
 }
 
 export type ControlKind = "int" | "float" | "bool" | "select" | "string" | "json";

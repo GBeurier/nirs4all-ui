@@ -24,6 +24,12 @@ function stripBypassed(value: unknown): unknown {
   if (isRecord(value)) {
     const next: Record<string, unknown> = {};
     for (const [key, child] of Object.entries(value)) if (!isBypassWrapper(child)) next[key] = stripBypassed(child);
+    // `_weights_` is index-aligned with the `_or_` options: drop the weights of bypassed options too.
+    const options = value._or_;
+    const weights = value._weights_;
+    if (Array.isArray(options) && Array.isArray(weights) && weights.length === options.length) {
+      next._weights_ = weights.filter((_, index) => !isBypassWrapper(options[index]));
+    }
     return next;
   }
   return value;

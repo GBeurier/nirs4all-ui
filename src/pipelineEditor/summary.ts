@@ -193,8 +193,12 @@ function capped(count: number | null, modifiers: Readonly<Record<string, unknown
 export function itemVariants(item: ChainItem): number | null {
   if (item.bypassed) return 1;
   switch (item.kind) {
-    case "step":
-      return product(item.sweeps.map((sweep) => sweep.count));
+    case "step": {
+      // A generator nested where it is not read as a sweep (inside an estimator, a list) is unknown, not 1.
+      const read = new Set(item.sweeps.filter((sweep) => sweep.location === "param").map((sweep) => sweep.param));
+      const unread = Object.entries(item.params).some(([name, value]) => !read.has(name) && hasGeneratorKey(value));
+      return unread ? null : product(item.sweeps.map((sweep) => sweep.count));
+    }
     case "merge":
     case "note":
       return 1;
