@@ -48,6 +48,16 @@ export const N4_CATEGORICAL = [
   "#65a30d",
 ] as const;
 
+/**
+ * Signed-contribution colors: `positive` raises the model output, `negative`
+ * lowers it. Teal/rose stay separable under common color-vision deficiencies;
+ * charts also encode the sign by direction and signed text, never color alone.
+ */
+export const N4_SIGNED_COLORS = {
+  positive: N4_VIZ_COLORS.teal,
+  negative: N4_VIZ_COLORS.rose,
+} as const;
+
 /** Canonical train / validation / test partition colors. */
 export const N4_PARTITION_COLORS = {
   train: N4_VIZ_COLORS.teal,

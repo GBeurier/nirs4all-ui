@@ -44,3 +44,25 @@ describe("FeatureImportanceBar", () => {
     expect(markup).toContain("No finite feature importance values.");
   });
 });
+
+describe("FeatureImportanceBar signed values", () => {
+  it("ranks signed values by magnitude and draws them on both sides of zero", () => {
+    const markup = renderToStaticMarkup(<FeatureImportanceBar items={[
+      { label: "small", value: 0.01 }, { label: "negative", value: -0.5 }, { label: "positive", value: 0.2 },
+    ]} topN={2} showRank xLabel="Mean SHAP" />);
+    expect(markup).toContain("2 shown features of 3 supplied, ranked by absolute signed value; negative: -0.5; positive: +0.2.");
+    expect(markup).toContain('data-sign="negative"');
+    expect(markup).toContain('data-sign="positive"');
+    expect(markup).toContain("n4viz-zero");
+    expect(markup).toContain("#1 negative");
+    expect(markup).toContain("+0.20");
+    expect(markup).toContain("Mean SHAP");
+    expect(markup).not.toContain("small");
+  });
+
+  it("keeps magnitudes unsigned even when the host forces magnitude mode", () => {
+    const markup = renderToStaticMarkup(<FeatureImportanceBar items={[{ label: "a", value: 0.3 }]} signed={false} />);
+    expect(markup).not.toContain("data-sign");
+    expect(markup).not.toContain("+0.30");
+  });
+});

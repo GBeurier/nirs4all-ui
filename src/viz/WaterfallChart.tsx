@@ -3,7 +3,7 @@ import { useId } from "react";
 import { cx } from "./_cx.js";
 import { countLabel, summaryNumber } from "./description.js";
 import { makeScale, niceExtent, round, ticks } from "./geometry.js";
-import { N4_VIZ_COLORS } from "./theme.js";
+import { N4_SIGNED_COLORS, N4_VIZ_COLORS } from "./theme.js";
 
 /** One signed feature contribution in a per-sample SHAP decomposition. */
 export interface WaterfallContribution {
@@ -21,6 +21,14 @@ export interface WaterfallChartProps {
   /** Keep the largest `|value|` contributions, preserving original order (default 10). */
   topN?: number;
   valueFormat?: (v: number) => string;
+  /** Bar colors for contributions that raise / lower the output. */
+  positiveColor?: string;
+  negativeColor?: string;
+  /** Labels of the base and prediction references (default "E[f(x)]" / "f(x)"). */
+  baseLabel?: string;
+  predictionLabel?: string;
+  /** Value-axis title, e.g. "Model output". */
+  xLabel?: string;
   width?: number;
   /** Auto-sized from the kept row count when omitted. */
   height?: number;
@@ -42,16 +50,18 @@ function signed(value: number, format: (v: number) => string): string {
   return value > 0 ? `+${format(value)}` : format(value);
 }
 
-function truncate(label: string, max = 15): string {
+function truncate(label: string, max = 18): string {
   return label.length > max ? `${label.slice(0, max - 1)}…` : label;
 }
 
 /**
  * Per-sample SHAP waterfall — the Studio Variable-Importance waterfall. Each
  * feature contribution is a floating horizontal bar from the running total,
- * green when it pushes the prediction up and rose when down, walking from the
- * base value to the prediction. A dashed base reference and a solid prediction
- * reference frame the walk. Pure inline SVG; hosts pass precomputed SHAP values.
+ * teal when it pushes the prediction up and rose when down (direction and the
+ * signed label also carry the sign), walking from the base value to the
+ * prediction. A dashed base reference and a solid prediction reference, each
+ * labeled with its value, frame the walk. Pure inline SVG; hosts pass
+ * precomputed SHAP values.
  */
 export function WaterfallChart({
   baseValue,
@@ -59,6 +69,11 @@ export function WaterfallChart({
   predicted,
   topN = 10,
   valueFormat = defaultFormat,
+  positiveColor = N4_SIGNED_COLORS.positive,
+  negativeColor = N4_SIGNED_COLORS.negative,
+  baseLabel = "E[f(x)]",
+  predictionLabel = "f(x)",
+  xLabel,
   width = 440,
   height,
   title = "SHAP waterfall",
@@ -79,12 +94,12 @@ export function WaterfallChart({
   );
   const kept = indexed.filter((x) => keptIndices.has(x.i)).map((x) => x.c);
 
-  const resolvedHeight = height ?? Math.max(180, kept.length * 30 + 70);
+  const resolvedHeight = height ?? Math.max(180, kept.length * 30 + 70 + (xLabel ? 14 : 0));
 
-  const padLeft = 100;
-  const padRight = 48;
+  const padLeft = 112;
+  const padRight = 52;
   const padTop = 26;
-  const padBottom = 30;
+  const padBottom = xLabel ? 44 : 30;
   const plotLeft = padLeft;
   const plotRight = width - padRight;
   const plotTop = padTop;
@@ -109,6 +124,7 @@ export function WaterfallChart({
   const n = visibleRows.length;
   const band = n > 0 ? plotHeight / n : plotHeight;
   const barHeight = Math.min(18, Math.max(4, band - 8));
+  const baseFirst = !(resolvedPredicted < baseValue);
   const shownSum = visibleRows.reduce((sum, row) => sum + row.value, 0);
   const summary = description?.trim() || (
     [
@@ -162,11 +178,21 @@ export function WaterfallChart({
         stroke={N4_VIZ_COLORS.tealDark}
         strokeWidth={1.6}
       /> : null}
-      {Number.isFinite(baseValue) ? <text className="n4viz-tick" x={round(xScale(baseValue))} y={plotTop - 6} textAnchor="middle">
-        base
+      {Number.isFinite(baseValue) ? <text
+        className="n4viz-tick n4viz-reference-label"
+        x={round(xScale(baseValue) + (baseFirst ? -3 : 3))}
+        y={plotTop - 8}
+        textAnchor={baseFirst ? "end" : "start"}
+      >
+        {`${baseLabel} ${valueFormat(baseValue)}`}
       </text> : null}
-      {Number.isFinite(resolvedPredicted) ? <text className="n4viz-tick" x={round(xScale(resolvedPredicted))} y={plotTop - 6} textAnchor="middle">
-        f(x)
+      {Number.isFinite(resolvedPredicted) ? <text
+        className="n4viz-badge n4viz-reference-label"
+        x={round(xScale(resolvedPredicted) + (baseFirst ? 3 : -3))}
+        y={plotTop - 8}
+        textAnchor={baseFirst ? "start" : "end"}
+      >
+        {`${predictionLabel} ${valueFormat(resolvedPredicted)}`}
       </text> : null}
 
       {visibleRows.map((row, i) => {
@@ -177,6 +203,7 @@ export function WaterfallChart({
         const labelX = up ? xScale(row.to) + 4 : xScale(row.to) - 4;
         return (
           <g key={`${row.label}-${i}`}>
+            <title>{`${row.label}: ${signed(row.value, valueFormat)} (${valueFormat(row.from)} → ${valueFormat(row.to)})`}</title>
             <text className="n4viz-tick" x={plotLeft - 6} y={round(center + 3)} textAnchor="end">
               {truncate(row.label)}
             </text>
@@ -187,7 +214,8 @@ export function WaterfallChart({
               width={round(Math.max(1, x1 - x0))}
               height={round(barHeight)}
               rx={2}
-              fill={up ? N4_VIZ_COLORS.green : N4_VIZ_COLORS.rose}
+              data-sign={up ? "positive" : "negative"}
+              fill={up ? positiveColor : negativeColor}
             />
             <text
               className="n4viz-badge"
@@ -213,6 +241,11 @@ export function WaterfallChart({
           {valueFormat(t)}
         </text>
       ))}
+      {xLabel ? (
+        <text className="n4viz-axis-label" x={round(plotLeft + (plotRight - plotLeft) / 2)} y={resolvedHeight - 4} textAnchor="middle">
+          {xLabel}
+        </text>
+      ) : null}
     </svg>
   );
 }

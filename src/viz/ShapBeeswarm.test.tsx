@@ -62,3 +62,23 @@ describe("ShapBeeswarm", () => {
     expect(markup).toContain("No finite SHAP contributions.");
   });
 });
+
+describe("ShapBeeswarm selection", () => {
+  it("emphasizes selected samples, titles points and shows the feature-value legend", () => {
+    const markup = renderToStaticMarkup(<ShapBeeswarm
+      features={[{ label: "1400–1450", points: [
+        { shap: 0.2, featureValue: 0.9, sampleId: 3 },
+        { shap: -0.1, featureValue: 0.1, sampleId: 7 },
+      ] }]}
+      selectedSampleIds={[7]}
+      sampleLabel={(id) => `Sample #${id}`}
+    />);
+    expect(markup.match(/n4viz-dot-selected/g)).toHaveLength(1);
+    expect(markup).toContain("Sample #7 · 1400–1450: SHAP -0.100, feature value 0.100 (selected)");
+    expect(markup).toContain("Sample #3 · 1400–1450: SHAP +0.200");
+    expect(markup).toContain("Feature value: low");
+    expect(markup).toContain("1 selected sample emphasized.");
+    // the selected point is drawn last (on top of the others)
+    expect(markup.indexOf("Sample #3")).toBeLessThan(markup.indexOf("Sample #7"));
+  });
+});

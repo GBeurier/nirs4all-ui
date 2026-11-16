@@ -77,3 +77,17 @@ describe("viz/WaterfallChart", () => {
     expect(markup).toContain("1 of 2 contributions shown; large: -0.9; omitted contribution sum 0.01.");
   });
 });
+
+describe("viz/WaterfallChart references", () => {
+  it("labels base and prediction values and colors contributions by sign", () => {
+    const markup = renderToStaticMarkup(
+      <WaterfallChart baseValue={2} contributions={[{ label: "up", value: 0.5 }, { label: "down", value: -0.2 }]} xLabel="Model output" />,
+    );
+    expect(markup).toContain("E[f(x)] 2.00");
+    expect(markup).toContain("f(x) 2.30");
+    expect(markup).toContain('data-sign="positive"');
+    expect(markup).toContain('data-sign="negative"');
+    expect(markup).toContain("up: +0.500 (2.00 → 2.50)");
+    expect(markup).toContain("Model output");
+  });
+});
