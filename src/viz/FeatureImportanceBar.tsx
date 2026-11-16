@@ -98,7 +98,13 @@ export function FeatureImportanceBar({
   const minValue = isSigned ? Math.min(0, ...values) : 0;
   const domain = { min: minValue, max: maxValue || (minValue < 0 ? 0 : 1) };
   if (domain.max === domain.min) domain.max = domain.min + 1;
-  const xScale = makeScale(domain, plotLeft, plotRight);
+  // Reserve room for value labels past the bar ends so they never cover the
+  // label column (negative bars) or run past the right edge.
+  const formatLabel = (value: number) => (isSigned ? signedNumber(value, valueFormat) : valueFormat(value));
+  const labelRoom = Math.max(0, ...sorted.map((item) => formatLabel(item.value).length * 6.6 + 6));
+  const barLeft = plotLeft + (minValue < 0 ? labelRoom : 0);
+  const barRight = Math.max(barLeft + 20, width - Math.max(8, labelRoom));
+  const xScale = makeScale(domain, barLeft, barRight);
   const axisTicks = ticks(domain, 4);
   const axisTickLabels = distinctTickLabels(axisTicks, valueFormat);
   const xZero = xScale(0);
@@ -107,7 +113,7 @@ export function FeatureImportanceBar({
   const n = sorted.length;
   const band = n > 0 ? plotHeight / n : plotHeight;
   const barHeight = Math.min(18, Math.max(4, band - 8));
-  const format = (value: number) => (isSigned ? signedNumber(value, valueFormat) : valueFormat(value));
+  const format = formatLabel;
   const summary = description?.trim() || (
     sorted.length === 0
       ? "No finite feature importance values."

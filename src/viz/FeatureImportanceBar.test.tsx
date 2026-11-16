@@ -66,3 +66,12 @@ describe("FeatureImportanceBar signed values", () => {
     expect(markup).not.toContain("+0.30");
   });
 });
+
+describe("FeatureImportanceBar label room", () => {
+  it("keeps negative value labels right of the label column", () => {
+    const markup = renderToStaticMarkup(<FeatureImportanceBar items={[{ label: "a", value: -0.5 }, { label: "b", value: 0.2 }]} />);
+    const badge = [...markup.matchAll(/class="n4viz-badge" x="([^"]+)"[^>]*>([^<]+)</g)].find((match) => match[2] === "-0.500");
+    const textWidth = "-0.500".length * 6.6;
+    expect(Number(badge?.[1]) - textWidth).toBeGreaterThanOrEqual(104);
+  });
+});
