@@ -41,6 +41,7 @@ export function MultimodalWorkbench(props: MultimodalWorkbenchProps & { classNam
     candidates,
     onCandidatesChange,
     stepCatalog,
+    pipelineEditor,
     run,
     onRun,
     onCancel,
@@ -74,6 +75,13 @@ export function MultimodalWorkbench(props: MultimodalWorkbenchProps & { classNam
   return (
     <div className={cx("n4mm", "n4-app", className)}>
       <MultimodalHeader brand={brand} backHref={backHref} {...(backLabel ? { backLabel } : {})} runtime={runtime} />
+      {pipelineEditor !== undefined ? <nav className="n4mm-workflow" aria-label="Laboratory sections">
+        <a href="#n4mm-data">Dataset builder</a>
+        <a href="#n4mm-explore">Explore sources</a>
+        <a href="#n4mm-protocol">Validation</a>
+        <a href="#n4mm-pipeline">Pipeline editor</a>
+        <a href="#n4mm-results">Results</a>
+      </nav> : null}
       <main className="n4mm-main">
         <Section
           id="n4mm-case"
@@ -117,63 +125,103 @@ export function MultimodalWorkbench(props: MultimodalWorkbenchProps & { classNam
               <SourceViews dataset={dataset} selectedSampleId={selectedSampleId} onSelectSample={onSelectSample} />
             </Section>
 
-            <Section
-              id="n4mm-preprocess"
-              step={4}
-              title="Preprocess each source"
-              lead="Choose the sources of the experiment and give each one its own preprocessing chain."
-              actions={
-                <button type="button" className="n4mm-button" data-variant="quiet" onClick={onRestoreTeachingConfig} disabled={locked}>
-                  Restore teaching settings
-                </button>
-              }
-            >
-              <SourceChainEditor
-                sources={dataset.sources}
-                config={config}
-                onConfigChange={changeConfig}
-                {...(stepCatalog ? { catalog: stepCatalog } : {})}
-                disabled={locked}
-              />
-            </Section>
+            {pipelineEditor !== undefined ? (
+              <>
+                <Section
+                  id="n4mm-protocol"
+                  step={4}
+                  title="Validation protocol"
+                  lead="One protocol for every run: the same held-out samples, the same outer folds and the same inner folds."
+                >
+                  <ValidationPanel dataset={dataset} config={config} onConfigChange={changeConfig} disabled={locked} />
+                </Section>
 
-            <Section
-              id="n4mm-recipes"
-              step={5}
-              title="Choose fusion recipes"
-              lead="Where are the sources combined: variables, learned features or predictions? Pick one recipe to explain and tick the recipes to compare."
-            >
-              <StrategyPanel
-                sources={dataset.sources}
-                config={config}
-                onConfigChange={changeConfig}
-                candidates={candidates}
-                onCandidatesChange={onCandidatesChange}
-                {...(stepCatalog ? { catalog: stepCatalog } : {})}
-                disabled={locked}
-              />
-              <ModelSettings config={config} onConfigChange={changeConfig} disabled={locked} />
-            </Section>
+                <Section
+                  id="n4mm-pipeline"
+                  step={5}
+                  title="Build and run the pipeline"
+                  lead="Start from a preset, then edit branches, sources, preprocessing, models and the merge. Select any card to inspect it."
+                >
+                  {pipelineEditor}
+                  <details className="n4mm-details">
+                    <summary>Compare unedited presets</summary>
+                    <p className="n4mm-note">
+                      Runs the fixed teaching recipes chosen by the host with their default settings, for comparison. It does not
+                      run the pipeline edited above.
+                    </p>
+                    <RunPanel
+                      dataset={dataset}
+                      config={config}
+                      candidates={candidates}
+                      run={run}
+                      runtimeReady={runtime.state === "ready"}
+                      onRun={onRun}
+                      onCancel={onCancel}
+                    />
+                  </details>
+                </Section>
+              </>
+            ) : (
+              <>
+                <Section
+                  id="n4mm-preprocess"
+                  step={4}
+                  title="Preprocess each source"
+                  lead="Choose the sources of the experiment and give each one its own preprocessing chain."
+                  actions={
+                    <button type="button" className="n4mm-button" data-variant="quiet" onClick={onRestoreTeachingConfig} disabled={locked}>
+                      Restore teaching settings
+                    </button>
+                  }
+                >
+                  <SourceChainEditor
+                    sources={dataset.sources}
+                    config={config}
+                    onConfigChange={changeConfig}
+                    {...(stepCatalog ? { catalog: stepCatalog } : {})}
+                    disabled={locked}
+                  />
+                </Section>
 
-            <Section
-              id="n4mm-run"
-              step={6}
-              title="Validate and run"
-              lead="One protocol for every recipe: the same held-out samples, the same outer folds and the same inner folds."
-            >
-              <ValidationPanel dataset={dataset} config={config} onConfigChange={changeConfig} disabled={locked} />
-              <RunPanel
-                dataset={dataset}
-                config={config}
-                candidates={candidates}
-                run={run}
-                runtimeReady={runtime.state === "ready"}
-                onRun={onRun}
-                onCancel={onCancel}
-              />
-            </Section>
+                <Section
+                  id="n4mm-recipes"
+                  step={5}
+                  title="Choose fusion recipes"
+                  lead="Where are the sources combined: variables, learned features or predictions? Pick one recipe to explain and tick the recipes to compare."
+                >
+                  <StrategyPanel
+                    sources={dataset.sources}
+                    config={config}
+                    onConfigChange={changeConfig}
+                    candidates={candidates}
+                    onCandidatesChange={onCandidatesChange}
+                    {...(stepCatalog ? { catalog: stepCatalog } : {})}
+                    disabled={locked}
+                  />
+                  <ModelSettings config={config} onConfigChange={changeConfig} disabled={locked} />
+                </Section>
 
-            <Section id="n4mm-results" step={7} title="Compare results">
+                <Section
+                  id="n4mm-run"
+                  step={6}
+                  title="Validate and run"
+                  lead="One protocol for every recipe: the same held-out samples, the same outer folds and the same inner folds."
+                >
+                  <ValidationPanel dataset={dataset} config={config} onConfigChange={changeConfig} disabled={locked} />
+                  <RunPanel
+                    dataset={dataset}
+                    config={config}
+                    candidates={candidates}
+                    run={run}
+                    runtimeReady={runtime.state === "ready"}
+                    onRun={onRun}
+                    onCancel={onCancel}
+                  />
+                </Section>
+              </>
+            )}
+
+            <Section id="n4mm-results" step={pipelineEditor !== undefined ? 6 : 7} title="Compare results">
               {results ? (
                 <ResultsPanel
                   dataset={dataset}
@@ -185,7 +233,9 @@ export function MultimodalWorkbench(props: MultimodalWorkbenchProps & { classNam
                 <p className="n4mm-status" role="status">
                   {run.kind === "running"
                     ? "Results will appear when the run completes."
-                    : "No results for the current data and settings. Results are cleared whenever data, preprocessing, recipes or protocol change; run the comparison to produce them."}
+                    : pipelineEditor !== undefined
+                      ? "No results for the current draft. Run edited pipeline to produce them. Editing the data, pipeline or validation protocol clears the current result; completed drafts remain in the host's run history."
+                      : "No results for the current data and settings. Results are cleared whenever data, preprocessing, recipes or protocol change; run the comparison to produce them."}
                 </p>
               )}
               <ExportPanel
@@ -198,7 +248,7 @@ export function MultimodalWorkbench(props: MultimodalWorkbenchProps & { classNam
           </>
         ) : null}
 
-        <Section id="n4mm-guide" step={ready ? 8 : 3} title="Instructor guide">
+        <Section id="n4mm-guide" step={ready ? (pipelineEditor !== undefined ? 7 : 8) : 3} title="Instructor guide">
           <InstructorGuide caseId={caseId} cases={cases} />
         </Section>
       </main>

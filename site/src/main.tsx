@@ -9,6 +9,7 @@ import "../../assets/chains.css";
 import "../../assets/datasetBuilder.css";
 import "../../assets/conformal.css";
 import "../../assets/workbench.css";
+import "../../assets/multimodal.css";
 import "./styles.css";
 
 createRoot(document.getElementById("root") as HTMLElement).render(

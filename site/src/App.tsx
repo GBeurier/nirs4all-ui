@@ -10,6 +10,7 @@ import * as playgroundExports from "../../src/playground/index.js";
 import * as inspectorExports from "../../src/inspector/index.js";
 import * as labExports from "../../src/lab/index.js";
 import * as datasetBuilderExports from "../../src/datasetBuilder/index.js";
+import * as multimodalExports from "../../src/multimodal/index.js";
 import * as scoreExports from "../../src/score/index.js";
 import * as runtimeExports from "../../src/runtime/index.js";
 import * as datasetExports from "../../src/dataset/index.js";
@@ -25,6 +26,7 @@ import packageJson from "../../package.json" with { type: "json" };
 import { CANONICAL_SITE_URL, PUBLICATION_ASSETS } from "./showcaseMetadata.js";
 import { WorkbenchShowcase } from "./demo/WorkbenchShowcase.js";
 import { MultimodalBuilderDemo } from "./demo/MultimodalBuilderDemo.js";
+import { MultimodalPipelineDemo } from "./demo/MultimodalPipelineDemo.js";
 import {
   CHAIN_ANALYSIS,
   CHAIN_CORPUS,
@@ -47,6 +49,7 @@ const EXPORT_SURFACE = [
   { entry: "nirs4all-ui/components", title: "Presentational components", symbols: Object.keys(componentsExports) },
   { entry: "nirs4all-ui/lab", title: "Quality / lab UI", symbols: Object.keys(labExports) },
   { entry: "nirs4all-ui/datasetBuilder", title: "Dataset builder", symbols: Object.keys(datasetBuilderExports) },
+  { entry: "nirs4all-ui/multimodal", title: "Multimodal pipeline editor and laboratory", symbols: Object.keys(multimodalExports) },
   { entry: "nirs4all-ui/dataset", title: "Dataset view models", symbols: Object.keys(datasetExports) },
   { entry: "nirs4all-ui/runtime", title: "Runtime view models", symbols: Object.keys(runtimeExports) },
   { entry: "nirs4all-ui/score", title: "Score view models", symbols: Object.keys(scoreExports) },
@@ -271,6 +274,7 @@ export function App() {
           <a href="#workbench">Workbench</a>
           <a href="#showroom">Showroom</a>
           <a href="#builder">Builder</a>
+          <a href="#pipeline-editor">Pipeline editor</a>
           <a href="#graph">Graph</a>
           <a href="#chains">Chains</a>
           <a href="#brand">Brand</a>
@@ -376,6 +380,22 @@ export function App() {
       >
         <DatasetBuilder defaultSources={datasetBuilderSources} defaultDatasetName="demo_wheat_2025" />
         <MultimodalBuilderDemo />
+      </Section>
+
+      <Section
+        id="pipeline-editor"
+        kicker="multimodal · controlled pipeline editor"
+        title={<>Edit a <em className="n4-gradient-text">multimodal pipeline</em></>}
+        lead={
+          <>
+            <code>MultimodalPipelineEditor</code> edits a host-owned document with source branches, preprocessing, models and
+            fixed or learned merges. Try the seven editable presets below. The host owns IO, compilation, training and validation;
+            this example edits configuration only.
+          </>
+        }
+        variant="plain"
+      >
+        <MultimodalPipelineDemo />
       </Section>
 
       <Section

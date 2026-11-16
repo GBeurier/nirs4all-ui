@@ -81,6 +81,37 @@ illustrative controlled host; the Web multimodal laboratory uses actual
 IO/Formats inspection and materialization. `MultimodalWorkbench.datasetBuilder`
 accepts the hosted component while keeping example downloads available.
 
+`MultimodalPipelineEditor` from `nirs4all-ui/multimodal` is a controlled editor for
+source branches, per-source preprocessing, PLS/Ridge/MB-PLS/neural models, and a
+fixed prediction mean or learned PLS/Ridge meta-model. Import
+`nirs4all-ui/assets/multimodal.css` alongside the component:
+
+```tsx
+import { useState } from "react";
+import { MultimodalPipelineEditor, type MultimodalPipelineDocument } from "nirs4all-ui/multimodal";
+
+const [pipeline, setPipeline] = useState<MultimodalPipelineDocument>(presets[0]!.document);
+
+<MultimodalPipelineEditor
+  sources={sources}
+  value={pipeline}
+  onChange={setPipeline}
+  presets={presets}
+  onLoadPreset={(id) => setPipeline(structuredClone(presets.find((p) => p.id === id)!.document))}
+/>
+```
+
+Supply source descriptors and editable preset documents from the host. Loading a
+preset replaces the document; subsequent edits remain in that document. The
+component shows structural issues and preserves branches and raw inputs across
+merge changes. No merge requires one branch; mean or learned merging requires at
+least two. Raw merge inputs make a learned merge hybrid. Hosts own file reads,
+IO, import validation, native DSL adaptation, fold/group/OOF safeguards, worker
+execution, persistence and results. This is a branch-and-optional-merge document,
+not an arbitrary native DAG editor. The showroom's full-width example edits real
+local state with metadata-only sources and no simulated execution. For actual
+training, open the [WASM multimodal laboratory](https://web.nirs4all.org/nirs4all_multimodale/).
+
 The tuning tests include a copied `ordered_search_space_v1.json` fixture from
 full Python `nirs4all/tests/fixtures/tuning`. It verifies that this package
 continues to parse and project the Python-generated

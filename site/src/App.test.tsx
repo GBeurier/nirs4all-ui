@@ -15,6 +15,7 @@ import { TOP_LEVEL_VISUAL_ASSETS, VISUAL_ASSET_GROUPS } from "../vite.config.js"
 import { App } from "./App.js";
 import { CANONICAL_SITE_URL, PUBLICATION_ASSETS } from "./showcaseMetadata.js";
 import { SHOWCASE_ENTRIES } from "./showcaseData.js";
+import { MultimodalPipelineDemo } from "./demo/MultimodalPipelineDemo.js";
 
 const directory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(directory, "..", "..");
@@ -57,6 +58,7 @@ describe("GitHub Pages showcase", () => {
       "nirs4all-ui/components",
       "nirs4all-ui/lab",
       "nirs4all-ui/datasetBuilder",
+      "nirs4all-ui/multimodal",
       "nirs4all-ui/dataset",
       "nirs4all-ui/runtime",
       "nirs4all-ui/score",
@@ -99,6 +101,16 @@ describe("GitHub Pages showcase", () => {
     }
 
     expect(markup).toContain(CANONICAL_SITE_URL);
+  });
+
+  it("shows an editable pipeline document and routes actual training to the WASM host", () => {
+    const markup = renderToStaticMarkup(<MultimodalPipelineDemo />);
+    expect(markup).toContain("Current editable document (JSON)");
+    expect(markup).toContain("Learned prediction stacking");
+    expect(markup).toContain('href="https://web.nirs4all.org/nirs4all_multimodale/"');
+    expect(markup).toContain("no training, prediction or scoring runs");
+    expect(markup).not.toContain("RMSE");
+    expect(markup).not.toContain("Run pipeline");
   });
 
   it("keeps publication metadata and mirrored brand assets coherent", () => {

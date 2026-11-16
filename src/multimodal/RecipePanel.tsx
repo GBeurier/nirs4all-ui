@@ -232,15 +232,14 @@ function StepEditor({
   );
 }
 
-function ParamField({
-  spec,
-  value,
-  onChange,
-}: {
+export interface ParamFieldProps {
   spec: MultimodalStepParamSpec;
   value: MultimodalParamValue;
   onChange: (value: MultimodalParamValue) => void;
-}) {
+}
+
+/** One catalogue-described parameter: checkbox, option list or committed number field. */
+export function ParamField({ spec, value, onChange }: ParamFieldProps) {
   if (spec.kind === "bool") {
     return (
       <label className="n4mm-check">

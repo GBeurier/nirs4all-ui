@@ -478,3 +478,10 @@ button { font-family: inherit; }
 .builder-demo__head code, .builder-demo__status { font-size: 0.9em; }
 .builder-demo__head code { background: color-mix(in srgb, var(--teal) 10%, transparent); padding: 1px 6px; border-radius: 5px; color: var(--teal-d); }
 .builder-demo__status { margin: 0; color: var(--text-3); }
+
+/* Full-width controlled editor, separate from the gallery's button previews. */
+.pipeline-editor-demo.n4mm { min-height: 0; background: none; display: grid; gap: 18px; }
+.pipeline-editor-demo__intro { margin: 0; max-width: 900px; color: var(--text-2); }
+.pipeline-editor-demo__document { border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
+.pipeline-editor-demo__document summary { cursor: pointer; font-weight: 600; }
+.pipeline-editor-demo__document pre { max-height: 420px; overflow: auto; margin: 16px 0 0; font-size: 0.8rem; }
