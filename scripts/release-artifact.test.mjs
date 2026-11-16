@@ -1,13 +1,36 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { ARTIFACT_SCHEMA, MANIFEST_FILENAME, verifyReleaseArtifact } from "./release-artifact.mjs";
+import { ARTIFACT_SCHEMA, MANIFEST_FILENAME, buildReleaseArtifact, verifyReleaseArtifact } from "./release-artifact.mjs";
 
 const COMMIT = "0123456789abcdef0123456789abcdef01234567";
+
+test("builds an artifact when prepare writes lifecycle output", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "n4a-ui-pack-lifecycle-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const repo = join(directory, "source");
+  await mkdir(join(repo, "dist"), { recursive: true });
+  await writeFile(join(repo, "package.json"), JSON.stringify({
+    name: "nirs4all-ui", version: "0.0.1", files: ["dist", "LICENSE"],
+    scripts: { prepare: 'node -e "console.log(\'prepare lifecycle output\')"' },
+  }));
+  await writeFile(join(repo, "LICENSE"), "Synthetic packaging fixture");
+  await writeFile(join(repo, "dist/index.js"), "export const fixture = true;\n");
+  await writeFile(join(repo, "dist/index.d.ts"), "export declare const fixture: boolean;\n");
+  execFileSync("git", ["init", "--quiet", repo]);
+  execFileSync("git", ["-C", repo, "add", "."]);
+  execFileSync("git", ["-C", repo, "-c", "user.name=GBeurier",
+    "-c", "user.email=95907737+GBeurier@users.noreply.github.com",
+    "commit", "--quiet", "-m", "test: create packaging fixture"]);
+  const result = await buildReleaseArtifact({ repoRoot: repo, outputDir: join(directory, "artifact") });
+  const verified = await verifyReleaseArtifact({ manifestPath: result.manifestPath });
+  assert.equal(verified.manifest.package.version, "0.0.1");
+});
 
 function digest(algorithm, bytes, encoding = "hex") {
   return createHash(algorithm).update(bytes).digest(encoding);

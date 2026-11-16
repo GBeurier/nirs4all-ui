@@ -76,7 +76,10 @@ export async function buildReleaseArtifact({ repoRoot, outputDir }) {
   const packageJson = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
   const npm = process.platform === "win32" ? "npm.cmd" : "npm";
   const packed = JSON.parse(
-    execFileSync(npm, ["pack", "--json", "--ignore-scripts", "--pack-destination", destination], {
+    // npm pack defaults lifecycle output to inherited stdout, including prepare
+    // in npm versions that do not suppress it with --ignore-scripts. Keep that
+    // output out of the machine-readable package metadata channel.
+    execFileSync(npm, ["pack", "--json", "--ignore-scripts", "--foreground-scripts=false", "--pack-destination", destination], {
       cwd: root,
       encoding: "utf8",
     }),
