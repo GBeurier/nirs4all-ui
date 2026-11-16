@@ -21,6 +21,8 @@ describe("nirs4all-ui root barrel", () => {
     expect(typeof root.playground.Playground).toBe("function");
     expect(typeof root.qualification.buildQualificationReportView).toBe("function");
     expect(typeof root.inspector.Inspector).toBe("function");
+    expect(typeof root.pipelineEditor.PipelineChainEditor).toBe("function");
+    expect(typeof root.pipelineEditor.toCanonicalPipeline).toBe("function");
     expect(root.brand.NIRS4ALL_BRANDS.length).toBeGreaterThanOrEqual(4);
     expect(root.styles.NIRS4ALL_STYLE_ASSETS.map((asset) => asset.id)).toContain("default-theme");
   });

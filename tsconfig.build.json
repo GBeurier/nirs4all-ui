@@ -7,7 +7,8 @@
   },
   "exclude": [
     "src/**/*.test.ts",
-    "src/**/*.test.tsx"
+    "src/**/*.test.tsx",
+    "src/**/__fixtures__/**/*.ts"
   ],
   "include": [
     "src/**/*.ts",
