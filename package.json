@@ -127,6 +127,10 @@
     "./multimodal": {
       "types": "./dist/multimodal/index.d.ts",
       "import": "./dist/multimodal/index.js"
+    },
+    "./pipelineEditor": {
+      "types": "./dist/pipelineEditor/index.d.ts",
+      "import": "./dist/pipelineEditor/index.js"
     }
   },
   "scripts": {
@@ -142,6 +146,7 @@
     "smoke:react-consumers": "node scripts/smoke-react-consumers.mjs",
     "site:build": "vite build --config site/vite.config.ts",
     "site:dev": "vite --config site/vite.config.ts",
+    "demo:pipeline-editor": "vite --config site/vite.config.ts --open /nirs4all-ui/pipeline-editor/",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "prepare": "npm run build",

@@ -20,6 +20,7 @@ spectra motion asset.
 | `runtime` | `nirs4all-ui/runtime` | Runtime/result status display tokens, busy-state predicates, progress projection, engine metadata summaries, diagnostics, and native-result affordances. |
 | `ranking` | `nirs4all-ui/ranking` | Presentational native ranking, paired relative-gain, adjusted mixed-effects and surrogate fANOVA views. Hosts supply versioned artifacts and optional Plotly rendering; exact values, declared references/domains and diagnostics remain available in HTML tables. No model fitting or importance computation runs in these views. |
 | `multimodal` | `nirs4all-ui/multimodal` | Controlled multisource / multimodal fusion teaching workbench: case selector, per-source spectra on their own axes, genetic dosage table, image gallery with linked sample selection, identity-matching report, per-source preprocessing editor, strategy explanations with a branch-and-merge recipe view (reusing `dag`), shared validation protocol, run/cancel/progress, and owner-scored OOF/held-out comparison (reusing `viz`). Hosts own loading, IO, worker execution and downloads; styles at `nirs4all-ui/assets/multimodal.css`. |
+| `pipelineEditor` | `nirs4all-ui/pipelineEditor` | `PipelineChainEditor`: a rack-style editor for canonical nirs4all pipelines. Steps are cells on a left-to-right signal wire, branches and alternatives are parallel lanes that split and join, generators and finetuning read on the cells, and a device strip edits the selected step. Controlled (document in, document out) over a host-supplied operator catalogue; edits are applied to the pipeline JSON in place so unmodelled constructs survive. Pure view model exported (`parsePipeline`, `layoutChain`, edit operations); styles at `nirs4all-ui/assets/pipelineEditor.css`. Trial status: not yet adopted by a host. |
 | `conformal` | `nirs4all-ui/conformal` | Validation and pure view-model projection for native nirs4all `CalibratedRunResult.to_dict()` and `ConformalMetricSet.to_dict()` payloads, guarantee-status badges, calibration replay provenance, coverage options, per-sample prediction interval rows, materialized interval summaries, and empirical metric rows. |
 | `robustness` | `nirs4all-ui/robustness` | Validation and compact card view-models for nirs4all robustness `summary.json` artifacts, optional conformal guarantee badge projection, plus fallback and registry-derived mode/scenario/distribution vocabulary and form validation aligned with the Python keyword registry. |
 | `keywordRegistry` | `nirs4all-ui/keywordRegistry` | Metadata-only validation, indexing, id/path/token/alias resolution, value-option extraction, form-field projection, ordered form-section grouping, optimizer-persistence field grouping, and workspace prediction publication contract projection for the exported full Python nirs4all keyword/effect registry. |
@@ -111,6 +112,69 @@ execution, persistence and results. This is a branch-and-optional-merge document
 not an arbitrary native DAG editor. The showroom's full-width example edits real
 local state with metadata-only sources and no simulated execution. For actual
 training, open the [WASM multimodal laboratory](https://web.nirs4all.org/nirs4all_multimodale/).
+
+### Pipeline chain editor (trial)
+
+`PipelineChainEditor` from `nirs4all-ui/pipelineEditor` edits a nirs4all pipeline
+laid out as a signal chain. It is new and not wired into Studio or Web yet. Try it
+with the standalone page:
+
+```bash
+npm run demo:pipeline-editor   # then open http://localhost:5173/nirs4all-ui/pipeline-editor/
+```
+
+The page is served by the showroom dev server only; it is not part of
+`npm run site:build`. It loads a mock catalogue and a few pipelines (two of them
+Studio presets).
+
+```tsx
+import { useState } from "react";
+import { PipelineChainEditor, fromCanonicalPipeline, toCanonicalPipeline, type PipelineChainDocument } from "nirs4all-ui/pipelineEditor";
+import "nirs4all-ui/assets/pipelineEditor.css";
+
+const [pipeline, setPipeline] = useState<PipelineChainDocument>(() => fromCanonicalPipeline(loaded));
+
+<PipelineChainEditor value={pipeline} onChange={setPipeline} catalog={{ operators }} onUndo={undo} onRedo={redo} />;
+
+run(toCanonicalPipeline(pipeline));
+```
+
+- **Document.** The value is the canonical pipeline wrapper (`{ name, description,
+  pipeline }`, the list of steps the SDK loads). The editor never converts it to a
+  private format: each cell points at a JSON path and edits rewrite only that
+  place. Steps it does not model (separation branches, `sample_augmentation`,
+  `source_branch`, unknown keys, ...) are shown as raw cells, can be moved,
+  bypassed and edited as JSON, and are otherwise left exactly as they were.
+- **Catalogue.** `catalog.operators` lists what can be inserted and describes the
+  parameters (`PipelineOperatorDefinition`; `nodeRegistry.NodeDefinition` and
+  Studio registry entries fit it structurally). No operator is built in. An
+  operator absent from the catalogue still renders and its parameters stay
+  editable. Inserted steps carry no explicit parameters, so runtime defaults apply
+  until a value is set.
+- **Layout.** Left-to-right wire between the dataset and results terminals, on a
+  24 px grid. A `branch` draws solid fans to full-height lanes; `_or_`
+  alternatives draw a compact bank on dotted wires (one option per variant);
+  `_cartesian_` stages sit in a dashed frame; `concat_transform` and
+  `feature_augmentation` lists are banks on solid buses. The top-level chain wraps
+  onto rows (toggle for a single scrolling row) and zooms.
+- **Generators and tuning.** A parameter is fixed, swept (`_or_`, `_range_`,
+  `_log_range_`, written under `params`; an existing `_range_` + `param` on a
+  model step is edited where it is) or, on models, tuned (`finetune_params.
+  model_params`). Cells show the sweep, a `×n` badge and the trial count. The
+  variant total is read from generator sizes and marked `≈`; pass `variantCount`
+  when the host has the authoritative number.
+- **Bypass.** Canonical nirs4all has no enabled flag. A bypassed step, lane or
+  group stays in the document as `{ "_bypassed_": <value> }` and
+  `toCanonicalPipeline()` leaves it out. Persist the edited document, run the
+  canonical one.
+- **Keyboard.** One tab stop; arrows travel along the chain and across lanes,
+  `Shift+Up/Down` selects the enclosing lane or group, `A` adds after the
+  selection, `B` bypasses, `D` duplicates, `Alt+arrows` move the step, `Delete`
+  removes, `Enter` opens the step's parameters. `Ctrl+Z` calls the host's
+  `onUndo`. Cells also drag onto any insert point.
+
+Hosts own loading, persistence, history, validation and execution. The editor
+does not validate pipelines and does not know what an operator computes.
 
 The tuning tests include a copied `ordered_search_space_v1.json` fixture from
 full Python `nirs4all/tests/fixtures/tuning`. It verifies that this package
