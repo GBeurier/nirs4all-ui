@@ -80,10 +80,6 @@ export function ResidualPlot({
   className,
 }: ResidualPlotProps) {
   const descriptionId = useId();
-  const frame = buildFrame(width, height, padding);
-  const { top, left } = frame.padding;
-  const bottom = top + frame.innerHeight;
-  const right = left + frame.innerWidth;
 
   const resolved = points
     .map((p) => ({ predicted: p.predicted, residual: resolveResidual(p), color: pointColor(p) }))
@@ -103,12 +99,20 @@ export function ResidualPlot({
   const safeMaxAbs = Number.isFinite(maxAbs) && maxAbs > 0 ? maxAbs : 1;
   const yDomain: Extent = niceExtent([-safeMaxAbs, safeMaxAbs], 0.08);
   const xDomain: Extent = niceExtent(resolved.map((p) => p.predicted), 0.06);
-
-  const xScale = makeScale(xDomain, left, right);
-  const yScale = makeScale(yDomain, bottom, top);
   const xTicks = ticks(xDomain, 5);
   const yTicks = ticks(yDomain, 5);
 
+  // Reserve room for the widest y tick label (mono 10px, right-aligned at
+  // left - 6) plus the rotated y-axis label band, unless the host sets it.
+  const yTickChars = Math.max(0, ...yTicks.map((t) => fmt(t).length));
+  const autoLeft = Math.max(40, Math.ceil(6 + yTickChars * 6.2 + 22));
+  const frame = buildFrame(width, height, { ...padding, left: padding?.left ?? autoLeft });
+  const { top, left } = frame.padding;
+  const bottom = top + frame.innerHeight;
+  const right = left + frame.innerWidth;
+
+  const xScale = makeScale(xDomain, left, right);
+  const yScale = makeScale(yDomain, bottom, top);
   const showSigma = sigmaBand && Number.isFinite(sigma) && sigma > 0 && resolved.length > 1;
   const meanResidual = residuals.length
     ? residuals.reduce((sum, value) => sum + value, 0) / residuals.length

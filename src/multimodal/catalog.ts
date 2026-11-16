@@ -98,9 +98,9 @@ export const MULTIMODAL_STRATEGIES: readonly MultimodalStrategyInfo[] = [
     summary: "Preprocessed sources kept as separate blocks → native multiblock PLS.",
     learned: "Multiblock PLS with block widths passed to the owner model.",
     explanation:
-      "The owner model receives the block widths and computes block scores and a consensus super score. The exact algorithm and block normalisation are reported by the owner and shown verbatim with the result.",
+      "The native multiblock PLS model receives the block widths, centres each block on the training samples and runs NIPALS: each block gets a normalised weight vector and a block score, and the consensus super score is the equal-weight mean of the block scores, then normalised. There is no internal block scaling. The result row names this algorithm profile.",
     caveat:
-      "Read the exact owner algorithm label: some multiblock PLS variants are equivalent to PLS on concatenated blocks under matching scaling; this one is not claimed to be universally superior.",
+      "This is one specific multiblock PLS variant (centred blocks, equal super weights), not the general Westerhuis formulation; some multiblock PLS variants are equivalent to PLS on concatenated blocks under matching scaling. No universal superiority is claimed.",
   },
   {
     id: "late",
