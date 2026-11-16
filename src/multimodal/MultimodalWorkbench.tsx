@@ -32,6 +32,7 @@ export function MultimodalWorkbench(props: MultimodalWorkbenchProps & { classNam
     dataset,
     onLoadPreset,
     onImportFiles,
+    datasetBuilder,
     selectedSampleId,
     onSelectSample,
     config,
@@ -98,6 +99,7 @@ export function MultimodalWorkbench(props: MultimodalWorkbenchProps & { classNam
             dataStatus={dataStatus}
             onLoadPreset={onLoadPreset}
             onImportFiles={onImportFiles}
+            {...(datasetBuilder !== undefined ? { datasetBuilder } : {})}
             disabled={locked}
           />
           {dataset && dataset.caseId === caseId ? <AlignmentTable dataset={dataset} /> : null}

@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from "react";
+import { useState, type ChangeEvent, type ReactNode } from "react";
 import { modalityLabel, representationLabel, sourceTag } from "./catalog.js";
 import {
   axisRangeText,
@@ -25,6 +25,12 @@ export interface DataPanelProps {
   dataStatus: MultimodalDataStatus;
   onLoadPreset: (presetId: string) => void;
   onImportFiles: (profileId: string, files: readonly File[]) => void;
+  /**
+   * Host-provided import wizard (e.g. a controlled `MultimodalDatasetBuilder`).
+   * When present it replaces the manifest-only profile cards; the matching
+   * example downloads stay listed next to it.
+   */
+  datasetBuilder?: ReactNode;
   disabled?: boolean;
 }
 
@@ -39,12 +45,14 @@ export function DataPanel({
   dataStatus,
   onLoadPreset,
   onImportFiles,
+  datasetBuilder,
   disabled,
 }: DataPanelProps) {
   const [tab, setTab] = useState<DataTab>(dataOrigin?.kind === "import" ? "import" : "synthetic");
   const casePresets = presets.filter((preset) => preset.caseId === caseId);
   const caseProfiles = importProfiles.filter((profile) => profile.caseId === caseId);
   const busy = dataStatus.kind === "loading";
+  const hasBuilder = datasetBuilder !== undefined && datasetBuilder !== null && datasetBuilder !== false;
 
   return (
     <div className="n4mm-data">
@@ -103,14 +111,22 @@ export function DataPanel({
             </ul>
           )}
         </div>
-      ) : (
-        <div className="n4mm-data__pane">
+      ) : null}
+
+      {/* A host builder stays mounted while hidden so its local step survives tab switches. */}
+      {tab === "import" || hasBuilder ? (
+        <div className="n4mm-data__pane" hidden={tab !== "import"}>
           <p className="n4mm-note">
             Files are read in this browser and interpreted by the nirs4all IO and Formats owners. Sources are joined by
             explicit sample identifiers, never by file row position; missing, duplicate or unmatched identities are reported
             below before any training.
           </p>
-          {caseProfiles.length === 0 ? (
+          {hasBuilder ? (
+            <>
+              {datasetBuilder}
+              <ExampleDownloads profiles={caseProfiles} />
+            </>
+          ) : caseProfiles.length === 0 ? (
             <p className="n4mm-note" role="note">
               No import profile is declared for this case by the host.
             </p>
@@ -125,7 +141,7 @@ export function DataPanel({
             ))
           )}
         </div>
-      )}
+      ) : null}
 
       <DataStatusLine status={dataStatus} origin={dataOrigin} />
     </div>
@@ -191,6 +207,29 @@ function ImportProfileCard({
           </span>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+/** Example files of every import profile, kept downloadable beside a host builder. */
+function ExampleDownloads({ profiles }: { profiles: readonly MultimodalImportProfile[] }) {
+  const withExamples = profiles.filter((profile) => profile.examples && profile.examples.length > 0);
+  if (withExamples.length === 0) return null;
+  return (
+    <div className="n4mm-examples">
+      {withExamples.map((profile) => (
+        <p key={profile.id} className="n4mm-profile__examples">
+          <span className="n4mm-examples__label">{profile.label}</span> — matching examples:{" "}
+          {(profile.examples ?? []).map((example, index) => (
+            <span key={example.href}>
+              {index > 0 ? " · " : null}
+              <a href={example.href} download={example.fileName ?? true}>
+                {example.label}
+              </a>
+            </span>
+          ))}
+        </p>
+      ))}
     </div>
   );
 }

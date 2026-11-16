@@ -24,6 +24,7 @@ import { ChainExplorer, ChainNodeHub, ChainNodeOrbit } from "../../src/chains/in
 import packageJson from "../../package.json" with { type: "json" };
 import { CANONICAL_SITE_URL, PUBLICATION_ASSETS } from "./showcaseMetadata.js";
 import { WorkbenchShowcase } from "./demo/WorkbenchShowcase.js";
+import { MultimodalBuilderDemo } from "./demo/MultimodalBuilderDemo.js";
 import {
   CHAIN_ANALYSIS,
   CHAIN_CORPUS,
@@ -366,13 +367,15 @@ export function App() {
           <>
             A self-contained, presentational wizard (Source → Rôle → Colonnes → Validation) that turns already-parsed
             source descriptors into a nirs4all dataset config. Local UI state only — the host parses files into{" "}
-            <code>DatasetSource</code>s and receives the exported JSON. Ships with{" "}
-            <code>nirs4all-ui/assets/datasetBuilder.css</code>.
+            <code>DatasetSource</code>s and receives the exported JSON. The controlled{" "}
+            <code>MultimodalDatasetBuilder</code> below follows the same four steps for multisource imports whose files and
+            alignment checks stay with the host. Ships with <code>nirs4all-ui/assets/datasetBuilder.css</code>.
           </>
         }
         variant="paper"
       >
         <DatasetBuilder defaultSources={datasetBuilderSources} defaultDatasetName="demo_wheat_2025" />
+        <MultimodalBuilderDemo />
       </Section>
 
       <Section

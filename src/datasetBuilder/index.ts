@@ -10,6 +10,10 @@
  * The pure engine (detection, validation, schema, export) is exported alongside
  * the components so hosts (or a Python/WASM backend) can reuse the same logic.
  *
+ * `MultimodalDatasetBuilder` is the controlled variant for multisource imports:
+ * the host keeps files, the draft and owner validation; the wizard only
+ * forwards picked/dropped `File` objects and mapping edits.
+ *
  * A default stylesheet ships at `nirs4all-ui/assets/datasetBuilder.css`.
  *
  * Consumed as `nirs4all-ui/datasetBuilder`.
@@ -36,6 +40,11 @@ export * from "./ColumnMappingTable.js";
 export * from "./PartitionPreview.js";
 export * from "./DatasetSourceConfigPanel.js";
 export * from "./LiveValidationCard.js";
+
+// --- controlled multimodal import wizard (host owns files, draft, owner checks) ---
+export * from "./multimodalTypes.js";
+export * from "./multimodalBuilderModel.js";
+export * from "./MultimodalDatasetBuilder.js";
 export {
   OwnerProposalList,
   type OwnerProposalAlternative,

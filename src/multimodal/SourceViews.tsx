@@ -17,11 +17,14 @@ import {
 } from "./data.js";
 import type { MultimodalDataset, MultimodalSource } from "./types.js";
 
-/** Charter colours used for linked selection (selected = brand red, others = teal master). */
+/**
+ * Chart colours aligned with the canonical theme (assets/theme.css): teal
+ * traces, rose for the selected sample, amber for secondary emphasis.
+ */
 export const N4MM_COLORS = {
-  master: "#058E96",
-  red: "#E9362D",
-  orange: "#FF6400",
+  master: "#0D9488",
+  red: "#E11D48",
+  orange: "#D97706",
 } as const;
 
 // ---------------------------------------------------------------------------
