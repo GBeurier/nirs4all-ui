@@ -1,38 +1,66 @@
 /* nirs4all-ui — multimodal teaching workbench.
  *
- * Styles for `nirs4all-ui/multimodal`. Reuses the shared chart and DAG viewer
- * styles and the default nirs4all design tokens (load
- * `nirs4all-ui/assets/styles/nirs4all-default.css` first). Charter: teal master
- * #058E96, brand red #E9362D, Web orange #FF6400, pale light surfaces,
- * local/system fonts only, readable when projected.
+ * Styles for `nirs4all-ui/multimodal`. Follows the canonical nirs4all.org
+ * charter defined in `assets/theme.css` (imported below): warm-paper canvas
+ * with the faint spectral grid, the teal ramp for chrome, 16px surfaces,
+ * IBM Plex Sans display headings over Inter/system text, calm hierarchy.
+ * Logo accent colours are never used for chrome. Fonts degrade to system
+ * fonts; nothing is fetched remotely. Also loads the shared chart, DAG and
+ * Dataset Builder styles so a host only imports this file.
  *
  * Consumed as `nirs4all-ui/assets/multimodal.css`.
  */
 
+@import "./theme.css";
 @import "./viz.css";
 @import "./dag.css";
+@import "./datasetBuilder.css";
+
+/* Full-bleed page: scoped to documents that render the workbench. */
+body:has(.n4mm) {
+  background: var(--paper, #faf7f0);
+  margin: 0;
+  min-width: 320px;
+}
 
 .n4mm {
-  --n4mm-master: #058e96;
-  --n4mm-master-dark: #04707a;
-  --n4mm-master-pale: #e8f5f6;
-  --n4mm-red: #e9362d;
-  --n4mm-red-text: #b42318;
-  --n4mm-orange: #ff6400;
-  --n4mm-orange-text: #b54700;
-  --n4mm-bg: var(--n4-color-bg-alt, #f5f7fa);
-  --n4mm-surface: var(--n4-color-surface, #ffffff);
-  --n4mm-border: var(--n4-color-border, #e2e8f0);
-  --n4mm-text: var(--n4-color-text, #0f172a);
-  --n4mm-muted: var(--n4-color-muted, #475569);
-  --n4mm-radius: var(--n4-radius, 8px);
-  --n4mm-radius-sm: var(--n4-radius-sm, 6px);
-  --n4mm-focus: 0 0 0 3px color-mix(in srgb, var(--n4mm-master) 40%, transparent);
-  background: var(--n4mm-bg);
+  --n4mm-master: var(--teal, #0d9488);
+  --n4mm-master-dark: var(--teal-d, #0f766e);
+  --n4mm-master-pale: color-mix(in srgb, var(--n4mm-master) 9%, var(--surface, #ffffff));
+  /* Semantic accents (selection, refusal, caution) — not chrome. */
+  --n4mm-red: var(--rose, #e11d48);
+  --n4mm-red-text: #be123c;
+  --n4mm-red-pale: color-mix(in srgb, var(--n4mm-red) 8%, var(--surface, #ffffff));
+  --n4mm-orange: var(--amber, #d97706);
+  --n4mm-orange-text: #b45309;
+  --n4mm-orange-pale: color-mix(in srgb, var(--n4mm-orange) 9%, var(--surface, #ffffff));
+  --n4mm-bg: var(--paper, #faf7f0);
+  --n4mm-bg-alt: var(--paper-2, #f3efe5);
+  --n4mm-surface: var(--surface, #ffffff);
+  --n4mm-border: var(--border, #e2e8f0);
+  --n4mm-border-warm: var(--border-warm, #e8e2d3);
+  --n4mm-text: var(--text, #0f172a);
+  --n4mm-muted: var(--text-2, #475569);
+  --n4mm-faint: var(--text-3, #64748b);
+  --n4mm-radius: var(--radius, 16px);
+  --n4mm-radius-sm: var(--radius-sm, 10px);
+  --n4mm-shadow: var(--shadow, 0 4px 16px -4px rgba(17, 24, 39, 0.08), 0 2px 4px -2px rgba(17, 24, 39, 0.04));
+  --n4mm-font: var(--font, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif);
+  --n4mm-display: var(--display, "IBM Plex Sans", Inter, -apple-system, system-ui, sans-serif);
+  --n4mm-mono: var(--mono, "JetBrains Mono", "Fira Code", Consolas, monospace);
+  --n4mm-focus: 0 0 0 3px color-mix(in srgb, var(--n4mm-master) 35%, transparent);
+  /* Canonical spectral canvas (theme.css `.n4-app-bg`), scrolling with the page. */
+  background-color: var(--n4mm-bg);
+  background-image:
+    radial-gradient(ellipse 90% 45% at 50% -8%, rgba(13, 148, 136, 0.07), transparent 70%),
+    linear-gradient(rgba(20, 50, 48, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20, 50, 48, 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, var(--grid-size, 52px) var(--grid-size, 52px), var(--grid-size, 52px) var(--grid-size, 52px);
   color: var(--n4mm-text);
-  font-family: var(--n4-font-sans, Inter, -apple-system, "Segoe UI", system-ui, sans-serif);
+  font-family: var(--n4mm-font);
   font-size: 16px;
-  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.55;
   min-height: 100vh;
 }
 
@@ -51,6 +79,16 @@
   color: var(--n4mm-master-dark);
 }
 
+.n4mm h1,
+.n4mm h2,
+.n4mm h3 {
+  font-family: var(--n4mm-display);
+}
+
+.n4mm code {
+  font-family: var(--n4mm-mono);
+}
+
 .n4mm-sr-only {
   border: 0;
   clip: rect(0 0 0 0);
@@ -64,7 +102,7 @@
 }
 
 .n4mm-mono {
-  font-family: var(--n4-font-mono, "JetBrains Mono", Consolas, monospace);
+  font-family: var(--n4mm-mono);
   font-size: 0.9em;
   overflow-wrap: anywhere;
 }
@@ -76,7 +114,8 @@
 /* ---- header ---- */
 .n4mm-header {
   align-items: center;
-  background: var(--n4mm-surface);
+  backdrop-filter: blur(18px) saturate(160%);
+  background: color-mix(in srgb, var(--n4mm-surface) 86%, transparent);
   border-bottom: 1px solid var(--n4mm-border);
   display: flex;
   flex-wrap: wrap;
@@ -99,16 +138,28 @@
 }
 
 .n4mm-header__eyebrow {
+  align-items: center;
   color: var(--n4mm-master-dark);
-  font: 700 0.75rem/1.2 var(--n4-font-mono, monospace);
-  letter-spacing: 0.06em;
+  display: flex;
+  font: 600 0.72rem/1.2 var(--n4mm-mono);
+  gap: 0.5rem;
+  letter-spacing: 0.16em;
   margin: 0;
   text-transform: uppercase;
 }
 
+.n4mm-header__eyebrow::before {
+  background: var(--n4mm-master);
+  border-radius: 2px;
+  content: "";
+  flex: none;
+  height: 2px;
+  width: 22px;
+}
+
 .n4mm-header__title {
-  font: 650 clamp(1.25rem, 2.2vw, 1.6rem) / 1.2 var(--n4-font-display, var(--n4-font-sans, sans-serif));
-  letter-spacing: -0.01em;
+  font: 600 clamp(1.25rem, 2.2vw, 1.6rem) / 1.2 var(--n4mm-display);
+  letter-spacing: -0.02em;
   margin: 0.1rem 0 0;
 }
 
@@ -132,8 +183,12 @@
   background: var(--n4mm-master-pale);
 }
 
+/* Canonical wavelength strip (theme.css `.n4-spectrum-strip`). */
 .n4mm-header__strip {
-  background: linear-gradient(90deg, var(--n4mm-master) 0%, var(--n4mm-master) 70%, var(--n4mm-orange) 70%, var(--n4mm-orange) 92%, var(--n4mm-red) 92%);
+  animation: n4-strip 14s linear infinite;
+  background: linear-gradient(90deg, var(--teal-d, #0f766e), var(--teal-l, #2dd4bf), var(--cyan, #06b6d4), var(--teal-l, #2dd4bf), var(--teal-d, #0f766e));
+  background-size: 200% 100%;
+  border-radius: 0;
   bottom: -1px;
   height: 3px;
   left: 0;
@@ -167,14 +222,14 @@
 }
 
 .n4mm-pill[data-tone="warning"] {
-  background: #fff4e5;
-  border-color: #f5c48a;
+  background: var(--n4mm-orange-pale);
+  border-color: color-mix(in srgb, var(--n4mm-orange) 40%, transparent);
   color: var(--n4mm-orange-text);
 }
 
 .n4mm-pill[data-tone="danger"] {
-  background: #fdecea;
-  border-color: #f4b4ae;
+  background: var(--n4mm-red-pale);
+  border-color: color-mix(in srgb, var(--n4mm-red) 35%, transparent);
   color: var(--n4mm-red-text);
 }
 
@@ -196,7 +251,9 @@
   background: var(--n4mm-surface);
   border: 1px solid var(--n4mm-border);
   border-radius: var(--n4mm-radius);
-  padding: 1.1rem clamp(0.9rem, 2vw, 1.5rem) 1.25rem;
+  box-shadow: var(--n4mm-shadow);
+  min-width: 0;
+  padding: 1.25rem clamp(0.9rem, 2.4vw, 1.75rem) 1.4rem;
 }
 
 .n4mm-section__head {
@@ -210,18 +267,20 @@
 .n4mm-section__title {
   align-items: center;
   display: flex;
-  font: 650 1.2rem/1.3 var(--n4-font-display, var(--n4-font-sans, sans-serif));
-  gap: 0.6rem;
+  font: 600 1.3rem/1.25 var(--n4mm-display);
+  gap: 0.65rem;
+  letter-spacing: -0.02em;
   margin: 0;
 }
 
 .n4mm-section__step {
   align-items: center;
-  background: var(--n4mm-master);
+  background: var(--n4mm-master-pale);
+  border: 1.5px solid color-mix(in srgb, var(--n4mm-master) 45%, transparent);
   border-radius: 50%;
-  color: #fff;
+  color: var(--n4mm-master-dark);
   display: inline-flex;
-  font: 700 0.85rem/1 var(--n4-font-mono, monospace);
+  font: 700 0.85rem/1 var(--n4mm-mono);
   height: 1.7rem;
   justify-content: center;
   width: 1.7rem;
@@ -234,8 +293,9 @@
 }
 
 .n4mm-subtitle {
-  font-size: 1.02rem;
-  font-weight: 650;
+  font-family: var(--n4mm-display);
+  font-size: 1.05rem;
+  font-weight: 600;
   margin: 0 0 0.35rem;
 }
 
@@ -253,7 +313,8 @@
 }
 
 .n4mm-caveat {
-  background: #fff8f2;
+  background: var(--n4mm-orange-pale);
+  border-radius: 0 var(--n4mm-radius-sm) var(--n4mm-radius-sm) 0;
   border-left: 3px solid var(--n4mm-orange);
   font-size: 0.92rem;
   margin: 0.5rem 0;
@@ -271,11 +332,11 @@
 }
 
 .n4mm-alert {
-  background: #fdecea;
-  border: 1px solid #f4b4ae;
+  background: var(--n4mm-red-pale);
+  border: 1px solid color-mix(in srgb, var(--n4mm-red) 30%, transparent);
   border-left: 4px solid var(--n4mm-red);
   border-radius: var(--n4mm-radius-sm);
-  color: #5c140f;
+  color: #881337;
   display: flex;
   flex-direction: column;
   font-size: 0.92rem;
@@ -305,7 +366,7 @@
   color: #fff;
   cursor: pointer;
   display: inline-flex;
-  font: 650 0.92rem/1 var(--n4-font-sans, sans-serif);
+  font: 650 0.92rem/1 var(--n4mm-font);
   gap: 0.4rem;
   justify-content: center;
   min-height: 38px;
@@ -359,6 +420,7 @@
 }
 
 .n4mm-segmented {
+  background: var(--n4mm-surface);
   border: 1px solid var(--n4mm-border);
   border-radius: var(--n4mm-radius-sm);
   display: inline-flex;
@@ -372,7 +434,7 @@
   border-right: 1px solid var(--n4mm-border);
   color: var(--n4mm-muted);
   cursor: pointer;
-  font: 600 0.9rem/1.2 var(--n4-font-sans, sans-serif);
+  font: 600 0.9rem/1.2 var(--n4mm-font);
   padding: 0.5rem 0.9rem;
 }
 
@@ -422,19 +484,17 @@
   font-weight: 600;
 }
 
-.n4mm input[type="number"],
-.n4mm input[type="text"],
-.n4mm select {
+.n4mm :where(input[type="number"], input[type="text"], input[type="search"], select) {
   background: var(--n4mm-surface);
-  border: 1px solid #cbd5e1;
-  border-radius: var(--n4mm-radius-sm);
+  border: 1px solid color-mix(in srgb, var(--n4mm-border) 55%, #94a3b8);
+  border-radius: 8px;
   color: var(--n4mm-text);
-  font: 500 0.95rem/1.2 var(--n4-font-sans, sans-serif);
+  font: 500 0.95rem/1.2 var(--n4mm-font);
   min-height: 36px;
   padding: 0.4rem 0.55rem;
 }
 
-.n4mm input[aria-invalid="true"] {
+.n4mm :where(input[aria-invalid="true"]) {
   border-color: var(--n4mm-red);
 }
 
@@ -499,8 +559,8 @@
 }
 
 .n4mm-badge[data-tone="fitted"] {
-  background: #fff4e5;
-  border-color: #f5c48a;
+  background: var(--n4mm-orange-pale);
+  border-color: color-mix(in srgb, var(--n4mm-orange) 40%, transparent);
   color: var(--n4mm-orange-text);
 }
 
@@ -509,17 +569,17 @@
   border-radius: 5px;
   color: #fff;
   display: inline-block;
-  font: 700 0.78rem/1 var(--n4-font-mono, monospace);
+  font: 700 0.78rem/1 var(--n4mm-mono);
   margin-right: 0.35rem;
   padding: 0.22rem 0.38rem;
   vertical-align: 0.08em;
 }
 
-.n4mm-tag[data-source="0"] { background: #058e96; }
-.n4mm-tag[data-source="1"] { background: #4f46e5; }
-.n4mm-tag[data-source="2"] { background: #b54700; }
+.n4mm-tag[data-source="0"] { background: var(--teal-d, #0f766e); }
+.n4mm-tag[data-source="1"] { background: var(--indigo, #4f46e5); }
+.n4mm-tag[data-source="2"] { background: #b45309; }
 .n4mm-tag[data-source="3"] { background: #7c3aed; }
-.n4mm-tag[data-source="4"] { background: #0f7b54; }
+.n4mm-tag[data-source="4"] { background: #047857; }
 .n4mm-tag[data-source="5"] { background: #be123c; }
 
 /* ---- case selector ---- */
@@ -533,8 +593,10 @@
 }
 
 .n4mm-case {
+  background: var(--n4mm-surface);
   border: 1px solid var(--n4mm-border);
   border-radius: var(--n4mm-radius);
+  transition: border-color 0.15s, box-shadow 0.15s;
   cursor: pointer;
   display: flex;
   gap: 0.75rem;
@@ -551,10 +613,14 @@
   box-shadow: var(--n4mm-focus);
 }
 
+.n4mm-case:hover {
+  border-color: color-mix(in srgb, var(--n4mm-master) 45%, var(--n4mm-border));
+}
+
 .n4mm-case[data-checked] {
   background: var(--n4mm-master-pale);
   border-color: var(--n4mm-master);
-  box-shadow: inset 4px 0 0 var(--n4mm-master);
+  box-shadow: inset 4px 0 0 var(--n4mm-master), var(--n4mm-shadow);
 }
 
 .n4mm-case__index {
@@ -564,7 +630,7 @@
   color: var(--n4mm-master-dark);
   display: inline-flex;
   flex: none;
-  font: 700 0.9rem/1 var(--n4-font-mono, monospace);
+  font: 700 0.9rem/1 var(--n4mm-mono);
   height: 1.9rem;
   justify-content: center;
   width: 1.9rem;
@@ -587,7 +653,7 @@
 
 .n4mm-case__modalities {
   color: var(--n4mm-master-dark);
-  font: 650 0.82rem/1.3 var(--n4-font-mono, monospace);
+  font: 650 0.82rem/1.3 var(--n4mm-mono);
 }
 
 .n4mm-case__goal {
@@ -605,6 +671,10 @@
 .n4mm-data__pane {
   border-top: 1px solid var(--n4mm-border);
   padding-top: 0.5rem;
+}
+
+.n4mm-data__pane[hidden] {
+  display: none;
 }
 
 .n4mm-list {
@@ -697,6 +767,24 @@
   font-size: 0.88rem;
 }
 
+.n4mm-examples {
+  border-top: 1px dashed var(--n4mm-border-warm);
+  margin-top: 0.85rem;
+  padding-top: 0.6rem;
+}
+
+.n4mm-examples p {
+  margin: 0.2rem 0;
+}
+
+.n4mm-examples__label {
+  font-weight: 650;
+}
+
+.n4mm-data .dsb-mm {
+  margin-top: 0.6rem;
+}
+
 .n4mm-alignment {
   margin-top: 1rem;
 }
@@ -741,7 +829,7 @@
 }
 
 .n4mm-table thead th {
-  background: #f8fafc;
+  background: var(--n4mm-bg);
   color: var(--n4mm-muted);
   font-size: 0.78rem;
   font-weight: 700;
@@ -778,7 +866,7 @@
 
 .n4mm-table tr[data-selected] > *,
 .n4mm-table tr[data-focused] > * {
-  background: #fff1ef;
+  background: var(--n4mm-red-pale);
 }
 
 .n4mm-table tr[data-selected] > th:first-child,
@@ -791,7 +879,7 @@
   border: 0;
   color: var(--n4mm-master-dark);
   cursor: pointer;
-  font: 600 0.88rem/1.2 var(--n4-font-mono, monospace);
+  font: 600 0.88rem/1.2 var(--n4mm-mono);
   padding: 0;
   text-align: left;
   text-decoration: underline dotted;
@@ -803,15 +891,15 @@
 }
 
 .n4mm-dosage td {
-  font-family: var(--n4-font-mono, monospace);
+  font-family: var(--n4mm-mono);
   min-width: 2.2rem;
 }
 
 .n4mm-dosage td[data-dosage="0"] { background: #ffffff; }
-.n4mm-dosage td[data-dosage="1"] { background: #e8f5f6; }
-.n4mm-dosage td[data-dosage="2"] { background: #bfe3e6; }
+.n4mm-dosage td[data-dosage="1"] { background: #e0f4f1; }
+.n4mm-dosage td[data-dosage="2"] { background: #a7e0d8; }
 .n4mm-dosage td[data-dosage="na"] {
-  background: repeating-linear-gradient(45deg, #fdecea 0 4px, #ffffff 4px 8px);
+  background: repeating-linear-gradient(45deg, #ffe4e6 0 4px, #ffffff 4px 8px);
   color: var(--n4mm-red-text);
   font-weight: 700;
 }
@@ -840,7 +928,7 @@
 /* ---- source views ---- */
 .n4mm-navigator {
   align-items: flex-end;
-  background: #f8fafc;
+  background: var(--n4mm-bg);
   border: 1px solid var(--n4mm-border);
   border-radius: var(--n4mm-radius-sm);
   display: flex;
@@ -944,7 +1032,7 @@
 }
 
 .n4mm-thumb__id {
-  font: 600 0.72rem/1.2 var(--n4-font-mono, monospace);
+  font: 600 0.72rem/1.2 var(--n4mm-mono);
   overflow-wrap: anywhere;
 }
 
@@ -981,7 +1069,7 @@
 }
 
 .n4mm-chain[data-excluded] {
-  background: #f8fafc;
+  background: var(--n4mm-bg);
 }
 
 .n4mm-chain[data-excluded] .n4mm-steps {
@@ -1010,7 +1098,7 @@
 }
 
 .n4mm-step {
-  background: #fbfcfd;
+  background: var(--n4mm-bg);
   border: 1px solid var(--n4mm-border);
   border-left: 3px solid var(--n4mm-master);
   border-radius: var(--n4mm-radius-sm);
@@ -1275,12 +1363,34 @@
   .n4mm-recipe {
     grid-template-columns: 1fr;
   }
+  .n4mm-header {
+    padding-bottom: 1.05rem;
+  }
   .n4mm-list__item {
     flex-direction: column;
   }
 }
 
+@media (max-width: 560px) {
+  .n4mm-main {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .n4mm-section {
+    border-radius: var(--n4mm-radius-sm);
+  }
+  .n4mm-field {
+    min-width: min(9rem, 100%);
+  }
+  .n4mm-run__status progress {
+    min-width: min(12rem, 100%);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .n4mm-header__strip {
+    animation: none;
+  }
   .n4mm *,
   .n4mm *::before,
   .n4mm *::after {

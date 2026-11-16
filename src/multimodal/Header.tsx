@@ -43,7 +43,7 @@ export function MultimodalHeader({ brand, backHref, backLabel = "nirs4all Web wo
           Local only · data never leaves this browser
         </span>
       </div>
-      <div className="n4mm-header__strip" aria-hidden="true" />
+      <div className="n4mm-header__strip n4-spectrum-strip" aria-hidden="true" />
     </header>
   );
 }

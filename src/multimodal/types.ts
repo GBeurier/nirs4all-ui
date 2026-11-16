@@ -375,6 +375,11 @@ export interface MultimodalWorkbenchProps {
   dataset: MultimodalDataset | null;
   onLoadPreset: (presetId: string) => void;
   onImportFiles: (profileId: string, files: readonly File[]) => void;
+  /**
+   * Host-built import wizard shown in "Import your files" instead of the
+   * manifest-only profile cards (example downloads stay visible).
+   */
+  datasetBuilder?: ReactNode;
 
   // linked selection
   selectedSampleId: string | null;

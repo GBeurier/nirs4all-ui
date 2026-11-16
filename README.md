@@ -57,7 +57,7 @@ import { createRobustnessGuaranteeView, createRobustnessSummaryCards, getRobustn
 import { createKeywordRegistryFieldViews, createKeywordRegistryWorkspacePredictionPublicationContract, parseKeywordRegistryDocument } from "nirs4all-ui/keywordRegistry";
 import { projectN4mManifest } from "nirs4all-ui/nodeRegistry";
 import { createTuningSearchSpacePreview, createTuningStudySummary, createTuningSummaryCard, createTuningTrialRows, parseOrderedTuningSearchSpaceArtifact, parseTuningResultArtifact, parseTuningSummaryArtifact } from "nirs4all-ui/tuning";
-import { DatasetBuilder } from "nirs4all-ui/datasetBuilder";
+import { DatasetBuilder, MultimodalDatasetBuilder } from "nirs4all-ui/datasetBuilder";
 import { Playground } from "nirs4all-ui/playground";
 import { Inspector } from "nirs4all-ui/inspector";
 import { SpectraView, ScatterView, combineSelection } from "nirs4all-ui/workbench";
@@ -68,6 +68,18 @@ import { generateNirs4allBrandSvg } from "nirs4all-ui/brand";
 import { getNirs4allStyleAsset } from "nirs4all-ui/styles";
 import { MetricValueBadge, RuntimeEngineBadge } from "nirs4all-ui/components";
 ```
+
+`MultimodalDatasetBuilder` is the controlled four-stage Source → Role → Columns →
+Validation importer. Pass host-inspected `files` and `draft`, handle
+`onAddFiles` / `onRemoveFile` / `onDraftChange`, and return owner inspection
+through `validation` after `onValidate`. Reset validation on every draft or file
+edit. `onCreate` is enabled only for a current successful validation; hosts also
+guard the exact accepted revision. The component performs no file reads, parsing,
+identity joins or execution. Its `MultimodalDatasetBuilderProps` and source DTOs
+are exported from the same entrypoint. The showroom includes an explicitly
+illustrative controlled host; the Web multimodal laboratory uses actual
+IO/Formats inspection and materialization. `MultimodalWorkbench.datasetBuilder`
+accepts the hosted component while keeping example downloads available.
 
 The tuning tests include a copied `ordered_search_space_v1.json` fixture from
 full Python `nirs4all/tests/fixtures/tuning`. It verifies that this package

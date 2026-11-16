@@ -41,6 +41,7 @@ export function DatasetWizardStepper({
             <button
               type="button"
               className="dsb-stepper__button"
+              aria-label={`${index + 1}. ${t.steps[step]}`}
               onClick={onStepClick ? () => onStepClick(step) : undefined}
               disabled={!onStepClick}
               aria-current={isActive ? "step" : undefined}

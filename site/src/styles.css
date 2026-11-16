@@ -469,3 +469,12 @@ button { font-family: inherit; }
   background: var(--paper);
 }
 .wb-showcase.is-fullscreen .wb-showcase-stage { flex: 1; height: auto; min-height: 0; }
+
+/* ---------- controlled multimodal builder demo ---------- */
+.builder-demo { max-width: 1240px; margin: clamp(40px, 6vw, 72px) auto 0; display: grid; gap: 18px; }
+.builder-demo__head { max-width: 760px; display: grid; gap: 8px; }
+.builder-demo__head h3 { font-size: clamp(1.3rem, 2.4vw, 1.6rem); font-weight: 600; }
+.builder-demo__head p { margin: 0; color: var(--text-2); line-height: 1.7; }
+.builder-demo__head code, .builder-demo__status { font-size: 0.9em; }
+.builder-demo__head code { background: color-mix(in srgb, var(--teal) 10%, transparent); padding: 1px 6px; border-radius: 5px; color: var(--teal-d); }
+.builder-demo__status { margin: 0; color: var(--text-3); }
