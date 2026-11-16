@@ -1,8 +1,15 @@
 import { useId, useMemo, useState, type KeyboardEvent, type PointerEvent } from "react";
 
 import { cx } from "./_cx.js";
-import { compactNumber, distinctTickLabels, signedNumber } from "./description.js";
+import { compactNumber, countLabel, distinctTickLabels, signedNumber } from "./description.js";
 import { extentOf, linePath, makeScale, round, ticks, type Extent } from "./geometry.js";
+import {
+  layoutBandLabels,
+  spectralBandReadout,
+  spectralBandsAt,
+  visibleSpectralBands,
+  type SpectralBand,
+} from "./spectralBands.js";
 import {
   decimatedRuns,
   formatAxisValue,
@@ -60,10 +67,23 @@ export interface SpectralImportanceChartProps {
   showDataTable?: boolean;
   /** Text shown in the readout before any point or region is active. */
   instructions?: string;
+  /**
+   * Reference annotation bands in the axis unit (for example from
+   * `referenceBandsForAxis`), drawn as labelled translucent spans behind the
+   * importance curve. They are annotations only and never alter the data.
+   */
+  bands?: readonly SpectralBand[];
+  /** Caption for the band legend, readout and table (default "Reference absorption bands"). */
+  bandsLabel?: string;
   className?: string;
 }
 
 const PAD = { top: 14, bottom: 46, left: 64, gap: 22 } as const;
+
+/** Default band color; `assets/viz.css` themes it through `--n4-viz-band` (light and dark). */
+const BAND_COLOR = N4_VIZ_COLORS.violet;
+const BAND_LABEL_ROW_HEIGHT = 11;
+const NO_BANDS: readonly SpectralBand[] = [];
 
 function domainWithZero(values: readonly number[], pad = 0.08): Extent {
   const finite = values.filter((value) => Number.isFinite(value));
@@ -119,6 +139,8 @@ export function SpectralImportanceChart({
   showSummary = true,
   showDataTable = true,
   instructions = "Hover the chart, or focus it and use the arrow keys, Home and End to step through regions. Escape clears.",
+  bands = NO_BANDS,
+  bandsLabel = "Reference absorption bands",
   className,
 }: SpectralImportanceChartProps) {
   const baseId = useId();
@@ -183,7 +205,30 @@ export function SpectralImportanceChart({
 
   const regionFill = (value: number) => (!signed ? color : value < 0 ? negativeColor : positiveColor);
 
-  const summary = description?.trim() || summarizeSpectralImportance({
+  // --- reference bands (annotations, top panel only) -----------------------
+  const hasBandInput = bands.length > 0;
+  const shownBands = useMemo(
+    () => (hasBandInput ? visibleSpectralBands(bands, xDomain.min, xDomain.max) : []),
+    [bands, hasBandInput, xDomain.min, xDomain.max],
+  );
+  const bandSpans = shownBands.map((band) => {
+    // min/max keeps spans valid whatever the scale direction; clamping clips them to the plot.
+    const a = xScale(band.start);
+    const b = xScale(band.end);
+    const left = Math.min(plotRight - 1, Math.max(plotLeft, Math.min(a, b)));
+    const right = Math.min(plotRight, Math.max(a, b));
+    return { left, right: Math.max(right, left + 1), label: band.label };
+  });
+  const bandLabelRows = topHeight >= 120 ? 2 : 1;
+  const bandLabels = layoutBandLabels(bandSpans, { minX: plotLeft + 2, maxX: plotRight - 2, rows: bandLabelRows });
+  const bandRangeText = (band: SpectralBand) => `${axisFormat(band.start)}–${axisFormat(band.end)}`;
+  const bandSummary = hasBandInput
+    ? shownBands.length > 0
+      ? `${bandsLabel}: ${countLabel(shownBands.length, "band")} shown as annotations behind the curve.`
+      : `${bandsLabel}: none within the displayed axis range.`
+    : "";
+
+  const dataSummary = summarizeSpectralImportance({
     axis,
     importance,
     spectrum: hasSpectrum ? spectrum : undefined,
@@ -196,12 +241,15 @@ export function SpectralImportanceChart({
     valueFormat,
     axisFormat,
   });
+  const summary = description?.trim() || (bandSummary ? `${dataSummary} ${bandSummary}` : dataSummary);
 
   // --- cursor resolution -------------------------------------------------
   const pointCount = axis.length;
   const activeRegion = cursor?.kind === "region" ? resolved[cursor.index] ?? null : null;
   const activePoint = cursor?.kind === "point" && cursor.index >= 0 && cursor.index < pointCount ? cursor.index : -1;
   const cursorX = activeRegion ? activeRegion.center : activePoint >= 0 ? axis[activePoint]! : NaN;
+  const activeBands = shownBands.length > 0 ? spectralBandsAt(shownBands, cursorX) : [];
+  const bandReadout = spectralBandReadout(activeBands, bandsLabel);
 
   const readout = (() => {
     if (activeRegion) {
@@ -212,6 +260,7 @@ export function SpectralImportanceChart({
         `${formatRegionValue(activeRegion.value)}`,
         activeRegion.rank > 0 ? `rank ${activeRegion.rank} of ${resolved.filter((region) => region.rank > 0).length} by magnitude` : "value unavailable",
         curve !== undefined && Number.isFinite(curve) ? `${importanceLabel} at center ${valueFormat(curve)}` : null,
+        bandReadout,
       ].filter(Boolean).join(" · ");
     }
     if (activePoint >= 0) {
@@ -224,6 +273,7 @@ export function SpectralImportanceChart({
         `${importanceLabel} ${y !== undefined && Number.isFinite(y) ? valueFormat(y) : "unavailable"}`,
         s !== undefined ? `${spectrumLabel} ${Number.isFinite(s) ? valueFormat(s) : "unavailable"}` : null,
         covering.length > 0 ? `${regionLabel} ${covering.map((region) => `${region.label}: ${formatRegionValue(region.value)}`).join(", ")}` : null,
+        bandReadout,
       ].filter(Boolean).join(" · ");
     }
     return instructions;
@@ -283,6 +333,32 @@ export function SpectralImportanceChart({
           {xTicks.map((tick) => (
             <line key={`gx-${tick}`} className="n4viz-grid" x1={round(xScale(tick))} x2={round(xScale(tick))} y1={topTop} y2={topBottom} />
           ))}
+          {bandSpans.length > 0 ? (
+            <g className="n4viz-bands">
+              {bandSpans.map((span, index) => {
+                const band = shownBands[index]!;
+                const active = activeBands.includes(band);
+                return (
+                  <rect
+                    key={`band-${index}`}
+                    className="n4viz-band"
+                    data-family={band.family}
+                    data-active={active ? "true" : undefined}
+                    x={round(span.left)}
+                    y={topTop}
+                    width={round(span.right - span.left)}
+                    height={round(topHeight)}
+                    fill={BAND_COLOR}
+                    fillOpacity={active ? 0.2 : 0.09}
+                  >
+                    <title>
+                      {`${band.label}: ${bandRangeText(band)}${suffix}${band.assignment ? ` — ${band.assignment}` : ""}`}
+                    </title>
+                  </rect>
+                );
+              })}
+            </g>
+          ) : null}
           {resolved.map((region) =>
             region.strength >= highlightThreshold && region.strength > 0 ? (
               <rect
@@ -336,6 +412,24 @@ export function SpectralImportanceChart({
               strokeLinejoin="round"
             />
           ))}
+          {bandLabels.some(Boolean) ? (
+            <g className="n4viz-band-labels" aria-hidden="true">
+              {bandLabels.map((placement, index) =>
+                placement ? (
+                  <text
+                    key={`band-label-${index}`}
+                    className="n4viz-band-label"
+                    x={round(placement.x)}
+                    y={round(topTop + 9 + placement.row * BAND_LABEL_ROW_HEIGHT)}
+                    textAnchor="middle"
+                    fill={BAND_COLOR}
+                  >
+                    {placement.text}
+                  </text>
+                ) : null,
+              )}
+            </g>
+          ) : null}
           <line className="n4viz-axis" x1={plotLeft} x2={plotLeft} y1={topTop} y2={topBottom} />
           <line className="n4viz-axis" x1={plotLeft} x2={plotRight} y1={topBottom} y2={topBottom} />
           {yTicks.map((tick, index) => (
@@ -476,6 +570,9 @@ export function SpectralImportanceChart({
             low → high
           </span>
         ) : null}
+        {shownBands.length > 0 ? (
+          <span className="n4viz-legend-item"><span className="n4viz-swatch n4viz-band-swatch" />{bandsLabel}</span>
+        ) : null}
       </div>
 
       {showSummary ? <figcaption className="n4viz-summary">{summary}</figcaption> : null}
@@ -503,6 +600,35 @@ export function SpectralImportanceChart({
                     <td>{axisFormat(region.center)}</td>
                     <td>{Number.isFinite(region.value) ? formatRegionValue(region.value) : "unavailable"}</td>
                     <td>{region.rank > 0 ? region.rank : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      ) : null}
+
+      {showDataTable && shownBands.length > 0 ? (
+        <details className="n4viz-datatable n4viz-band-table">
+          <summary>{bandsLabel} ({countLabel(shownBands.length, "band")})</summary>
+          <div className="n4viz-table-wrap" role="region" tabIndex={0} aria-label={bandsLabel}>
+            <table>
+              <caption>
+                {bandsLabel} on {axisLabel}: indicative annotations with approximate, matrix-dependent positions, not model output
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Band</th>
+                  <th scope="col">Range{suffix ? ` (${axisUnit})` : ""}</th>
+                  <th scope="col">Assignment</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shownBands.map((band, index) => (
+                  <tr key={`band-row-${index}`} data-active={activeBands.includes(band) ? "true" : undefined}>
+                    <th scope="row">{band.label}</th>
+                    <td>{bandRangeText(band)}</td>
+                    <td className="n4viz-band-assignment">{band.assignment ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>

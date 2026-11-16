@@ -16,7 +16,9 @@ import {
   ScoreSummary,
   ShapBeeswarm,
   SpectraPlot,
+  SpectralImportanceChart,
   WaterfallChart,
+  referenceBandsForAxis,
   type BeeswarmFeature,
   type PcaPoint,
   type PredictionPoint,
@@ -179,6 +181,59 @@ const BEESWARM: BeeswarmFeature[] = ["1930 nm", "1450 nm", "2100 nm", "2320 nm",
     }),
   }),
 );
+
+// Spectral importance with reference absorption bands. Pure functions of the
+// axis (no seeded random draws) so the rest of the showcase data is unchanged.
+const BAND_NM_AXIS = Array.from({ length: 151 }, (_, i) => 1000 + i * 10);
+const BAND_NM_IMPORTANCE = BAND_NM_AXIS.map((wl) =>
+  Number(
+    (
+      0.004 +
+      gaussian(wl, 1450, 28, 0.052) +
+      gaussian(wl, 1940, 30, 0.071) +
+      gaussian(wl, 2180, 22, 0.038) +
+      gaussian(wl, 1210, 20, 0.018) +
+      gaussian(wl, 2310, 26, 0.024)
+    ).toFixed(5),
+  ),
+);
+const BAND_NM_SPECTRUM = BAND_NM_AXIS.map((wl) =>
+  Number(
+    (
+      0.3 +
+      ((wl - 1000) / 1500) * 0.12 +
+      gaussian(wl, 1450, 55, 0.3) +
+      gaussian(wl, 1940, 60, 0.46) +
+      gaussian(wl, 2100, 50, 0.18) +
+      gaussian(wl, 2310, 45, 0.12)
+    ).toFixed(4),
+  ),
+);
+const BAND_NM_REGIONS = Array.from({ length: 15 }, (_, b) => {
+  const start = 1000 + b * 100;
+  const slice = BAND_NM_IMPORTANCE.slice(b * 10, b * 10 + 11);
+  return { start, end: start + 100, value: Number((slice.reduce((sum, v) => sum + v, 0) / slice.length).toFixed(5)) };
+});
+const BAND_NM = referenceBandsForAxis("nm", 1000, 2500);
+
+// Wavenumber axis stored in descending order, as many FT-NIR instruments export it.
+const BAND_CM_AXIS = Array.from({ length: 121 }, (_, i) => 10000 - i * 50);
+const BAND_CM_IMPORTANCE = BAND_CM_AXIS.map((wn) =>
+  Number(
+    (
+      gaussian(wn, 6900, 140, 0.034) -
+      gaussian(wn, 5170, 90, 0.046) +
+      gaussian(wn, 4600, 80, 0.021) -
+      gaussian(wn, 8300, 160, 0.011)
+    ).toFixed(5),
+  ),
+);
+const BAND_CM_REGIONS = Array.from({ length: 12 }, (_, b) => {
+  const start = 4000 + b * 500;
+  const inside = BAND_CM_AXIS.map((wn, i) => [wn, BAND_CM_IMPORTANCE[i] ?? 0] as const).filter(([wn]) => wn >= start && wn <= start + 500);
+  return { start, end: start + 500, value: Number((inside.reduce((sum, [, v]) => sum + v, 0) / inside.length).toFixed(5)) };
+});
+const BAND_CM = referenceBandsForAxis("cm-1", 4000, 10000);
 
 // --- Inspector heatmap + box plot -----------------------------------------
 const HEATMAP_ROWS = ["PLS", "Ridge", "SVR", "RandomForest"];
@@ -845,6 +900,78 @@ export const SHOWCASE_ENTRIES: readonly ShowcaseEntry[] = [
   }))}
 />`,
     render: () => <ShapBeeswarm features={BEESWARM} title="SHAP by wavelength region" width={420} />,
+  },
+  {
+    id: "spectral-importance-bands-nm",
+    name: "SpectralImportanceChart",
+    category: "Explainability",
+    entry: "nirs4all-ui/viz",
+    propsInterface: "SpectralImportanceChartProps",
+    mirrors: "Studio SpectralImportanceChart (SHAP)",
+    summary:
+      "Mean |SHAP| along the wavelength axis with binned importance, the mean spectrum and approximate reference NIR absorption bands (water, C–H, N–H, O–H) as labelled annotations.",
+    hostOwned: ["SHAP computation", "binning", "axis unit", "band selection"],
+    importLine: 'import { SpectralImportanceChart, referenceBandsForAxis } from "nirs4all-ui/viz";',
+    code: `<SpectralImportanceChart
+  axis={explanation.axis.values}
+  importance={explanation.summary.mean_abs}
+  regions={bins}
+  axisLabel="Wavelength (nm)"
+  axisUnit="nm"
+  bands={referenceBandsForAxis("nm", 1000, 2500)}
+/>`,
+    render: () => (
+      <SpectralImportanceChart
+        axis={BAND_NM_AXIS}
+        importance={BAND_NM_IMPORTANCE}
+        spectrum={BAND_NM_SPECTRUM}
+        regions={BAND_NM_REGIONS}
+        axisLabel="Wavelength (nm)"
+        axisUnit="nm"
+        regionLabel="Binned mean |SHAP|"
+        bands={BAND_NM}
+        title="Spectral importance with reference bands"
+      />
+    ),
+  },
+  {
+    id: "spectral-importance-bands-cm1",
+    name: "SpectralImportanceChart",
+    category: "Explainability",
+    entry: "nirs4all-ui/viz",
+    propsInterface: "SpectralImportanceChartProps",
+    mirrors: "Studio SpectralImportanceChart (SHAP)",
+    summary:
+      "Signed binned SHAP on a descending wavenumber axis (cm⁻¹); reference bands are converted from nanometres (1e7 / nm) and clipped to the axis. Unknown units or feature indices get no bands.",
+    hostOwned: ["SHAP computation", "binning", "axis unit", "band selection"],
+    importLine: 'import { SpectralImportanceChart, referenceBandsForAxis } from "nirs4all-ui/viz";',
+    code: `<SpectralImportanceChart
+  axis={wavenumbers}
+  importance={meanSignedShap}
+  regions={signedBins}
+  regionValueKind="signed"
+  axisLabel="Wavenumber (cm⁻¹)"
+  axisUnit="cm-1"
+  bands={referenceBandsForAxis("cm-1", 4000, 10000)}
+/>`,
+    render: () => (
+      <SpectralImportanceChart
+        axis={BAND_CM_AXIS}
+        importance={BAND_CM_IMPORTANCE}
+        regions={BAND_CM_REGIONS}
+        regionValueKind="signed"
+        axisLabel="Wavenumber (cm⁻¹)"
+        axisUnit="cm-1"
+        importanceLabel="Mean SHAP"
+        regionLabel="Binned mean SHAP"
+        positiveLabel="Raises prediction"
+        negativeLabel="Lowers prediction"
+        bands={BAND_CM}
+        width={520}
+        height={380}
+        title="Signed importance on a wavenumber axis"
+      />
+    ),
   },
   {
     id: "pipeline-flow",

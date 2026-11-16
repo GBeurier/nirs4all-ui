@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { SpectralImportanceChart } from "./SpectralImportanceChart.js";
+import { referenceBandsForAxis, spectralBandReadout, spectralBandsAt } from "./spectralBands.js";
 import {
   decimatedRuns,
   nearestAxisIndex,
@@ -138,5 +139,99 @@ describe("SpectralImportanceChart", () => {
       <SpectralImportanceChart axis={axis} importance={importance} description="Host summary." showDataTable={false} />,
     );
     expect(markup).toContain("Host summary.");
+  });
+});
+
+describe("SpectralImportanceChart reference bands", () => {
+  const nmAxis = Array.from({ length: 61 }, (_, index) => 1000 + index * 25);
+  const nmImportance = nmAxis.map((x) => Math.exp(-(((x - 1450) / 60) ** 2)) + 0.4 * Math.exp(-(((x - 1940) / 50) ** 2)));
+  const bandRects = (markup: string) =>
+    [...markup.matchAll(/<rect class="n4viz-band"[^>]*?x="([^"]+)"[^>]*?width="([^"]+)"/g)].map((match) => ({
+      x: Number(match[1]),
+      width: Number(match[2]),
+    }));
+
+  it("leaves the chart untouched when no bands are supplied", () => {
+    const props = { axis, importance, spectrum, regions: [{ start: 1000, end: 1200, value: 0.012 }], axisUnit: "nm" };
+    const without = renderToStaticMarkup(<SpectralImportanceChart {...props} />);
+    expect(renderToStaticMarkup(<SpectralImportanceChart {...props} bands={[]} />)).toBe(without);
+    expect(without).not.toContain("n4viz-band");
+    expect(without).not.toContain("Reference absorption bands");
+  });
+
+  it("draws labelled spans, a legend entry, a summary count and a band table", () => {
+    const bands = referenceBandsForAxis("nm", 1000, 2500);
+    const markup = renderToStaticMarkup(
+      <SpectralImportanceChart axis={nmAxis} importance={nmImportance} axisLabel="Wavelength (nm)" axisUnit="nm" bands={bands} />,
+    );
+    const rects = bandRects(markup);
+    expect(rects).toHaveLength(bands.length);
+    for (const rect of rects) {
+      expect(rect.width).toBeGreaterThan(0);
+      expect(rect.x).toBeGreaterThanOrEqual(64);
+      expect(rect.x + rect.width).toBeLessThanOrEqual(740 + 1e-6);
+    }
+    // spans sit behind the importance curve
+    expect(markup.indexOf("n4viz-band")).toBeLessThan(markup.indexOf("n4viz-importance-line"));
+    expect(markup).toContain("<title>O–H 1st overtone: 1400–1460 nm — O–H stretch first overtone");
+    expect(markup).toContain("n4viz-band-label");
+    expect(markup).toContain("n4viz-band-swatch");
+    expect(markup).toContain(`Reference absorption bands: ${bands.length} bands shown as annotations behind the curve.`);
+    expect(markup).toContain(`Reference absorption bands (${bands.length} bands)`);
+    expect(markup).toContain("Water O–H stretch + H–O–H bend combination (~1940 nm)");
+    expect(markup).not.toMatch(/NaN|Infinity/);
+  });
+
+  it("keeps only bands within the displayed range and honours a custom caption", () => {
+    const markup = renderToStaticMarkup(
+      <SpectralImportanceChart
+        axis={axis}
+        importance={importance}
+        axisUnit="nm"
+        bandsLabel="Literature bands"
+        bands={[
+          { start: 1400, end: 1460, label: "O–H 1st overtone", assignment: "water" },
+          { start: 2280, end: 2360, label: "C–H combination" },
+        ]}
+      />,
+    );
+    expect(bandRects(markup)).toHaveLength(1);
+    expect(markup).toContain("Literature bands: 1 band shown as annotations behind the curve.");
+    expect(markup).not.toContain("C–H combination");
+  });
+
+  it("reports when supplied bands fall outside the axis", () => {
+    const markup = renderToStaticMarkup(
+      <SpectralImportanceChart axis={axis} importance={importance} bands={[{ start: 2280, end: 2360, label: "C–H" }]} />,
+    );
+    expect(bandRects(markup)).toHaveLength(0);
+    expect(markup).toContain("Reference absorption bands: none within the displayed axis range.");
+  });
+
+  it("places wavenumber bands correctly on a descending axis", () => {
+    const wavenumbers = Array.from({ length: 61 }, (_, index) => 10000 - index * 100);
+    const values = wavenumbers.map((x) => Math.exp(-(((x - 6900) / 300) ** 2)));
+    const bands = referenceBandsForAxis("cm-1", 10000, 4000);
+    const markup = renderToStaticMarkup(
+      <SpectralImportanceChart axis={wavenumbers} importance={values} axisLabel="Wavenumber (cm-1)" axisUnit="cm-1" bands={bands} />,
+    );
+    const rects = bandRects(markup);
+    expect(rects).toHaveLength(bands.length);
+    for (const rect of rects) expect(rect.width).toBeGreaterThan(0);
+    // the x scale grows with the wavenumber whatever the data order: the water combination (~5100–5260 cm-1)
+    // lies left of the O–H first overtone (~6850–7140 cm-1); the 970 nm overtone (>10100 cm-1) is outside the axis
+    const water = bands.findIndex((band) => band.label === "H₂O combination");
+    const ohFirst = bands.findIndex((band) => band.label === "O–H 1st overtone");
+    expect(water).toBeGreaterThanOrEqual(0);
+    expect(rects[water]!.x).toBeLessThan(rects[ohFirst]!.x);
+    expect(bands.some((band) => band.label === "O–H 2nd overtone")).toBe(false);
+    expect(markup).toContain("Range (cm-1)");
+  });
+
+  it("composes the readout fragment for a cursor inside a band", () => {
+    const bands = referenceBandsForAxis("nm", 1000, 2500);
+    const readout = spectralBandReadout(spectralBandsAt(bands, 1940), "Reference absorption bands");
+    expect(readout).toBe("Reference absorption bands: H₂O combination (Water O–H stretch + H–O–H bend combination (~1940 nm))");
+    expect(spectralBandReadout(spectralBandsAt(bands, 1600), "Reference absorption bands")).toBeNull();
   });
 });

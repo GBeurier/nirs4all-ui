@@ -149,6 +149,9 @@
   --n4-color-border: rgba(255, 255, 255, 0.14);
   --n4-color-muted: rgba(255, 255, 255, 0.62);
   --n4-color-text: rgba(255, 255, 255, 0.92);
+  --n4-viz-band: #a78bfa;
+  --n4-viz-band-text: #c4b5fd;
+  --n4-viz-band-halo: var(--n4-color-surface, #0f172a);
 }
 
 /* spectral importance figure (SVG + HTML readout, legend and data table) */
@@ -307,6 +310,39 @@
   border: 0;
 }
 
+/* reference absorption bands (annotations behind the spectral importance curve) */
+.n4viz-band {
+  fill: var(--n4-viz-band, #7c3aed);
+  fill-opacity: 0.09;
+  transition: fill-opacity 120ms ease;
+}
+
+.n4viz-band[data-active="true"] {
+  fill-opacity: 0.2;
+}
+
+.n4viz-band-label {
+  font-size: 9px;
+  font-weight: 600;
+  fill: var(--n4-viz-band-text, #6d28d9);
+  paint-order: stroke;
+  stroke: var(--n4-viz-band-halo, var(--n4-color-surface, #ffffff));
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.n4viz-band-swatch {
+  background: color-mix(in srgb, var(--n4-viz-band, #7c3aed) 32%, transparent);
+  border: 1px solid color-mix(in srgb, var(--n4-viz-band, #7c3aed) 55%, transparent);
+}
+
+.n4viz-band-table td.n4viz-band-assignment {
+  text-align: left;
+  font-family: var(--n4-font-sans, "Inter", -apple-system, system-ui, sans-serif);
+  white-space: normal;
+}
+
 .n4viz-dot-selected {
   color: var(--n4-color-text, #0f172a);
 }
@@ -315,6 +351,13 @@
   .n4viz-cursor,
   .n4viz-cursor-region {
     stroke: CanvasText;
+  }
+  .n4viz-band {
+    fill: GrayText;
+  }
+  .n4viz-band-label {
+    fill: CanvasText;
+    stroke: Canvas;
   }
   .n4viz-focus:focus-visible {
     outline-color: Highlight;

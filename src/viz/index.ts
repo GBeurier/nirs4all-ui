@@ -4,7 +4,8 @@
  * Presentational, dependency-free inline-SVG charts that mirror what nirs4all
  * Studio and the Web/WASM client render: spectra, prediction diagnostics,
  * confusion matrices, distributions, importance/SHAP views (including the
- * spectral importance curve with region bands), projections,
+ * spectral importance curve with region bins and optional reference NIR
+ * absorption-band annotations), projections,
  * pipeline graphs, and score summaries. Same package boundary as the rest of
  * nirs4all-ui: pure + stateless, NO app state, network/IO, browser globals, or
  * runtime execution. Hosts pass already-computed numeric arrays; each component
@@ -41,6 +42,7 @@ export * from "./ShapBeeswarm.js";
 export * from "./WaterfallChart.js";
 export * from "./SpectralImportanceChart.js";
 export * from "./spectralImportance.js";
+export * from "./spectralBands.js";
 export { compactNumber, signedNumber } from "./description.js";
 
 // --- pipeline + scores ---
