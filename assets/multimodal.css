@@ -1082,6 +1082,14 @@
   min-width: 0;
 }
 
+.n4mm-graph__scroll {
+  padding-bottom: 0.25rem;
+}
+
+.n4mm-graph__scroll:focus-visible {
+  border-radius: var(--n4mm-radius-sm);
+}
+
 .n4mm-outline {
   font-size: 0.9rem;
   margin: 0.4rem 0 0;

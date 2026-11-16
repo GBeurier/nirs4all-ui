@@ -437,17 +437,26 @@ export function RecipeGraph({ strategy, config, sources, catalog, singleSourceId
   const hasOof = recipe.graph.edges.some((edge) => edge.oof);
   return (
     <figure className="n4mm-graph">
-      <DagGraphView
-        key={`${strategy}:${config.sourceIds.join(",")}`}
-        graph={recipe.graph}
-        direction="LR"
-        width={920}
-        height={340}
-        showMinimap={false}
-        showInspector={false}
-        showShapes={false}
-        title={`Branch and merge view: ${strategyInfo(strategy).name}`}
-      />
+      {/* The viewer has a fixed pixel viewport (pan/zoom map pointer pixels 1:1),
+          so narrow screens scroll it horizontally inside this region. */}
+      <div
+        className="n4mm-scroll n4mm-graph__scroll"
+        role="region"
+        aria-label={`Branch and merge diagram, scroll horizontally on narrow screens: ${strategyInfo(strategy).name}`}
+        tabIndex={0}
+      >
+        <DagGraphView
+          key={`${strategy}:${config.sourceIds.join(",")}`}
+          graph={recipe.graph}
+          direction="LR"
+          width={920}
+          height={340}
+          showMinimap={false}
+          showInspector={false}
+          showShapes={false}
+          title={`Branch and merge view: ${strategyInfo(strategy).name}`}
+        />
+      </div>
       <figcaption className="n4mm-caption">
         Sources on the left flow through their own preprocessing to models and merges on the right.
         {hasOof ? " Emphasised edges carry nested out-of-fold predictions." : ""} The same recipe as text:
