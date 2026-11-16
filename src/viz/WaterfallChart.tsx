@@ -201,7 +201,12 @@ export function WaterfallChart({
         const x0 = xScale(Math.min(row.from, row.to));
         const x1 = xScale(Math.max(row.from, row.to));
         const up = row.value > 0;
-        const labelX = up ? xScale(row.to) + 4 : xScale(row.to) - 4;
+        // Value labels sit past the bar end; when that would cross the label
+        // column or the right edge, they flip to the bar's other side.
+        const labelWidth = signed(row.value, valueFormat).length * 6.6;
+        const outward = up ? xScale(row.to) + 4 + labelWidth <= width : xScale(row.to) - 4 - labelWidth >= plotLeft;
+        const labelAtEnd = outward ? up : !up;
+        const labelX = outward ? (up ? xScale(row.to) + 4 : xScale(row.to) - 4) : up ? xScale(row.from) - 4 : xScale(row.from) + 4;
         return (
           <g key={`${row.label}-${i}`}>
             <title>{`${row.label}: ${signed(row.value, valueFormat)} (${valueFormat(row.from)} → ${valueFormat(row.to)})`}</title>
@@ -222,7 +227,7 @@ export function WaterfallChart({
               className="n4viz-badge"
               x={round(labelX)}
               y={round(center + 3)}
-              textAnchor={up ? "start" : "end"}
+              textAnchor={labelAtEnd ? "start" : "end"}
             >
               {signed(row.value, valueFormat)}
             </text>

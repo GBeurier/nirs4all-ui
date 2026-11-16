@@ -102,3 +102,15 @@ describe("viz/WaterfallChart ticks", () => {
     expect(new Set(ticks).size).toBe(ticks.length);
   });
 });
+
+describe("viz/WaterfallChart label placement", () => {
+  it("flips a negative value label to the bar's right when it would cross the label column", () => {
+    const markup = renderToStaticMarkup(
+      <WaterfallChart baseValue={0} width={300} contributions={[{ label: "up", value: 1 }, { label: "down", value: -1 }]} />,
+    );
+    const badges = [...markup.matchAll(/class="n4viz-badge" x="([^"]+)" y="[^"]+" text-anchor="([a-z]+)">([^<]+)</g)];
+    const down = badges.find((match) => match[3] === "-1.00");
+    expect(down?.[2]).toBe("start");
+    expect(Number(down?.[1])).toBeGreaterThan(112);
+  });
+});
