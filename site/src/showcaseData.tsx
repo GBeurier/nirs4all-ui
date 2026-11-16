@@ -909,7 +909,7 @@ export const SHOWCASE_ENTRIES: readonly ShowcaseEntry[] = [
     propsInterface: "SpectralImportanceChartProps",
     mirrors: "Studio SpectralImportanceChart (SHAP)",
     summary:
-      "Mean |SHAP| along the wavelength axis with binned importance, the mean spectrum and approximate reference NIR absorption bands (water, C–H, N–H, O–H) as labelled annotations.",
+      "Mean |SHAP| along the wavelength axis with binned importance and the mean spectrum. With bandFocus=\"important\", only the approximate reference NIR absorption bands overlapping the strongest regions are drawn, labelled with their typical assignment as candidates (not evidence of chemical causation).",
     hostOwned: ["SHAP computation", "binning", "axis unit", "band selection"],
     importLine: 'import { SpectralImportanceChart, referenceBandsForAxis } from "nirs4all-ui/viz";',
     code: `<SpectralImportanceChart
@@ -919,6 +919,8 @@ export const SHOWCASE_ENTRIES: readonly ShowcaseEntry[] = [
   axisLabel="Wavelength (nm)"
   axisUnit="nm"
   bands={referenceBandsForAxis("nm", 1000, 2500)}
+  bandFocus="important"
+  bandImportanceThreshold={0.5}
 />`,
     render: () => (
       <SpectralImportanceChart
@@ -930,7 +932,8 @@ export const SHOWCASE_ENTRIES: readonly ShowcaseEntry[] = [
         axisUnit="nm"
         regionLabel="Binned mean |SHAP|"
         bands={BAND_NM}
-        title="Spectral importance with reference bands"
+        bandFocus="important"
+        title="Spectral importance with candidate bands"
       />
     ),
   },

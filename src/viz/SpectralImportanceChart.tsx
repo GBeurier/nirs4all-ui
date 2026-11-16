@@ -4,6 +4,9 @@ import { cx } from "./_cx.js";
 import { compactNumber, countLabel, distinctTickLabels, signedNumber } from "./description.js";
 import { extentOf, linePath, makeScale, round, ticks, type Extent } from "./geometry.js";
 import {
+  bandAssignmentLabel,
+  bandsForImportantRegions,
+  regionsWithImportanceStrength,
   layoutBandLabels,
   spectralBandReadout,
   spectralBandsAt,
@@ -75,8 +78,22 @@ export interface SpectralImportanceChartProps {
   bands?: readonly SpectralBand[];
   /** Caption for the band legend, readout and table (default "Reference absorption bands"). */
   bandsLabel?: string;
+  /**
+   * `"all"` (default) draws every band in range. `"important"` keeps only the
+   * bands overlapping an important region (see `bandImportanceThreshold`),
+   * draws them more prominently with their short assignment and lists each
+   * important region's candidate bands in the summary and table.
+   */
+  bandFocus?: SpectralBandFocus;
+  /** Important regions reach at least this fraction (default 0.5) of the peak of the magnitude `importance` curve (for example mean |SHAP|) inside their bounds; signed region values are not used because they can cancel. */
+  bandImportanceThreshold?: number;
+  /** Caption used instead of `bandsLabel` when `bandFocus` is `"important"`. */
+  importantBandsLabel?: string;
   className?: string;
 }
+
+/** Which reference bands the chart draws: every band in range, or those overlapping important regions. */
+export type SpectralBandFocus = "all" | "important";
 
 const PAD = { top: 14, bottom: 46, left: 64, gap: 22 } as const;
 
@@ -141,6 +158,9 @@ export function SpectralImportanceChart({
   instructions = "Hover the chart, or focus it and use the arrow keys, Home and End to step through regions. Escape clears.",
   bands = NO_BANDS,
   bandsLabel = "Reference absorption bands",
+  bandFocus = "all",
+  bandImportanceThreshold = 0.5,
+  importantBandsLabel = "Candidate absorption bands in important regions",
   className,
 }: SpectralImportanceChartProps) {
   const baseId = useId();
@@ -207,26 +227,81 @@ export function SpectralImportanceChart({
 
   // --- reference bands (annotations, top panel only) -----------------------
   const hasBandInput = bands.length > 0;
-  const shownBands = useMemo(
+  const focusImportant = bandFocus === "important";
+  const bandCaption = focusImportant ? importantBandsLabel : bandsLabel;
+  const visibleBands = useMemo(
     () => (hasBandInput ? visibleSpectralBands(bands, xDomain.min, xDomain.max) : []),
     [bands, hasBandInput, xDomain.min, xDomain.max],
   );
-  const bandSpans = shownBands.map((band) => {
+  const bandSelection = useMemo(
+    () =>
+      hasBandInput && focusImportant
+        ? bandsForImportantRegions(visibleBands, regionsWithImportanceStrength(resolved, axis, importance), bandImportanceThreshold)
+        : null,
+    [hasBandInput, focusImportant, visibleBands, resolved, axis, importance, bandImportanceThreshold],
+  );
+  const shownBands = useMemo(
+    () => (bandSelection ? bandSelection.bands.map((match) => match.band) : visibleBands),
+    [bandSelection, visibleBands],
+  );
+  const unmatchedRegions = bandSelection ? bandSelection.regions.filter((entry) => entry.bands.length === 0) : [];
+  const toSpan = (start: number, end: number) => {
     // min/max keeps spans valid whatever the scale direction; clamping clips them to the plot.
-    const a = xScale(band.start);
-    const b = xScale(band.end);
+    const a = xScale(start);
+    const b = xScale(end);
     const left = Math.min(plotRight - 1, Math.max(plotLeft, Math.min(a, b)));
     const right = Math.min(plotRight, Math.max(a, b));
-    return { left, right: Math.max(right, left + 1), label: band.label };
+    return { left, right: Math.max(right, left + 1) };
+  };
+  const bandSpans = shownBands.map((band) => ({ ...toSpan(band.start, band.end), label: band.label }));
+  // In "important" mode a label names the band and its short assignment and is centred on the
+  // part of the band covered by its important regions; the plain band label is the fallback.
+  const bandLabelSpans = bandSelection
+    ? bandSelection.bands.map(({ band, regions: hit }) => {
+        const low = Math.max(band.start, Math.min(...hit.map((region) => region.start)));
+        const high = Math.min(band.end, Math.max(...hit.map((region) => region.end)));
+        return {
+          ...(high >= low ? toSpan(low, high) : toSpan(band.start, band.end)),
+          label: bandAssignmentLabel(band),
+          fallbackLabel: band.label,
+        };
+      })
+    : bandSpans;
+  const bandLabelRows = focusImportant ? (topHeight >= 160 ? 3 : topHeight >= 120 ? 2 : 1) : topHeight >= 120 ? 2 : 1;
+  const bandLabels = layoutBandLabels(bandLabelSpans, {
+    minX: plotLeft + 2,
+    maxX: plotRight - 2,
+    rows: bandLabelRows,
+    // important-mode labels are slightly larger and bold (see assets/viz.css)
+    ...(focusImportant ? { maxChars: 44, minSpan: 1, charWidth: 5.8 } : {}),
   });
-  const bandLabelRows = topHeight >= 120 ? 2 : 1;
-  const bandLabels = layoutBandLabels(bandSpans, { minX: plotLeft + 2, maxX: plotRight - 2, rows: bandLabelRows });
   const bandRangeText = (band: SpectralBand) => `${axisFormat(band.start)}–${axisFormat(band.end)}`;
-  const bandSummary = hasBandInput
-    ? shownBands.length > 0
-      ? `${bandsLabel}: ${countLabel(shownBands.length, "band")} shown as annotations behind the curve.`
-      : `${bandsLabel}: none within the displayed axis range.`
-    : "";
+  const thresholdText = `${Math.round(bandImportanceThreshold * 100)}%`;
+  const bandSummary = (() => {
+    if (!hasBandInput) return "";
+    if (!bandSelection) {
+      return shownBands.length > 0
+        ? `${bandsLabel}: ${countLabel(shownBands.length, "band")} shown as annotations behind the curve.`
+        : `${bandsLabel}: none within the displayed axis range.`;
+    }
+    if (bandSelection.regions.length === 0) {
+      return resolved.length === 0
+        ? `${importantBandsLabel}: no region values are available to select important regions.`
+        : `${importantBandsLabel}: no region reaches ${thresholdText} of the ${importanceLabel} peak.`;
+    }
+    const items = bandSelection.regions.map(({ region, bands: matched }) => {
+      const candidates = matched.length > 0
+        ? matched
+            .map((band) => {
+              const short = band.shortAssignment ?? band.family;
+              return short ? `${band.label} (${short})` : band.label;
+            })
+            .join(", ")
+        : "no catalogued band";
+      return `${region.label}${suffix} (${formatRegionValue(region.value)}): ${candidates}`;
+    });
+    return `${importantBandsLabel} (${importanceLabel} at least ${thresholdText} of its peak): ${items.join("; ")}. These are typical literature assignments for the ranges, candidates rather than evidence of chemical causation.`;
+  })();
 
   const dataSummary = summarizeSpectralImportance({
     axis,
@@ -249,7 +324,7 @@ export function SpectralImportanceChart({
   const activePoint = cursor?.kind === "point" && cursor.index >= 0 && cursor.index < pointCount ? cursor.index : -1;
   const cursorX = activeRegion ? activeRegion.center : activePoint >= 0 ? axis[activePoint]! : NaN;
   const activeBands = shownBands.length > 0 ? spectralBandsAt(shownBands, cursorX) : [];
-  const bandReadout = spectralBandReadout(activeBands, bandsLabel);
+  const bandReadout = spectralBandReadout(activeBands, bandCaption);
 
   const readout = (() => {
     if (activeRegion) {
@@ -343,16 +418,19 @@ export function SpectralImportanceChart({
                     key={`band-${index}`}
                     className="n4viz-band"
                     data-family={band.family}
+                    data-focus={focusImportant ? "important" : undefined}
                     data-active={active ? "true" : undefined}
                     x={round(span.left)}
                     y={topTop}
                     width={round(span.right - span.left)}
                     height={round(topHeight)}
                     fill={BAND_COLOR}
-                    fillOpacity={active ? 0.2 : 0.09}
+                    fillOpacity={focusImportant ? (active ? 0.3 : 0.18) : active ? 0.2 : 0.09}
                   >
                     <title>
-                      {`${band.label}: ${bandRangeText(band)}${suffix}${band.assignment ? ` — ${band.assignment}` : ""}`}
+                      {`${band.label}: ${bandRangeText(band)}${suffix}${band.assignment ? ` — ${band.assignment}` : ""}${
+                      bandSelection ? ` (candidate for ${bandSelection.bands[index]!.regions.map((region) => `${region.label}${suffix}`).join(", ")})` : ""
+                    }`}
                     </title>
                   </rect>
                 );
@@ -419,6 +497,7 @@ export function SpectralImportanceChart({
                   <text
                     key={`band-label-${index}`}
                     className="n4viz-band-label"
+                    data-focus={focusImportant ? "important" : undefined}
                     x={round(placement.x)}
                     y={round(topTop + 9 + placement.row * BAND_LABEL_ROW_HEIGHT)}
                     textAnchor="middle"
@@ -571,7 +650,7 @@ export function SpectralImportanceChart({
           </span>
         ) : null}
         {shownBands.length > 0 ? (
-          <span className="n4viz-legend-item"><span className="n4viz-swatch n4viz-band-swatch" />{bandsLabel}</span>
+          <span className="n4viz-legend-item"><span className="n4viz-swatch n4viz-band-swatch" />{bandCaption}</span>
         ) : null}
       </div>
 
@@ -608,19 +687,22 @@ export function SpectralImportanceChart({
         </details>
       ) : null}
 
-      {showDataTable && shownBands.length > 0 ? (
+      {showDataTable && (shownBands.length > 0 || unmatchedRegions.length > 0) ? (
         <details className="n4viz-datatable n4viz-band-table">
-          <summary>{bandsLabel} ({countLabel(shownBands.length, "band")})</summary>
-          <div className="n4viz-table-wrap" role="region" tabIndex={0} aria-label={bandsLabel}>
+          <summary>{bandCaption} ({countLabel(shownBands.length, "band")})</summary>
+          <div className="n4viz-table-wrap" role="region" tabIndex={0} aria-label={bandCaption}>
             <table>
               <caption>
-                {bandsLabel} on {axisLabel}: indicative annotations with approximate, matrix-dependent positions, not model output
+                {bandSelection
+                  ? `${importantBandsLabel} on ${axisLabel}: bands overlapping regions whose ${importanceLabel} reaches at least ${thresholdText} of its peak; typical assignments with approximate, matrix-dependent positions, candidates rather than evidence of chemical causation`
+                  : `${bandsLabel} on ${axisLabel}: indicative annotations with approximate, matrix-dependent positions, not model output`}
               </caption>
               <thead>
                 <tr>
                   <th scope="col">Band</th>
                   <th scope="col">Range{suffix ? ` (${axisUnit})` : ""}</th>
                   <th scope="col">Assignment</th>
+                  {bandSelection ? <th scope="col">Overlapping important regions</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -629,6 +711,19 @@ export function SpectralImportanceChart({
                     <th scope="row">{band.label}</th>
                     <td>{bandRangeText(band)}</td>
                     <td className="n4viz-band-assignment">{band.assignment ?? "—"}</td>
+                    {bandSelection ? (
+                      <td className="n4viz-band-assignment">
+                        {bandSelection.bands[index]!.regions.map((region) => `${region.label} (${formatRegionValue(region.value)})`).join(", ")}
+                      </td>
+                    ) : null}
+                  </tr>
+                ))}
+                {unmatchedRegions.map(({ region }) => (
+                  <tr key={`band-unmatched-${region.index}`} data-unmatched="true">
+                    <th scope="row">No catalogued band</th>
+                    <td>—</td>
+                    <td className="n4viz-band-assignment">—</td>
+                    <td className="n4viz-band-assignment">{`${region.label} (${formatRegionValue(region.value)})`}</td>
                   </tr>
                 ))}
               </tbody>

@@ -235,3 +235,83 @@ describe("SpectralImportanceChart reference bands", () => {
     expect(spectralBandReadout(spectralBandsAt(bands, 1600), "Reference absorption bands")).toBeNull();
   });
 });
+
+describe("SpectralImportanceChart band focus", () => {
+  const nmAxis = Array.from({ length: 61 }, (_, index) => 1000 + index * 25);
+  const nmImportance = nmAxis.map((x) => Math.exp(-(((x - 1425) / 40) ** 2)) + 0.8 * Math.exp(-(((x - 1925) / 30) ** 2)));
+  const regions = [
+    { start: 1400, end: 1450, value: -0.1 },
+    { start: 1560, end: 1650, value: 0.06 },
+    { start: 1900, end: 1950, value: 0.08 },
+    { start: 2280, end: 2300, value: 0.02 },
+  ];
+  const bands = referenceBandsForAxis("nm", 1000, 2500);
+  const bandLabels = (markup: string) => [...markup.matchAll(/<text class="n4viz-band-label"[^>]*>([^<]*)<\/text>/g)].map((match) => match[1]);
+  const bandTitles = (markup: string) => [...markup.matchAll(/<rect class="n4viz-band"[^>]*><title>([^:]*):/g)].map((match) => match[1]);
+  const props = { axis: nmAxis, importance: nmImportance, regions, axisLabel: "Wavelength (nm)", axisUnit: "nm", bands };
+
+  it("keeps the default rendering for bandFocus=\"all\"", () => {
+    const markup = renderToStaticMarkup(<SpectralImportanceChart {...props} />);
+    expect(renderToStaticMarkup(<SpectralImportanceChart {...props} bandFocus="all" />)).toBe(markup);
+    expect(bandTitles(markup)).toHaveLength(bands.length);
+    expect(markup).not.toContain('data-focus="important"');
+    expect(markup).not.toContain("Overlapping important regions");
+  });
+
+  it("draws only bands overlapping important regions, labelled with their short assignment", () => {
+    const markup = renderToStaticMarkup(<SpectralImportanceChart {...props} bandFocus="important" />);
+    expect(bandTitles(markup)).toEqual(["C–H 2ν+δ comb.", "O–H 1st overtone", "H₂O combination"]);
+    expect(markup.match(/<rect class="n4viz-band" [^>]*data-focus="important"/g)).toHaveLength(3);
+    const labels = bandLabels(markup);
+    expect(labels).toContain("O–H 1st overtone · water/hydroxyl");
+    expect(labels).toContain("H₂O combination · water");
+    expect(markup).toContain("(candidate for 1400–1450 nm)");
+    // the weak 2280–2300 region (strength 0.2) does not pull in the C–H combination band
+    expect(markup).not.toContain("C–H ν+δ comb.");
+    // Importance is read from the magnitude curve: 1560–1650 nm has a signed mean of +0.06
+    // but almost no |SHAP| mass, so it is not an important region.
+    expect(markup).toContain(
+      "Candidate absorption bands in important regions (Mean |SHAP| at least 50% of its peak): " +
+        "1400–1450 nm (-0.1): C–H 2ν+δ comb. (CH₃/CH₂), O–H 1st overtone (water/hydroxyl); " +
+        "1900–1950 nm (+0.08): H₂O combination (water). " +
+        "These are typical literature assignments for the ranges, candidates rather than evidence of chemical causation.",
+    );
+    expect(markup).toContain("Overlapping important regions");
+    expect(markup).toContain("Candidate absorption bands in important regions (3 bands)");
+    expect(markup).not.toContain('data-unmatched="true"');
+    expect(markup).not.toMatch(/NaN|Infinity/);
+  });
+
+  it("honours the threshold and reports when no region is important enough", () => {
+    const strict = renderToStaticMarkup(<SpectralImportanceChart {...props} bandFocus="important" bandImportanceThreshold={0.9} />);
+    expect(bandTitles(strict)).toEqual(["C–H 2ν+δ comb.", "O–H 1st overtone"]);
+    const none = renderToStaticMarkup(
+      <SpectralImportanceChart {...props} regions={regions.slice(1, 2)} bandFocus="important" bandImportanceThreshold={0.5} />,
+    );
+    expect(bandTitles(none)).toEqual([]);
+    expect(none).toContain("Candidate absorption bands in important regions: no region reaches 50% of the Mean |SHAP| peak.");
+    const noRegions = renderToStaticMarkup(<SpectralImportanceChart {...props} regions={[]} bandFocus="important" />);
+    expect(bandTitles(noRegions)).toEqual([]);
+    expect(noRegions).toContain("Candidate absorption bands in important regions: no region values are available to select important regions.");
+  });
+
+  it("selects bands on a descending wavenumber axis", () => {
+    const wavenumbers = Array.from({ length: 61 }, (_, index) => 10000 - index * 100);
+    const values = wavenumbers.map((x) => Math.exp(-(((x - 5150) / 200) ** 2)));
+    const markup = renderToStaticMarkup(
+      <SpectralImportanceChart
+        axis={wavenumbers}
+        importance={values}
+        regions={[
+          { start: 5300, end: 5000, value: 1 },
+          { start: 8000, end: 7600, value: 0.1 },
+        ]}
+        axisUnit="cm-1"
+        bands={referenceBandsForAxis("cm-1", 10000, 4000)}
+        bandFocus="important"
+      />,
+    );
+    expect(bandTitles(markup)).toEqual(["H₂O combination"]);
+    expect(bandLabels(markup)).toEqual(["H₂O combination · water"]);
+  });
+});
