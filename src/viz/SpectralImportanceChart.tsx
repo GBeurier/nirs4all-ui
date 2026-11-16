@@ -1,7 +1,7 @@
 import { useId, useMemo, useState, type KeyboardEvent, type PointerEvent } from "react";
 
 import { cx } from "./_cx.js";
-import { compactNumber, signedNumber } from "./description.js";
+import { compactNumber, distinctTickLabels, signedNumber } from "./description.js";
 import { extentOf, linePath, makeScale, round, ticks, type Extent } from "./geometry.js";
 import {
   decimatedRuns,
@@ -149,6 +149,7 @@ export function SpectralImportanceChart({
   const xDomain = extentOf(xValues);
   const xScale = makeScale(xDomain, plotLeft, plotRight);
   const xTicks = ticks(xDomain, Math.max(2, Math.round((plotRight - plotLeft) / 90)));
+  const xTickLabels = distinctTickLabels(xTicks, axisFormat);
 
   const importanceRuns = useMemo(() => decimatedRuns(axis, importance, maxPoints), [axis, importance, maxPoints]);
   const spectrumRuns = useMemo(
@@ -158,15 +159,18 @@ export function SpectralImportanceChart({
   const importanceDomain = domainWithZero(importanceRuns.flat().map(([, y]) => y), 0.1);
   const yScale = makeScale(importanceDomain, topBottom, topTop);
   const yTicks = ticks(importanceDomain, 4);
+  const yTickLabels = distinctTickLabels(yTicks, valueFormat);
   const spectrumDomain = paddedDomain(spectrumRuns.flat().map(([, y]) => y));
   const spectrumScale = makeScale(spectrumDomain, topBottom, topTop);
   const spectrumTicks = hasSpectrum ? ticks(spectrumDomain, 4) : [];
+  const spectrumTickLabels = distinctTickLabels(spectrumTicks, valueFormat);
 
   const barDomain = signed
     ? domainWithZero(resolved.map((region) => region.value))
     : { min: 0, max: Math.max(0, ...resolved.map((region) => (Number.isFinite(region.value) ? region.value : 0))) * 1.08 || 1 };
   const barScale = makeScale(barDomain, barBottom, barTop);
   const barTicks = ticks(barDomain, 2);
+  const barTickLabels = distinctTickLabels(barTicks, signed ? (v) => signedNumber(v, valueFormat) : valueFormat);
   const barZero = barScale(0);
   const centers = resolved.map((region) => xScale(region.center));
   let spacing = Infinity;
@@ -334,9 +338,9 @@ export function SpectralImportanceChart({
           ))}
           <line className="n4viz-axis" x1={plotLeft} x2={plotLeft} y1={topTop} y2={topBottom} />
           <line className="n4viz-axis" x1={plotLeft} x2={plotRight} y1={topBottom} y2={topBottom} />
-          {yTicks.map((tick) => (
+          {yTicks.map((tick, index) => (
             <text key={`ty-${tick}`} className="n4viz-tick" x={plotLeft - 6} y={round(yScale(tick) + 3)} textAnchor="end">
-              {valueFormat(tick)}
+              {yTickLabels[index]}
             </text>
           ))}
           <text
@@ -349,9 +353,9 @@ export function SpectralImportanceChart({
           {hasSpectrum ? (
             <>
               <line className="n4viz-axis" x1={plotRight} x2={plotRight} y1={topTop} y2={topBottom} />
-              {spectrumTicks.map((tick) => (
+              {spectrumTicks.map((tick, index) => (
                 <text key={`ts-${tick}`} className="n4viz-tick" x={plotRight + 6} y={round(spectrumScale(tick) + 3)} textAnchor="start">
-                  {valueFormat(tick)}
+                  {spectrumTickLabels[index]}
                 </text>
               ))}
               <text
@@ -400,9 +404,9 @@ export function SpectralImportanceChart({
                 y1={round(barZero)}
                 y2={round(barZero)}
               />
-              {barTicks.map((tick) => (
+              {barTicks.map((tick, index) => (
                 <text key={`tb-${tick}`} className="n4viz-tick" x={plotLeft - 6} y={round(barScale(tick) + 3)} textAnchor="end">
-                  {signed ? signedNumber(tick, valueFormat) : valueFormat(tick)}
+                  {barTickLabels[index]}
                 </text>
               ))}
               <text className="n4viz-panel-label" x={plotLeft + 6} y={barTop + 9} textAnchor="start">
@@ -413,9 +417,9 @@ export function SpectralImportanceChart({
 
           {/* shared x axis */}
           <line className="n4viz-axis" x1={plotLeft} x2={plotRight} y1={barBottom} y2={barBottom} />
-          {xTicks.map((tick) => (
+          {xTicks.map((tick, index) => (
             <text key={`tx-${tick}`} className="n4viz-tick" x={round(xScale(tick))} y={barBottom + 15} textAnchor="middle">
-              {axisFormat(tick)}
+              {xTickLabels[index]}
             </text>
           ))}
           <text className="n4viz-axis-label" x={round((plotLeft + plotRight) / 2)} y={height - 8} textAnchor="middle">

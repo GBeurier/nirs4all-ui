@@ -91,3 +91,14 @@ describe("viz/WaterfallChart references", () => {
     expect(markup).toContain("Model output");
   });
 });
+
+describe("viz/WaterfallChart ticks", () => {
+  it("keeps axis tick labels distinct on a narrow span far from zero", () => {
+    const markup = renderToStaticMarkup(
+      <WaterfallChart baseValue={12.4} contributions={[{ label: "a", value: 0.004 }, { label: "b", value: 0.003 }]} />,
+    );
+    const ticks = [...markup.matchAll(/class="n4viz-tick" x="[^"]+" y="[^"]+" text-anchor="middle">([^<]+)</g)].map((m) => m[1]);
+    expect(ticks.length).toBeGreaterThan(2);
+    expect(new Set(ticks).size).toBe(ticks.length);
+  });
+});

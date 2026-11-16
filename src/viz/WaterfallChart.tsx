@@ -1,7 +1,7 @@
 import { useId } from "react";
 
 import { cx } from "./_cx.js";
-import { countLabel, summaryNumber } from "./description.js";
+import { countLabel, distinctTickLabels, summaryNumber } from "./description.js";
 import { makeScale, niceExtent, round, ticks } from "./geometry.js";
 import { N4_SIGNED_COLORS, N4_VIZ_COLORS } from "./theme.js";
 
@@ -120,6 +120,7 @@ export function WaterfallChart({
   const domain = niceExtent(boundaries, 0.06);
   const xScale = makeScale(domain, plotLeft, plotRight);
   const xTicks = ticks(domain, 5);
+  const xTickLabels = distinctTickLabels(xTicks, valueFormat);
 
   const n = visibleRows.length;
   const band = n > 0 ? plotHeight / n : plotHeight;
@@ -230,7 +231,7 @@ export function WaterfallChart({
       })}
 
       <line className="n4viz-axis" x1={plotLeft} x2={plotRight} y1={plotBottom} y2={plotBottom} />
-      {xTicks.map((t) => (
+      {xTicks.map((t, ti) => (
         <text
           key={`tx-${t}`}
           className="n4viz-tick"
@@ -238,7 +239,7 @@ export function WaterfallChart({
           y={plotBottom + 15}
           textAnchor="middle"
         >
-          {valueFormat(t)}
+          {xTickLabels[ti]}
         </text>
       ))}
       {xLabel ? (

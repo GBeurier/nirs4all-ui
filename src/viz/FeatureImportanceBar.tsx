@@ -1,7 +1,7 @@
 import { useId } from "react";
 
 import { cx } from "./_cx.js";
-import { countLabel, signedNumber, summaryNumber } from "./description.js";
+import { countLabel, distinctTickLabels, signedNumber, summaryNumber } from "./description.js";
 import { makeScale, round, ticks } from "./geometry.js";
 import { N4_SIGNED_COLORS, N4_VIZ_COLORS } from "./theme.js";
 
@@ -100,6 +100,7 @@ export function FeatureImportanceBar({
   if (domain.max === domain.min) domain.max = domain.min + 1;
   const xScale = makeScale(domain, plotLeft, plotRight);
   const axisTicks = ticks(domain, 4);
+  const axisTickLabels = distinctTickLabels(axisTicks, valueFormat);
   const xZero = xScale(0);
   const maxMagnitude = Math.max(0, ...values.map((value) => Math.abs(value))) || 1;
 
@@ -180,7 +181,7 @@ export function FeatureImportanceBar({
         <line className="n4viz-reference n4viz-zero" x1={round(xZero)} x2={round(xZero)} y1={plotTop} y2={plotBottom} stroke={N4_VIZ_COLORS.slate} strokeWidth={1.2} />
       ) : null}
       <line className="n4viz-axis" x1={plotLeft} x2={plotRight} y1={plotBottom} y2={plotBottom} />
-      {axisTicks.map((t) => (
+      {axisTicks.map((t, ti) => (
         <text
           key={`tx-${t}`}
           className="n4viz-tick"
@@ -188,7 +189,7 @@ export function FeatureImportanceBar({
           y={plotBottom + 15}
           textAnchor="middle"
         >
-          {valueFormat(t)}
+          {axisTickLabels[ti]}
         </text>
       ))}
       {xLabel ? (

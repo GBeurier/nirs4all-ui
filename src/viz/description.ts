@@ -24,6 +24,24 @@ export function signedNumber(value: number, format: (v: number) => string = comp
   return value > 0 ? `+${format(value)}` : format(value);
 }
 
+/**
+ * Tick labels must stay distinct: when `format` collapses neighbouring ticks
+ * (a narrow span far from zero), fall back to fixed decimals derived from the
+ * tick step.
+ */
+export function distinctTickLabels(values: readonly number[], format: (v: number) => string): string[] {
+  const labels = values.map(format);
+  if (new Set(labels).size === labels.length || values.length < 2) return labels;
+  let step = Infinity;
+  for (let index = 1; index < values.length; index += 1) {
+    const delta = Math.abs(values[index]! - values[index - 1]!);
+    if (delta > 0) step = Math.min(step, delta);
+  }
+  if (!Number.isFinite(step)) return labels;
+  const decimals = Math.min(12, Math.max(0, Math.ceil(-Math.log10(step)) + 1));
+  return values.map((value) => (Number.isFinite(value) ? value.toFixed(decimals) : "—"));
+}
+
 export function countLabel(count: number, singular: string, plural = `${singular}s`): string {
   return `${count} ${count === 1 ? singular : plural}`;
 }
