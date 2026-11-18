@@ -42,6 +42,9 @@ export function MultimodalWorkbench(props: MultimodalWorkbenchProps & { classNam
     onCandidatesChange,
     stepCatalog,
     pipelineEditor,
+    pipelineLead,
+    presetComparison = true,
+    resultsView,
     run,
     onRun,
     onCancel,
@@ -140,10 +143,10 @@ export function MultimodalWorkbench(props: MultimodalWorkbenchProps & { classNam
                   id="n4mm-pipeline"
                   step={5}
                   title="Build and run the pipeline"
-                  lead="Start from a preset, then edit branches, sources, preprocessing, models and the merge. Select any card to inspect it."
+                  lead={pipelineLead ?? "Start from a preset, then edit branches, sources, preprocessing, models and the merge. Select any card to inspect it."}
                 >
                   {pipelineEditor}
-                  <details className="n4mm-details">
+                  {presetComparison ? <details className="n4mm-details">
                     <summary>Compare unedited presets</summary>
                     <p className="n4mm-note">
                       Runs the fixed teaching recipes chosen by the host with their default settings, for comparison. It does not
@@ -158,7 +161,7 @@ export function MultimodalWorkbench(props: MultimodalWorkbenchProps & { classNam
                       onRun={onRun}
                       onCancel={onCancel}
                     />
-                  </details>
+                  </details> : null}
                 </Section>
               </>
             ) : (
@@ -222,7 +225,7 @@ export function MultimodalWorkbench(props: MultimodalWorkbenchProps & { classNam
             )}
 
             <Section id="n4mm-results" step={pipelineEditor !== undefined ? 6 : 7} title="Compare results">
-              {results ? (
+              {resultsView !== undefined ? resultsView : results ? (
                 <ResultsPanel
                   dataset={dataset}
                   results={results}
