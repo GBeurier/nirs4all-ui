@@ -521,6 +521,20 @@ export interface MultimodalWorkbenchProps {
    * in a collapsed "Compare unedited presets" disclosure.
    */
   pipelineEditor?: ReactNode;
+  /** Section lead shown above `pipelineEditor`. */
+  pipelineLead?: string;
+  /**
+   * Show the collapsed "Compare unedited presets" batch run under
+   * `pipelineEditor` (default `true`). Hosts whose editor already runs presets
+   * can hide it.
+   */
+  presetComparison?: boolean;
+  /**
+   * Host results view (for example the Inspector over every completed run)
+   * replacing the built-in `ResultsPanel` in the results section. The export
+   * panel stays below it.
+   */
+  resultsView?: ReactNode;
 
   // execution
   run: MultimodalRunState;

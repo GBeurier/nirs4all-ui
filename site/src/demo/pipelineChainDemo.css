@@ -1,0 +1,109 @@
+/* Page chrome of the pipeline chain editor trial page (not part of the package). */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+body {
+  background: var(--paper);
+  color: var(--text);
+  font-family: var(--font);
+}
+.chain-demo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  min-height: 640px;
+  padding: 14px 18px 18px;
+  box-sizing: border-box;
+}
+.chain-demo__bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+}
+.chain-demo__bar h1 {
+  margin: 0;
+  font: 600 18px/1.2 var(--display);
+  letter-spacing: -0.01em;
+}
+.chain-demo__examples,
+.chain-demo__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.chain-demo__tools {
+  margin-left: auto;
+}
+.chain-demo button {
+  font-family: inherit;
+}
+.chain-demo__bar button {
+  height: 28px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.chain-demo__bar button[aria-pressed="true"] {
+  border-color: transparent;
+  background: var(--teal);
+  color: var(--surface);
+  font-weight: 600;
+}
+.chain-demo__bar button:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+.chain-demo__hint {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 13px;
+}
+.chain-demo__stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.chain-demo__stage[data-json] {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 30%);
+}
+.chain-demo__json {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.chain-demo__json h2 {
+  margin: 0 0 4px;
+  font: 600 13.5px/1.2 var(--display);
+}
+.chain-demo__json p {
+  margin: 0 0 8px;
+  color: var(--text-2);
+  font-size: 12px;
+}
+.chain-demo__json pre {
+  flex: 1 1 auto;
+  margin: 0;
+  overflow: auto;
+  font: 400 11.5px/1.5 var(--mono);
+}
+@media (max-width: 900px) {
+  .chain-demo__stage[data-json] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) 240px;
+  }
+}

@@ -1,6 +1,6 @@
 {
   "name": "nirs4all-ui",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "Shared React UI components, visual assets, and pure view-model helpers for nirs4all apps.",
   "type": "module",
   "license": "(CECILL-2.1 OR AGPL-3.0-or-later)",
@@ -127,6 +127,10 @@
     "./multimodal": {
       "types": "./dist/multimodal/index.d.ts",
       "import": "./dist/multimodal/index.js"
+    },
+    "./pipelineEditor": {
+      "types": "./dist/pipelineEditor/index.d.ts",
+      "import": "./dist/pipelineEditor/index.js"
     }
   },
   "scripts": {
@@ -142,6 +146,7 @@
     "smoke:react-consumers": "node scripts/smoke-react-consumers.mjs",
     "site:build": "vite build --config site/vite.config.ts",
     "site:dev": "vite --config site/vite.config.ts",
+    "demo:pipeline-editor": "vite --config site/vite.config.ts --open /nirs4all-ui/pipeline-editor/",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "prepare": "npm run build",
