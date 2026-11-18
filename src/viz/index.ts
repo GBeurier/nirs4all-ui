@@ -43,6 +43,11 @@ export * from "./WaterfallChart.js";
 export * from "./SpectralImportanceChart.js";
 export * from "./spectralImportance.js";
 export * from "./spectralBands.js";
+export * from "./ImportanceComparisonChart.js";
+export * from "./importanceComparisonModel.js";
+export * from "./AgreementMatrix.js";
+export * from "./AttributionHeatmap.js";
+export * from "./attributionHeatmapModel.js";
 export { compactNumber, signedNumber } from "./description.js";
 
 // --- pipeline + scores ---

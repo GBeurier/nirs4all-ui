@@ -266,3 +266,63 @@ export function summarizeSpectralImportance({
   return parts.join(" ");
 }
 
+
+/** A closed range along the spectral axis, in axis units, with `start <= end`. */
+export interface SpectralRange {
+  start: number;
+  end: number;
+}
+
+/**
+ * Range designated by a cursor at axis coordinate `x`: the narrowest supplied
+ * region (group/bin) covering `x`, otherwise the single coordinate `x`.
+ * Returns `null` for a non-finite `x`. Used by the spectral charts to emit
+ * hover/select ranges that hosts can link across views.
+ */
+export function spectralRangeAt(
+  regions: ReadonlyArray<{ start: number; end: number }>,
+  x: number,
+): SpectralRange | null {
+  if (!Number.isFinite(x)) return null;
+  let best: SpectralRange | null = null;
+  for (const region of regions) {
+    const start = Math.min(region.start, region.end);
+    const end = Math.max(region.start, region.end);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || x < start || x > end) continue;
+    if (best === null || end - start < best.end - best.start) best = { start, end };
+  }
+  return best ?? { start: x, end: x };
+}
+
+/** Normalized copy of a host range (`start <= end`), or `null` when unusable. */
+export function normalizeSpectralRange(range: SpectralRange | null | undefined): SpectralRange | null {
+  if (!range || !Number.isFinite(range.start) || !Number.isFinite(range.end)) return null;
+  return { start: Math.min(range.start, range.end), end: Math.max(range.start, range.end) };
+}
+
+/** Value equality of two ranges (both `null` counts as equal). */
+export function sameSpectralRange(a: SpectralRange | null, b: SpectralRange | null): boolean {
+  if (a === null || b === null) return a === b;
+  return a.start === b.start && a.end === b.end;
+}
+
+/**
+ * `value ± error` bounds for an uncertainty band; entries where either input
+ * is non-finite (or the error is negative) become `NaN` so the band shows gaps
+ * exactly where the curve does.
+ */
+export function errorBounds(
+  values: readonly number[],
+  error: readonly number[],
+): { lower: number[]; upper: number[] } {
+  const lower: number[] = [];
+  const upper: number[] = [];
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index]!;
+    const delta = error[index];
+    const usable = Number.isFinite(value) && delta !== undefined && Number.isFinite(delta) && delta >= 0;
+    lower.push(usable ? value - delta : Number.NaN);
+    upper.push(usable ? value + delta : Number.NaN);
+  }
+  return { lower, upper };
+}

@@ -145,13 +145,17 @@
 
 /* standalone dark fallback (when design tokens are not loaded) */
 :root[data-theme="dark"] .n4viz,
-.n4-theme-dark .n4viz {
+.n4-theme-dark .n4viz,
+:root[data-theme="dark"] .n4viz-figure,
+.n4-theme-dark .n4viz-figure {
   --n4-color-border: rgba(255, 255, 255, 0.14);
   --n4-color-muted: rgba(255, 255, 255, 0.62);
   --n4-color-text: rgba(255, 255, 255, 0.92);
   --n4-viz-band: #a78bfa;
   --n4-viz-band-text: #c4b5fd;
   --n4-viz-band-halo: var(--n4-color-surface, #0f172a);
+  --n4-viz-highlight: #fbbf24;
+  --n4-viz-tooltip-bg: var(--n4-color-surface, #0f172a);
 }
 
 /* spectral importance figure (SVG + HTML readout, legend and data table) */
@@ -360,6 +364,209 @@
   white-space: normal;
 }
 
+/* linked range highlight and uncertainty band (spectral charts) */
+.n4viz-highlight-range {
+  fill: var(--n4-viz-highlight, #d97706);
+  fill-opacity: 0.14;
+  stroke: var(--n4-viz-highlight, #d97706);
+  stroke-opacity: 0.6;
+  stroke-width: 1;
+  pointer-events: none;
+}
+
+.n4viz-error-band {
+  pointer-events: none;
+}
+
+.n4viz-zero {
+  stroke-opacity: 0.9;
+}
+
+/* importance comparison legend toggles */
+.n4viz-legend-toggle {
+  border: 1px solid var(--n4-color-border, #e2e8f0);
+  border-radius: 999px;
+  padding: 2px 9px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.n4viz-legend-toggle:hover {
+  border-color: var(--n4-color-muted, #94a3b8);
+}
+
+.n4viz-legend-toggle:focus-visible {
+  outline: 2px solid var(--n4-color-focus, #0d9488);
+  outline-offset: 1px;
+}
+
+.n4viz-legend-item[data-hidden="true"] {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+/* agreement matrix */
+.n4viz-agreement-cell.n4viz-clickable {
+  cursor: pointer;
+}
+
+.n4viz-agreement-cell:focus-visible {
+  outline: none;
+}
+
+.n4viz-agreement-cell:focus-visible rect {
+  stroke: var(--n4-color-focus, #0d9488);
+  stroke-opacity: 1;
+  stroke-width: 2;
+}
+
+/* attribution heatmap (canvas raster + HTML overlays) */
+.n4viz-attr-body {
+  display: grid;
+  gap: 0 8px;
+  align-items: start;
+}
+
+.n4viz-attr-rowlabels {
+  position: relative;
+  font-size: 11px;
+  color: var(--n4-color-muted, #64748b);
+}
+
+.n4viz-attr-rowlabel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: block;
+  padding: 0 4px 0 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+button.n4viz-attr-rowlabel {
+  cursor: pointer;
+}
+
+.n4viz-attr-rowlabel[data-selected="true"] {
+  color: var(--n4-color-text, #0f172a);
+  font-weight: 700;
+}
+
+.n4viz-attr-rowmarker {
+  transform: translateY(-50%);
+  line-height: 1.3;
+}
+
+.n4viz-attr-plot {
+  min-width: 0;
+}
+
+.n4viz-attr-canvas-wrap {
+  position: relative;
+  border: 1px solid var(--n4-color-border, #e2e8f0);
+  border-radius: 2px;
+}
+
+.n4viz-attr-canvas-wrap.n4viz-clickable {
+  cursor: pointer;
+}
+
+.n4viz-attr-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+.n4viz-attr-column,
+.n4viz-attr-selected-row,
+.n4viz-attr-cursor,
+.n4viz-attr-tooltip {
+  position: absolute;
+  pointer-events: none;
+}
+
+.n4viz-attr-column {
+  top: 0;
+  bottom: 0;
+  transform: translateX(-0.5px);
+  background: color-mix(in srgb, var(--n4-viz-highlight, #d97706) 22%, transparent);
+  outline: 1px solid var(--n4-viz-highlight, #d97706);
+}
+
+.n4viz-attr-selected-row {
+  left: -1px;
+  right: -1px;
+  outline: 2px solid var(--n4-color-text, #0f172a);
+}
+
+.n4viz-attr-cursor {
+  outline: 1px solid var(--n4-color-text, #0f172a);
+}
+
+.n4viz-attr-tooltip {
+  z-index: 2;
+  transform: translateY(6px);
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: var(--n4-viz-tooltip-bg, var(--n4-color-surface, #ffffff));
+  border: 1px solid var(--n4-color-border, #e2e8f0);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.14);
+  color: var(--n4-color-text, #0f172a);
+  font-family: var(--n4-font-mono, "JetBrains Mono", monospace);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.n4viz-attr-tooltip[data-side="above"] {
+  transform: translateY(calc(-100% - 6px));
+}
+
+.n4viz-attr-xticks {
+  position: relative;
+  height: 16px;
+  margin-top: 3px;
+}
+
+.n4viz-tick-label {
+  position: absolute;
+  transform: translateX(-50%);
+  font-family: var(--n4-font-mono, "JetBrains Mono", monospace);
+  font-size: 10px;
+  color: var(--n4-color-muted, #64748b);
+  white-space: nowrap;
+}
+
+.n4viz-tick-label[data-edge="start"] {
+  transform: none;
+  left: 0 !important;
+}
+
+.n4viz-tick-label[data-edge="end"] {
+  transform: none;
+  left: auto !important;
+  right: 0;
+}
+
+.n4viz-attr-axis-label {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--n4-color-muted, #64748b);
+}
+
+.n4viz-attr-ramp {
+  width: 96px;
+}
+
 .n4viz-dot-selected {
   color: var(--n4-color-text, #0f172a);
 }
@@ -380,6 +587,15 @@
     stroke: Canvas;
   }
   .n4viz-focus:focus-visible {
+    outline-color: Highlight;
+  }
+  .n4viz-highlight-range {
+    fill: Highlight;
+    stroke: Highlight;
+  }
+  .n4viz-attr-column,
+  .n4viz-attr-selected-row,
+  .n4viz-attr-cursor {
     outline-color: Highlight;
   }
 }
