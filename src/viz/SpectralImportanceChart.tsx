@@ -1,8 +1,8 @@
-import { useId, useMemo, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { useId, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from "react";
 
 import { cx } from "./_cx.js";
 import { compactNumber, countLabel, distinctTickLabels, signedNumber } from "./description.js";
-import { extentOf, linePath, makeScale, round, ticks, type Extent } from "./geometry.js";
+import { bandPath, extentOf, linePath, makeScale, round, ticks, type Extent } from "./geometry.js";
 import {
   bandAssignmentLabel,
   bandsForImportantRegions,
@@ -15,16 +15,21 @@ import {
 } from "./spectralBands.js";
 import {
   decimatedRuns,
+  errorBounds,
   formatAxisValue,
   nearestAxisIndex,
   nextSpectralCursor,
+  normalizeSpectralRange,
   regionsAt,
   resolveRegionValueKind,
   resolveSpectralRegions,
+  sameSpectralRange,
+  spectralRangeAt,
   summarizeSpectralImportance,
   type RegionValueKind,
   type SpectralCursor,
   type SpectralImportanceRegion,
+  type SpectralRange,
 } from "./spectralImportance.js";
 import { N4_SIGNED_COLORS, N4_VIZ_COLORS } from "./theme.js";
 
@@ -33,6 +38,24 @@ export interface SpectralImportanceChartProps {
   axis: readonly number[];
   /** Importance curve aligned to `axis` (for example mean |SHAP| per variable). */
   importance: readonly number[];
+  /**
+   * Optional host-computed uncertainty aligned to `axis` (same length as
+   * `importance`), drawn as a translucent `importance ± error` band. Non-finite
+   * or negative entries leave a gap in the band.
+   */
+  importanceError?: readonly number[];
+  /** Label of the uncertainty band in the legend and readout (default "± uncertainty"). */
+  importanceErrorLabel?: string;
+  /** Range (axis units) shaded across both panels, for example linked from another view. */
+  highlightRange?: SpectralRange | null;
+  /**
+   * Called with the range under the pointer or keyboard cursor (the narrowest
+   * region covering it, otherwise the single axis coordinate) and with `null`
+   * when the cursor leaves or is cleared. Called only when the range changes.
+   */
+  onRangeHover?: (range: SpectralRange | null) => void;
+  /** Called with the range under the cursor on click, or on Enter/Space while focused. */
+  onRangeSelect?: (range: SpectralRange) => void;
   /** Optional reference spectrum aligned to `axis`, drawn dashed on a right-hand axis. */
   spectrum?: readonly number[];
   /** Precomputed region (bin) values shaded behind the curve and drawn as bars below it. */
@@ -131,6 +154,11 @@ function paddedDomain(values: readonly number[], pad = 0.06): Extent {
 export function SpectralImportanceChart({
   axis,
   importance,
+  importanceError,
+  importanceErrorLabel = "± uncertainty",
+  highlightRange,
+  onRangeHover,
+  onRangeSelect,
   spectrum,
   regions = [],
   regionValueKind,
@@ -168,6 +196,7 @@ export function SpectralImportanceChart({
   const instructionsId = `${baseId}-help`;
   const gradientId = `${baseId}-area`;
   const [cursor, setCursor] = useState<SpectralCursor | null>(null);
+  const hoveredRange = useRef<SpectralRange | null>(null);
 
   const kind = resolveRegionValueKind(regions, regionValueKind);
   const signed = kind === "signed";
@@ -198,7 +227,22 @@ export function SpectralImportanceChart({
     () => (hasSpectrum && spectrum ? decimatedRuns(axis, spectrum, maxPoints) : []),
     [axis, spectrum, hasSpectrum, maxPoints],
   );
-  const importanceDomain = domainWithZero(importanceRuns.flat().map(([, y]) => y), 0.1);
+  const errorRuns = useMemo(() => {
+    if (!importanceError || importanceError.length === 0) return [];
+    const { lower, upper } = errorBounds(importance, importanceError);
+    const lowerRuns = decimatedRuns(axis, lower, maxPoints);
+    const upperRuns = decimatedRuns(axis, upper, maxPoints);
+    // Both bounds share the same finite mask, hence the same runs.
+    return upperRuns.map((run, index) => ({ upper: run, lower: lowerRuns[index] ?? [] }));
+  }, [axis, importance, importanceError, maxPoints]);
+  const hasError = errorRuns.length > 0;
+  const importanceDomain = domainWithZero(
+    [
+      ...importanceRuns.flat().map(([, y]) => y),
+      ...errorRuns.flatMap((run) => [...run.upper.map(([, y]) => y), ...run.lower.map(([, y]) => y)]),
+    ],
+    0.1,
+  );
   const yScale = makeScale(importanceDomain, topBottom, topTop);
   const yTicks = ticks(importanceDomain, 4);
   const yTickLabels = distinctTickLabels(yTicks, valueFormat);
@@ -316,7 +360,8 @@ export function SpectralImportanceChart({
     valueFormat,
     axisFormat,
   });
-  const summary = description?.trim() || (bandSummary ? `${dataSummary} ${bandSummary}` : dataSummary);
+  const errorSummary = hasError ? `A ${importanceErrorLabel} band is drawn around ${importanceLabel}.` : "";
+  const summary = description?.trim() || [dataSummary, errorSummary, bandSummary].filter(Boolean).join(" ");
 
   // --- cursor resolution -------------------------------------------------
   const pointCount = axis.length;
@@ -345,7 +390,9 @@ export function SpectralImportanceChart({
       const covering = Number.isFinite(x) ? regionsAt(resolved, x) : [];
       return [
         `${axisLabel} ${axisFormat(x)}${suffix}`,
-        `${importanceLabel} ${y !== undefined && Number.isFinite(y) ? valueFormat(y) : "unavailable"}`,
+        `${importanceLabel} ${y !== undefined && Number.isFinite(y) ? valueFormat(y) : "unavailable"}${
+          hasError && Number.isFinite(importanceError?.[activePoint] ?? NaN) ? ` ± ${valueFormat(importanceError![activePoint]!)}` : ""
+        }`,
         s !== undefined ? `${spectrumLabel} ${Number.isFinite(s) ? valueFormat(s) : "unavailable"}` : null,
         covering.length > 0 ? `${regionLabel} ${covering.map((region) => `${region.label}: ${formatRegionValue(region.value)}`).join(", ")}` : null,
         bandReadout,
@@ -354,21 +401,60 @@ export function SpectralImportanceChart({
     return instructions;
   })();
 
-  const handlePointer = (event: PointerEvent<SVGSVGElement>) => {
+  // --- range linking ----------------------------------------------------
+  const rangeFor = (target: SpectralCursor | null): SpectralRange | null => {
+    if (!target) return null;
+    if (target.kind === "region") {
+      const region = resolved[target.index];
+      return region ? { start: region.start, end: region.end } : null;
+    }
+    return spectralRangeAt(resolved, axis[target.index] ?? NaN);
+  };
+  const moveCursor = (next: SpectralCursor | null) => {
+    setCursor(next);
+    if (!onRangeHover) return;
+    const range = rangeFor(next);
+    if (sameSpectralRange(range, hoveredRange.current)) return;
+    hoveredRange.current = range;
+    onRangeHover(range);
+  };
+  const highlight = normalizeSpectralRange(highlightRange);
+  const highlightSpan = highlight ? toSpan(highlight.start, highlight.end) : null;
+
+  const cursorAt = (event: MouseEvent<SVGSVGElement>): SpectralCursor | null => {
     const rect = event.currentTarget.getBoundingClientRect();
-    if (rect.width <= 0) return;
+    if (rect.width <= 0) return null;
     const px = ((event.clientX - rect.left) / rect.width) * width;
-    if (px < plotLeft || px > plotRight) return;
+    if (px < plotLeft || px > plotRight) return null;
     const x = xDomain.min + ((px - plotLeft) / (plotRight - plotLeft || 1)) * (xDomain.max - xDomain.min);
     const index = nearestAxisIndex(axis, x);
-    if (index >= 0) setCursor({ kind: "point", index });
+    return index >= 0 ? { kind: "point", index } : null;
+  };
+  const handlePointer = (event: PointerEvent<SVGSVGElement>) => {
+    const next = cursorAt(event);
+    if (next) moveCursor(next);
+  };
+  const handleClick = (event: MouseEvent<SVGSVGElement>) => {
+    const next = cursorAt(event);
+    if (!next) return;
+    moveCursor(next);
+    const range = rangeFor(next);
+    if (range && onRangeSelect) onRangeSelect(range);
   };
 
   const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    if ((event.key === "Enter" || event.key === " ") && onRangeSelect) {
+      const range = rangeFor(cursor);
+      if (range) {
+        event.preventDefault();
+        onRangeSelect(range);
+      }
+      return;
+    }
     const next = nextSpectralCursor(cursor, event.key, resolved.length, pointCount);
     if (next === undefined) return;
     event.preventDefault();
-    setCursor(next);
+    moveCursor(next);
   };
 
   return (
@@ -390,7 +476,10 @@ export function SpectralImportanceChart({
           preserveAspectRatio="xMidYMid meet"
           onPointerMove={handlePointer}
           onPointerDown={handlePointer}
-          onPointerLeave={() => setCursor((previous) => (previous?.kind === "point" ? null : previous))}
+          onClick={onRangeSelect ? handleClick : undefined}
+          onPointerLeave={() => {
+            if (cursor?.kind === "point") moveCursor(null);
+          }}
         >
           <title>{title}</title>
           <desc id={descriptionId}>{summary}</desc>
@@ -452,6 +541,28 @@ export function SpectralImportanceChart({
               />
             ) : null,
           )}
+          {highlightSpan ? (
+            <rect
+              className="n4viz-highlight-range"
+              x={round(highlightSpan.left)}
+              y={topTop}
+              width={round(Math.max(2, highlightSpan.right - highlightSpan.left))}
+              height={round(barBottom - topTop)}
+            />
+          ) : null}
+          {errorRuns.map((run, index) => (
+            <path
+              key={`error-${index}`}
+              className="n4viz-error-band"
+              d={bandPath(
+                run.upper.map(([x, y]) => [xScale(x), yScale(y)] as const),
+                run.lower.map(([x, y]) => [xScale(x), yScale(y)] as const),
+              )}
+              fill={color}
+              fillOpacity={0.18}
+              stroke="none"
+            />
+          ))}
           {importanceRuns.map((run, index) => {
             const pixels = run.map(([x, y]) => [xScale(x), yScale(y)] as const);
             const baseline = yScale(Math.max(importanceDomain.min, Math.min(0, importanceDomain.max)));
@@ -633,6 +744,9 @@ export function SpectralImportanceChart({
 
       <div className="n4viz-legend-row" aria-hidden="true">
         <span className="n4viz-legend-item"><span className="n4viz-swatch-line" style={{ borderColor: color }} />{importanceLabel}</span>
+        {hasError ? (
+          <span className="n4viz-legend-item"><span className="n4viz-swatch" style={{ background: color, opacity: 0.3 }} />{importanceErrorLabel}</span>
+        ) : null}
         {hasSpectrum ? (
           <span className="n4viz-legend-item"><span className="n4viz-swatch-line n4viz-swatch-dashed" style={{ borderColor: spectrumColor }} />{spectrumLabel}</span>
         ) : null}

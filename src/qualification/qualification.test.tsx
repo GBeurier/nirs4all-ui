@@ -9,6 +9,9 @@ import {
   FindingList,
   QualificationOverview,
   buildQualificationReportView,
+  CSV_DECIMAL_COMMA,
+  csvFormatFor,
+  csvRows,
   evidenceCsv,
   formatQualificationValue,
   groupMetricsByFamily,
@@ -146,5 +149,21 @@ describe("evidence readability", () => {
     expect(lines[0]).toBe("family,metric_id,label,status,reason_code,value,unit,source_id,target_id,population_id,view_id,parameters,denominators,protocol_version");
     expect(lines).toHaveLength(v.metrics.length + 1);
     expect(groupMetricsByFamily(v.metrics).reduce((n, g) => n + g.metrics.length, 0)).toBe(v.metrics.length);
+  });
+
+  it("writes one value per cell for spreadsheets, in the reader's dialect", () => {
+    const [m] = buildQualificationReportView(report).metrics;
+    const nested = { ...m!, value: { scores: [[1, 2], [3, 4]] }, parameters: { threshold: 0.5, ids: ["a", "b"] } };
+    const line = evidenceCsv([nested], "en").split("\r\n")[1]!;
+    expect(line).not.toContain("[[");
+    expect(line).toContain("scores=2 values (see the JSON report)");
+    expect(line).toContain("threshold=0.5 · ids=a | b");
+    const french = evidenceCsv([{ ...m!, value: 0.25, viewId: "a;b" }], "en", CSV_DECIMAL_COMMA).split("\r\n");
+    expect(french[0]!.split(";")).toHaveLength(14);
+    expect(french[1]).toContain(";0,25;");
+    expect(french[1]).toContain('"a;b"');
+    expect(csvRows([["x", [1.5, 2]]], CSV_DECIMAL_COMMA)).toBe("x;1,5 | 2\r\n");
+    expect(csvFormatFor("fr-FR")).toEqual(CSV_DECIMAL_COMMA);
+    expect(csvFormatFor("en-US").delimiter).toBe(",");
   });
 });
