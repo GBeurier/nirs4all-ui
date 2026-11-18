@@ -39,6 +39,21 @@ const selectedPath = (document: PipelineChainDocument, select: ChainSelection | 
 };
 
 describe("chain edits", () => {
+  it("edits source lanes in place and writes source options next to the lanes", () => {
+    const document: PipelineChainDocument = { pipeline: [{ source_branch: { NIR: [SNV], markers: [] } }, { model: PLS }] };
+    const fork = forkAt(document, 0);
+    const added = insertStep(document, fork.lanes[1]!.chain, 0, MSC).document;
+    expect(added.pipeline[0]).toEqual({ source_branch: { NIR: [SNV], markers: [MSC] } });
+    const option = setModifier(added, fork.id, "_merge_after_", false).document;
+    expect(option.pipeline[0]).toEqual({ source_branch: { NIR: [SNV], markers: [MSC], _merge_after_: false } });
+    expect(forkAt(option, 0).lanes.map((lane) => lane.label)).toEqual(["NIR", "markers"]);
+    const late: PipelineChainDocument = { pipeline: [{ branch: { by_source: true, steps: { NIR: [{ model: PLS }] } } }] };
+    const changed = setModifier(late, forkAt(late, 0).id, "missing_source_policy", "zero_with_indicator").document;
+    expect(changed.pipeline[0]).toEqual({ branch: { by_source: true, missing_source_policy: "zero_with_indicator", steps: { NIR: [{ model: PLS }] } } });
+    const bypassed = toCanonicalPipeline(setBypassed(late, { kind: "lane", id: forkAt(late, 0).lanes[0]!.id }, true).document);
+    expect(bypassed.pipeline[0]).toEqual({ branch: { by_source: true, steps: {} } });
+  });
+
   it("inserts, duplicates and removes without mutating the input", () => {
     const source = branchDocument();
     const frozen = structuredClone(source);

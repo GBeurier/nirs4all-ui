@@ -22,6 +22,31 @@ describe("parsePipeline", () => {
     expect(head).toMatchObject({ role: "model", keyword: "model", customName: "PLS-10", classPath: PLS });
   });
 
+  it("projects source branches as source lanes and a source merge", () => {
+    const model = parsePipeline({ pipeline: [
+      { source_branch: { NIR: [SNV, SCALER], markers: [SCALER], _merge_after_: false } },
+      { merge_sources: "concat" },
+      { model: PLS },
+    ] }, index);
+    expect(kinds(model.root.items)).toEqual(["fork", "merge", "step"]);
+    const [fork, merge] = model.root.items as [ForkNode, ChainItem];
+    expect(fork).toMatchObject({ mode: "source", keyword: "source_branch", named: true, modifiers: { _merge_after_: false } });
+    expect(fork.lanes.map((lane) => [lane.label, lane.items.length])).toEqual([["NIR", 2], ["markers", 1]]);
+    expect(merge).toMatchObject({ kind: "merge", label: "concat", sources: true });
+  });
+
+  it("projects a by_source branch with per-source models before a prediction merge", () => {
+    const model = parsePipeline({ pipeline: [
+      { branch: { by_source: true, steps: { NIR: [SNV, { model: PLS }], image: [{ model: PLS }] } } },
+      { merge: "predictions" },
+      { model: PLS },
+    ] }, index);
+    const fork = model.root.items[0] as ForkNode;
+    expect(fork).toMatchObject({ mode: "source", keyword: "branch", lanesPath: ["pipeline", 0, "branch", "steps"], modifiers: { by_source: true } });
+    expect(fork.lanes.map((lane) => lane.label)).toEqual(["NIR", "image"]);
+    expect(fork.lanes[0]!.items[1]).toMatchObject({ kind: "step", role: "model" });
+  });
+
   it("reads alternatives, attached sweeps and finetune search spaces", () => {
     const model = parsePipeline(searchDocument(), index);
     const [choice, , sweep, tuned] = model.root.items as [ForkNode, ChainItem, StepNode, StepNode];

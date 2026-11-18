@@ -64,7 +64,7 @@ function box(rect: Rect): CSSProperties {
 
 function leafTitle(item: ChainLeaf, labels: PipelineChainLabels): string {
   if (item.kind === "step") return item.customName ?? item.label;
-  if (item.kind === "merge") return labels.role.merge;
+  if (item.kind === "merge") return item.sources ? labels.mergeSources : labels.role.merge;
   if (item.kind === "note") return labels.role.note;
   return item.label;
 }
@@ -282,7 +282,7 @@ export function ChainCanvas({
                 <strong>{labels.fork[fork.fork.mode]}</strong>
                 <span className="n4rack__tag-count">{groupCount(fork.fork, labels)}</span>
               </button>
-              {readOnly ? null : (
+              {readOnly || fork.fork.mode === "source" ? null : (
                 <button type="button" className="n4rack__newlane" style={box(fork.footer)} data-selected={selectionKey(lane) === selectedKey || undefined}
                   onClick={() => onSelect(lane, true)} {...focusProps(lane)} {...dropTarget(lane)}>
                   <ChainIcon name="plus" size={10} />

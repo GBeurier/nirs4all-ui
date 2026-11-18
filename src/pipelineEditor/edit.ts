@@ -423,7 +423,11 @@ export function setStepName(document: PipelineChainDocument, id: string, name: s
 export function setModifier(document: PipelineChainDocument, id: string, key: string, value: unknown): EditResult {
   return apply(document, (draft, model) => {
     const item = model.items.get(id);
-    const record = item && getAt(draft, item.valuePath);
+    // Source forks keep their options next to the lanes: inside `source_branch`, or in a `by_source` branch.
+    const path = item?.kind === "fork" && item.mode === "source"
+      ? (item.keyword === "source_branch" ? item.lanesPath : item.lanesPath.slice(0, -1))
+      : item?.valuePath;
+    const record = path && getAt(draft, path);
     if (!isRecord(record)) return UNCHANGED;
     if (value === undefined) delete record[key];
     else record[key] = structuredClone(value);
@@ -455,7 +459,7 @@ export function addLane(document: PipelineChainDocument, forkId: string, step?: 
     if (fork?.kind !== "fork") return UNCHANGED;
     const container = getAt(draft, fork.lanesPath);
     const content = step === undefined ? undefined : structuredClone(step);
-    const value = fork.mode === "branch" ? (content === undefined ? [] : [content]) : (content ?? null);
+    const value = fork.mode === "branch" || fork.mode === "source" ? (content === undefined ? [] : [content]) : (content ?? null);
     let key: string | number;
     if (Array.isArray(container)) {
       key = container.length;
@@ -468,7 +472,7 @@ export function addLane(document: PipelineChainDocument, forkId: string, step?: 
     } else return UNCHANGED;
     const lanePath = [...fork.lanesPath, key];
     if (content === undefined) return { kind: "slot", chain: chainIdAt(lanePath), index: 0 };
-    return selectItem(fork.mode === "branch" ? [...lanePath, 0] : lanePath);
+    return selectItem(fork.mode === "branch" || fork.mode === "source" ? [...lanePath, 0] : lanePath);
   });
 }
 

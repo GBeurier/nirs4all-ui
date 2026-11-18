@@ -152,7 +152,10 @@ run(toCanonicalPipeline(pipeline));
   editable. Inserted steps carry no explicit parameters, so runtime defaults apply
   until a value is set.
 - **Layout.** Left-to-right wire between the dataset and results terminals, on a
-  24 px grid. A `branch` draws solid fans to full-height lanes; `_or_`
+  24 px grid. A `branch` draws solid fans to full-height lanes; a `source_branch`
+  or a `branch` with `by_source: true` and named `steps` draws one lane per data
+  source (lanes are the dataset's sources, so none is added from the editor), and
+  `merge_sources` reads as a source merge; `_or_`
   alternatives draw a compact bank on dotted wires (one option per variant);
   `_cartesian_` stages sit in a dashed frame; `concat_transform` and
   `feature_augmentation` lists are banks on solid buses. The top-level chain wraps

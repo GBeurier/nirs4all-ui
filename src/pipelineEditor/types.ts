@@ -196,6 +196,8 @@ export interface MergeNode extends ChainNodeBase {
   kind: "merge";
   role: "merge";
   label: string;
+  /** `merge_sources`: joins the source blocks of a multisource dataset. */
+  sources?: boolean;
   value: unknown;
 }
 
@@ -214,7 +216,11 @@ export interface RawNode extends ChainNodeBase {
   value: unknown;
 }
 
-export type ForkMode = "branch" | "choice" | "concat" | "augment";
+/**
+ * `source`: one lane per data source (block) of the same samples, from a
+ * `source_branch` step or a `branch` with `by_source: true` and named `steps`.
+ */
+export type ForkMode = "branch" | "source" | "choice" | "concat" | "augment";
 
 export interface LaneNode {
   id: string;

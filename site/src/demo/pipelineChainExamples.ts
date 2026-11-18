@@ -155,6 +155,34 @@ export function pipelineChainExamples(): PipelineChainExample[] {
         ],
       },
     },
+    {
+      id: "multisource",
+      label: "Multisource",
+      hint: "Early fusion: one preprocessing lane per source, then source features concatenated before one PLS.",
+      document: {
+        name: "NIR + Raman + markers",
+        pipeline: [
+          kfold,
+          { source_branch: { NIR: [SNV, savgol(15, 1)], Raman: [MSC], markers: [{ class: "sklearn.preprocessing.StandardScaler" }] } },
+          { merge_sources: "concat" },
+          pls(10),
+        ],
+      },
+    },
+    {
+      id: "late-fusion",
+      label: "Late fusion",
+      hint: "One model per source, out-of-fold predictions merged and passed to a meta-model.",
+      document: {
+        name: "Per-source models + stacking",
+        pipeline: [
+          kfold,
+          { branch: { by_source: true, steps: { NIR: [SNV, pls(8)], Raman: [MSC, pls(5)], markers: [{ class: "sklearn.preprocessing.StandardScaler" }, { model: { class: "sklearn.linear_model.Ridge", params: { alpha: 1 } }, name: "Ridge" }] } } },
+          { merge: "predictions" },
+          { model: { class: "sklearn.linear_model.Ridge", params: { alpha: 0.5 } }, name: "Meta-Ridge" },
+        ],
+      },
+    },
     { id: "sweep", label: "Sweep", hint: "Studio preset: alternatives plus a swept component count.", document: preset("simple_pls") },
     { id: "search", label: "Cartesian search", hint: "Studio preset: four cartesian stages and finetuned models.", document: preset("complex_pls") },
     {

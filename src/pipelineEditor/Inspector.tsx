@@ -583,7 +583,7 @@ function GroupInspector({ ctx, item }: { ctx: InspectorContext; item: ForkNode |
               <ul className="n4rack__lane-list">
                 {item.lanes.map((lane) => <LaneRow key={lane.id} ctx={ctx} lane={lane} fork={item} inGroup />)}
               </ul>
-              <div className="n4rack__wrap-actions">
+              {item.mode === "source" ? null : <div className="n4rack__wrap-actions">
                 <button type="button" className="n4rack__btn n4rack__btn--text" disabled={readOnly} onClick={() => commit(addLane(document, item.id))}>
                   {item.mode === "choice" ? labels.addOption : labels.addLane}
                 </button>
@@ -592,7 +592,7 @@ function GroupInspector({ ctx, item }: { ctx: InspectorContext; item: ForkNode |
                     {labels.dissolve}
                   </button>
                 ) : null}
-              </div>
+              </div>}
             </Tile>
           ) : null}
           <ModifierTiles ctx={ctx} item={item} primary={primary} />

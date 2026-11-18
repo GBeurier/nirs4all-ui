@@ -151,19 +151,23 @@ function buildFork(
   record: Record<string, unknown>,
   keyword: string,
   mode: ForkMode,
+  /** Key of the lane map inside `record[keyword]` (`steps` of a `by_source` branch). */
+  inner?: string,
 ): ForkNode {
-  const container = record[keyword];
-  const lanesPath = [...base.valuePath, keyword];
+  const holder = record[keyword];
+  const container = inner !== undefined && isRecord(holder) ? holder[inner] : holder;
+  const lanesPath = inner !== undefined ? [...base.valuePath, keyword, inner] : [...base.valuePath, keyword];
   const id = itemIdAt(base.path);
   const named = !Array.isArray(container);
+  // Source lanes are the source names; `_merge_after_` and other `_` options stay modifiers.
   const entries: Array<[string | number, unknown]> = Array.isArray(container)
     ? container.map((lane, index) => [index, lane])
-    : Object.entries(container as Record<string, unknown>);
+    : Object.entries(container as Record<string, unknown>).filter(([key]) => mode !== "source" || !key.startsWith("_"));
   const lanes = entries.map(([key, raw], index): LaneNode => {
     const path = [...lanesPath, key];
     const lane = unwrap(raw, path);
     const laneId = laneIdAt(path);
-    const chain = buildChain(builder, lane.value, lane.valuePath, mode === "branch", laneId);
+    const chain = buildChain(builder, lane.value, lane.valuePath, mode === "branch" || mode === "source", laneId);
     const node: LaneNode = {
       id: laneId,
       path,
@@ -180,7 +184,12 @@ function buildFork(
     return node;
   });
   const modifiers: Record<string, unknown> = {};
-  for (const [name, value] of Object.entries(record)) if (name !== keyword) modifiers[name] = value;
+  if (mode !== "source") for (const [name, value] of Object.entries(record)) if (name !== keyword) modifiers[name] = value;
+  if (inner !== undefined && isRecord(holder)) {
+    for (const [name, value] of Object.entries(holder)) if (name !== inner) modifiers[name] = value;
+  } else if (mode === "source" && isRecord(container)) {
+    for (const [name, value] of Object.entries(container)) if (name.startsWith("_")) modifiers[name] = value;
+  }
   return {
     kind: "fork",
     id,
@@ -231,13 +240,19 @@ function buildItem(builder: Builder, raw: unknown, position: Position): ChainIte
   for (const [keyword, role] of OPERATOR_KEYWORDS) {
     if (keyword in value && isOperatorReference(value[keyword])) return buildStep(builder, base, value, keyword, role, value[keyword]);
   }
+  if (isRecord(value.source_branch) && Object.keys(value.source_branch).some((key) => !key.startsWith("_"))) {
+    return buildFork(builder, base, value, "source_branch", "source");
+  }
+  if (isRecord(value.branch) && value.branch.by_source === true && isPlainLaneMap(value.branch.steps)) {
+    return buildFork(builder, base, value, "branch", "source", "steps");
+  }
   if ("branch" in value && (Array.isArray(value.branch) || isPlainLaneMap(value.branch))) {
     return buildFork(builder, base, value, "branch", "branch");
   }
-  if ("merge" in value) {
-    const merge = value.merge;
+  if ("merge" in value || "merge_sources" in value) {
+    const merge = "merge" in value ? value.merge : value.merge_sources;
     const label = typeof merge === "string" ? merge : isRecord(merge) ? Object.keys(merge).join(" + ") : formatValue(merge);
-    return { kind: "merge", id, ...base, role: "merge", label, value: merge };
+    return { kind: "merge", id, ...base, role: "merge", label, value: merge, ...("merge" in value ? {} : { sources: true }) };
   }
   if (Array.isArray(value._or_)) return buildFork(builder, base, value, "_or_", "choice");
   if (Array.isArray(value._cartesian_)) {

@@ -103,6 +103,7 @@ export interface PipelineChainLabels {
   noMatch: string;
   emptyCatalog: string;
   role: Record<ChainRole, string>;
+  mergeSources: string;
   fork: Record<ForkMode, string>;
   forkHint: Record<ForkMode, string>;
   frame: Record<FrameMode, string>;
@@ -216,14 +217,17 @@ export const DEFAULT_PIPELINE_CHAIN_LABELS: PipelineChainLabels = {
     operator: "Operator",
     raw: "Raw step",
   },
+  mergeSources: "Merge sources",
   fork: {
     branch: "Branch",
+    source: "Sources",
     choice: "One of",
     concat: "Concat",
     augment: "Feature views",
   },
   forkHint: {
     branch: "Every lane runs on the same input. A merge step further down joins them.",
+    source: "Each lane processes one data source (block of variables measured on the same samples). The next step fuses them: a source merge or a multiblock model joins the features, a prediction merge joins per-source predictions.",
     choice: "One option is used per pipeline variant.",
     concat: "Each lane transforms the same input and the outputs are concatenated.",
     augment: "Each lane adds a processed view of the features.",

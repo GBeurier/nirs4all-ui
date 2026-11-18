@@ -30,6 +30,7 @@ export const CHAIN_ROLE_COLORS: Readonly<Record<ChainRole, string>> = {
 
 export const CHAIN_GROUP_COLORS: Readonly<Record<ForkMode | FrameMode, string>> = {
   branch: N4_VIZ_COLORS.amber,
+  source: N4_VIZ_COLORS.indigo,
   choice: N4_VIZ_COLORS.violet,
   cartesian: N4_VIZ_COLORS.violet,
   concat: N4_VIZ_COLORS.cyan,
@@ -51,6 +52,7 @@ const PATHS: Readonly<Record<ChainGlyphKind, string>> = {
   operator: "M8 3.2a4.8 4.8 0 1 0 0 9.6 4.8 4.8 0 0 0 0-9.6z",
   raw: "M6 2.5c-2 0-1.4 2.6-1.8 4C4 7.4 3 8 3 8s1 .6 1.2 1.5c.4 1.4-.2 4 1.8 4M10 2.5c2 0 1.4 2.6 1.8 4C12 7.4 13 8 13 8s-1 .6-1.2 1.5c-.4 1.4.2 4-1.8 4",
   branch: "M2 8h3c2.5 0 3-4 5.5-4H14M5 8c2.5 0 3 4 5.5 4H14",
+  source: "M2 3.5h5M2 8h5M2 12.5h5M9 3.5h5M9 8h5M9 12.5h5",
   choice: "M2 8h3.2l5.2-4H14M10.4 8H14M10.4 12H14M5.2 8a1 1 0 1 0 0 .01",
   cartesian: "M4 4l8 8M12 4l-8 8",
   concat: "M2 4h12M2 8h12M2 12h12M12 2.5v11",
