@@ -163,21 +163,76 @@ export function groupMetricsByFamily<M extends { id: string }>(metrics: readonly
   return METRIC_FAMILIES.map((family) => ({ family, metrics: metrics.filter((m) => metricFamily(m.id) === family) })).filter((g) => g.metrics.length);
 }
 
-const csvCell = (value: unknown): string => {
-  const raw = value === null || value === undefined ? '' : typeof value === 'string' ? value : typeof value === 'number' || typeof value === 'boolean' ? String(value) : JSON.stringify(value);
-  // a text cell starting like a formula is prefixed so spreadsheets keep it as text; numbers stay numeric
-  const text = typeof value === 'string' && /^[=+\-@\t\r]/.test(value) ? `'${raw}` : raw;
-  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-};
+/**
+ * Spreadsheet dialect of a CSV export. Spreadsheets in decimal-comma locales (French Excel, for
+ * instance) split columns on semicolons and read numbers with a decimal comma.
+ */
+export interface CsvFormat {
+  delimiter: ',' | ';';
+  decimal: '.' | ',';
+}
+export const CSV_STANDARD: CsvFormat = { delimiter: ',', decimal: '.' };
+export const CSV_DECIMAL_COMMA: CsvFormat = { delimiter: ';', decimal: ',' };
 
-/** RFC 4180 CSV of the evidence table: one row per metric, full-precision values, structured values as JSON; formula-like text cells get a leading apostrophe. */
-export function evidenceCsv(metrics: readonly QualificationMetricView[], locale: Locale = 'fr'): string {
+/** The dialect a spreadsheet uses for a BCP 47 language tag: semicolons where numbers take a decimal comma. */
+export function csvFormatFor(language: string): CsvFormat {
+  let decimalComma = false;
+  try {
+    decimalComma = new Intl.NumberFormat(language).format(1.5).includes(',');
+  } catch {
+    // unknown tag: the standard dialect
+  }
+  return decimalComma ? CSV_DECIMAL_COMMA : CSV_STANDARD;
+}
+
+/** Above this many entries a list or record is summarised; the JSON report keeps it in full. */
+const CSV_INLINE_MAX = 12;
+const scalar = (v: unknown): v is string | number | boolean => typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean';
+
+/** One spreadsheet cell: scalars as such, short flat lists/records inline, nested data summarised. */
+function csvText(value: unknown, format: CsvFormat): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'number') return format.decimal === ',' ? String(value).replace('.', ',') : String(value);
+  if (scalar(value)) return String(value);
+  if (Array.isArray(value)) {
+    return value.length <= CSV_INLINE_MAX && value.every((v) => v === null || scalar(v))
+      ? value.map((v) => csvText(v, format)).join(' | ')
+      : `${value.length} values (see the JSON report)`;
+  }
+  if (typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>);
+    // one level of keys inline; nested lists are summarised by the array rule
+    return entries.length <= CSV_INLINE_MAX
+      ? entries.map(([k, v]) => `${k}=${csvText(v, format)}`).join(' · ')
+      : `${entries.length} fields (see the JSON report)`;
+  }
+  return String(value);
+}
+
+function csvCell(value: unknown, format: CsvFormat): string {
+  const raw = csvText(value, format);
+  // a text cell starting like a formula is prefixed so spreadsheets keep it as text; numbers stay numeric
+  const text = typeof value !== 'number' && /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
+  return text.includes(format.delimiter) || /["\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+/** RFC 4180 rows in a spreadsheet dialect: one value per cell, nested data summarised. */
+export function csvRows(rows: readonly (readonly unknown[])[], format: CsvFormat = CSV_STANDARD): string {
+  return rows.map((row) => row.map((v) => csvCell(v, format)).join(format.delimiter)).join('\r\n') + '\r\n';
+}
+
+/**
+ * Evidence table for spreadsheets: one row per metric and one value per cell. Numbers keep full
+ * precision; short flat lists and records are written inline, larger or nested ones are summarised
+ * (the JSON report keeps every value); formula-like text cells get a leading apostrophe.
+ */
+export function evidenceCsv(metrics: readonly QualificationMetricView[], locale: Locale = 'fr', format: CsvFormat = CSV_STANDARD): string {
   const header = ['family', 'metric_id', 'label', 'status', 'reason_code', 'value', 'unit', 'source_id', 'target_id', 'population_id', 'view_id', 'parameters', 'denominators', 'protocol_version'];
   const rows = groupMetricsByFamily(metrics).flatMap(({ family, metrics: items }) => items.map((m) => [
     family, m.id, metricLabel(m.id, locale), m.status, m.reasonCode, m.value, m.unit, m.sourceId, m.targetId, m.populationId, m.viewId,
     Object.keys(m.parameters).length ? m.parameters : null, Object.keys(m.denominators).length ? m.denominators : null, m.protocolVersion,
   ]));
-  return [header, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n') + '\r\n';
+  return csvRows([header, ...rows], format);
 }
 
 /** `samples=5 · observations=6` style denominator summary ("" when none). */
