@@ -30,7 +30,7 @@ describe("parsePipeline", () => {
     ] }, index);
     expect(kinds(model.root.items)).toEqual(["fork", "merge", "step"]);
     const [fork, merge] = model.root.items as [ForkNode, ChainItem];
-    expect(fork).toMatchObject({ mode: "source", keyword: "source_branch", named: true, modifiers: { _merge_after_: false } });
+    expect(fork).toMatchObject({ mode: "source", keyword: "source_branch", named: true, stack: false, modifiers: { _merge_after_: false } });
     expect(fork.lanes.map((lane) => [lane.label, lane.items.length])).toEqual([["NIR", 2], ["markers", 1]]);
     expect(merge).toMatchObject({ kind: "merge", label: "concat", sources: true });
   });

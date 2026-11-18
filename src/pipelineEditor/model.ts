@@ -204,7 +204,7 @@ function buildFork(
     named,
     lanes,
     modifiers,
-    stack: mode !== "branch" && lanes.every((lane) => lane.items.length === 0 || (lane.items.length === 1 && lane.items[0]!.kind !== "fork" && lane.items[0]!.kind !== "frame")),
+    stack: mode !== "branch" && mode !== "source" && lanes.every((lane) => lane.items.length === 0 || (lane.items.length === 1 && lane.items[0]!.kind !== "fork" && lane.items[0]!.kind !== "frame")),
   };
 }
 
