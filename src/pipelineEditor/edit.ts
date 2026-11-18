@@ -501,8 +501,12 @@ export function moveLane(document: PipelineChainDocument, laneId: string, direct
       return { kind: "lane", id: laneIdAt([...found.fork.lanesPath, b]) };
     }
     if (!isRecord(container)) return UNCHANGED;
+    // Swap the two lane keys in place; option keys (`_merge_after_`, ...) keep their position.
     const keys = Object.keys(container);
-    [keys[found.lane.index], keys[target.index]] = [keys[target.index]!, keys[found.lane.index]!];
+    const a = keys.indexOf(String(found.lane.key));
+    const b = keys.indexOf(String(target.key));
+    if (a < 0 || b < 0) return UNCHANGED;
+    [keys[a], keys[b]] = [keys[b]!, keys[a]!];
     overwriteRecord(container, Object.fromEntries(keys.map((key) => [key, container[key]])));
     return { kind: "lane", id: found.lane.id };
   });

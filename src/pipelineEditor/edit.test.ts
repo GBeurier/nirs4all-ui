@@ -47,6 +47,9 @@ describe("chain edits", () => {
     const option = setModifier(added, fork.id, "_merge_after_", false).document;
     expect(option.pipeline[0]).toEqual({ source_branch: { NIR: [SNV], markers: [MSC], _merge_after_: false } });
     expect(forkAt(option, 0).lanes.map((lane) => lane.label)).toEqual(["NIR", "markers"]);
+    const optionsFirst: PipelineChainDocument = { pipeline: [{ source_branch: { _merge_after_: false, a: [SNV], b: [MSC], c: [] } }] };
+    const moved = moveLane(optionsFirst, forkAt(optionsFirst, 0).lanes[2]!.id, -1).document;
+    expect(Object.keys((moved.pipeline[0] as { source_branch: object }).source_branch)).toEqual(["_merge_after_", "a", "c", "b"]);
     const late: PipelineChainDocument = { pipeline: [{ branch: { by_source: true, steps: { NIR: [{ model: PLS }] } } }] };
     const changed = setModifier(late, forkAt(late, 0).id, "missing_source_policy", "zero_with_indicator").document;
     expect(changed.pipeline[0]).toEqual({ branch: { by_source: true, missing_source_policy: "zero_with_indicator", steps: { NIR: [{ model: PLS }] } } });
