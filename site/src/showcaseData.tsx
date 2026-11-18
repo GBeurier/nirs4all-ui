@@ -1,12 +1,15 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import {
+  AgreementMatrix,
+  AttributionHeatmap,
   BiasVarianceBars,
   BoxPlot,
   ConfusionMatrix,
   FeatureImportanceBar,
   FoldStabilityLines,
   Histogram,
+  ImportanceComparisonChart,
   PcaScatter,
   PipelineFlow,
   ConformalIntervalStrip,
@@ -20,6 +23,8 @@ import {
   WaterfallChart,
   referenceBandsForAxis,
   type BeeswarmFeature,
+  type ImportanceComparisonSeries,
+  type SpectralRange,
   type PcaPoint,
   type PredictionPoint,
 } from "../../src/viz/index.js";
@@ -215,6 +220,84 @@ const BAND_NM_REGIONS = Array.from({ length: 15 }, (_, b) => {
   return { start, end: start + 100, value: Number((slice.reduce((sum, v) => sum + v, 0) / slice.length).toFixed(5)) };
 });
 const BAND_NM = referenceBandsForAxis("nm", 1000, 2500);
+
+// Several importance profiles on the same nm axis (illustrative values only).
+const COMPARE_SERIES: readonly ImportanceComparisonSeries[] = [
+  { id: "shap", label: "Mean |SHAP|", values: BAND_NM_IMPORTANCE },
+  {
+    id: "coef",
+    label: "PLS coefficients (raw space)",
+    signed: true,
+    values: BAND_NM_AXIS.map((wl) =>
+      Number((gaussian(wl, 1440, 22, 2.1) - gaussian(wl, 1480, 22, 1.7) + gaussian(wl, 1930, 26, 3.2) - gaussian(wl, 1975, 24, 2.4) + gaussian(wl, 2170, 20, 1.1)).toFixed(4)),
+    ),
+  },
+  {
+    id: "vip",
+    label: "VIP",
+    values: BAND_NM_AXIS.map((wl) => Number((0.6 + gaussian(wl, 1450, 40, 0.9) + gaussian(wl, 1940, 45, 1.3) + gaussian(wl, 2180, 30, 0.5)).toFixed(4))),
+  },
+  {
+    id: "grad",
+    label: "Mean local gradient",
+    dashed: true,
+    values: BAND_NM_IMPORTANCE.map((v, i) => Number((v * (0.85 + 0.3 * Math.sin(i / 7))).toFixed(5))),
+    error: BAND_NM_IMPORTANCE.map((v) => Number((v * 0.18 + 0.001).toFixed(5))),
+  },
+];
+const COMPARE_LABELS = COMPARE_SERIES.map((series) => series.label);
+const COMPARE_SPEARMAN: Array<Array<number | null>> = [
+  [1, 0.71, 0.84, 0.93],
+  [0.71, 1, 0.66, 0.68],
+  [0.84, 0.66, 1, 0.79],
+  [0.93, 0.68, 0.79, 1],
+];
+const ATTR_COLUMNS = Array.from({ length: 150 }, (_, c) => ({ label: `${1000 + c * 10}` }));
+const ATTR_ROWS = Array.from({ length: 48 }, (_, r) => ({
+  id: `s${r + 1}`,
+  label: `Sample ${r + 1}`,
+  values: ATTR_COLUMNS.map((_, c) => {
+    const wl = 1000 + c * 10;
+    const direction = r % 3 === 0 ? -1 : 1;
+    return Number((direction * (gaussian(wl, 1940, 30, 0.06) + gaussian(wl, 1450, 28, 0.035) * Math.cos(r / 5)) + Math.sin(r * 13 + c * 7) * 0.003).toFixed(5));
+  }),
+}));
+
+// Showcase cards are buttons, so the demos avoid nested buttons (legend toggles, row buttons);
+// hover/click linking still works.
+function ImportanceComparisonDemo() {
+  const [range, setRange] = useState<SpectralRange | null>(null);
+  return (
+    <ImportanceComparisonChart
+      axis={BAND_NM_AXIS}
+      series={COMPARE_SERIES}
+      spectrum={BAND_NM_SPECTRUM}
+      regions={BAND_NM_REGIONS}
+      highlightRange={range}
+      onRangeSelect={setRange}
+      axisLabel="Wavelength (nm)"
+      axisUnit="nm"
+      title="Importance methods compared"
+    />
+  );
+}
+
+function AttributionHeatmapDemo() {
+  const [column, setColumn] = useState<number | null>(94);
+  return (
+    <AttributionHeatmap
+      rows={ATTR_ROWS}
+      columns={ATTR_COLUMNS}
+      selectedRowId="s4"
+      highlightColumn={column}
+      onColumnHover={(index) => index !== null && setColumn(index)}
+      valueLabel="SHAP value"
+      rowAxisLabel="Samples"
+      columnAxisLabel="Wavelength (nm)"
+      title="Per-sample SHAP by wavelength"
+    />
+  );
+}
 
 // Wavenumber axis stored in descending order, as many FT-NIR instruments export it.
 const BAND_CM_AXIS = Array.from({ length: 121 }, (_, i) => 10000 - i * 50);
@@ -975,6 +1058,67 @@ export const SHOWCASE_ENTRIES: readonly ShowcaseEntry[] = [
         title="Signed importance on a wavenumber axis"
       />
     ),
+  },
+  {
+    id: "importance-comparison",
+    name: "ImportanceComparisonChart",
+    category: "Explainability",
+    entry: "nirs4all-ui/viz",
+    propsInterface: "ImportanceComparisonChartProps",
+    mirrors: "Web Explain tab · method comparison",
+    summary:
+      "Several importance profiles (SHAP, coefficients, VIP, local gradients) overlaid on one spectral axis. Each profile is divided by its own max |value| for display so shapes compare across units; dashed lines mark local or approximate profiles. Legend chips toggle profiles; click a region to link it to other views.",
+    hostOwned: ["every profile value", "uncertainty", "hidden ids", "linked range"],
+    importLine: 'import { ImportanceComparisonChart } from "nirs4all-ui/viz";',
+    code: `<ImportanceComparisonChart
+  axis={axis.values}
+  series={profiles.map((p) => ({ id: p.id, label: p.label, values: p.values, signed: p.signed, dashed: p.exactness !== "exact" }))}
+  scaling="max_abs"
+  hiddenIds={hidden}
+  onToggleSeries={toggle}
+  highlightRange={range}
+  onRangeSelect={setRange}
+/>`,
+    render: () => <ImportanceComparisonDemo />,
+  },
+  {
+    id: "agreement-matrix",
+    name: "AgreementMatrix",
+    category: "Explainability",
+    entry: "nirs4all-ui/viz",
+    propsInterface: "AgreementMatrixProps",
+    mirrors: "Web Explain tab · method agreement",
+    summary:
+      "Pairwise agreement between importance profiles (Spearman ρ, top-K Jaccard) with the value printed in every cell. Domains spanning zero use a diverging scale centred on zero; undefined pairs print a dash.",
+    hostOwned: ["agreement computation", "domain", "cell click handling"],
+    importLine: 'import { AgreementMatrix } from "nirs4all-ui/viz";',
+    code: `<AgreementMatrix
+  labels={profiles.map((p) => p.label)}
+  values={comparison.spearman}
+  domain={[-1, 1]}
+  metricLabel="Spearman ρ"
+/>`,
+    render: () => <AgreementMatrix labels={COMPARE_LABELS} values={COMPARE_SPEARMAN} domain={[-1, 1]} metricLabel="Spearman ρ" showSummary />,
+  },
+  {
+    id: "attribution-heatmap",
+    name: "AttributionHeatmap",
+    category: "Explainability",
+    entry: "nirs4all-ui/viz",
+    propsInterface: "AttributionHeatmapProps",
+    mirrors: "Web Explain tab · per-sample attributions",
+    summary:
+      "Rows × groups heatmap of signed attributions on a symmetric diverging scale, drawn on a canvas so hundreds of columns stay fast. Rows are selectable and a column can be highlighted to link with a spectral chart.",
+    hostOwned: ["attribution values", "grouping", "selected row", "linked column"],
+    importLine: 'import { AttributionHeatmap } from "nirs4all-ui/viz";',
+    code: `<AttributionHeatmap
+  rows={explanation.rows.map((r) => ({ id: r.id, label: r.label, values: r.groupValues }))}
+  columns={groups.map((g) => ({ label: g.label }))}
+  selectedRowId={selected}
+  onRowActivate={setSelected}
+  highlightColumn={linkedGroup}
+/>`,
+    render: () => <AttributionHeatmapDemo />,
   },
   {
     id: "pipeline-flow",
