@@ -12,6 +12,11 @@ UI surfaces. It also ships the reusable graphical system for the ecosystem:
 brand manifests, generated SVG marks, default CSS tokens, and the shared NIR
 spectra motion asset.
 
+`N4aExportSelection` from `nirs4all-ui/components` is a controlled checklist
+for choosing archive content. Pass `options`, selected IDs in `value`, and
+`onChange`; the host resolves selected payloads and writes the Core container.
+Disabled options and an in-progress fieldset are supported without package IO.
+
 ## Domains
 
 | Domain | Export | What it owns |
