@@ -40,8 +40,8 @@
       "sha256": "d28d20c8364cbd86003b025b1f92504f2a77d602acd73cf6cc84e269f3b2959c"
     },
     "nirs4all-ui/src/n4aInspector/N4aInspector.tsx": {
-      "bytes": 54280,
-      "sha256": "92cdfbe285cdb1be9b8b6b43e6031276b97c0ea519097a2043e9ba02c77c166b"
+      "bytes": 54375,
+      "sha256": "c526d93d9f277256bb7cf122b04af9b69b8cbd1355dff60968d1a1c07b668334"
     },
     "nirs4all-ui/src/n4aInspector/model.ts": {
       "bytes": 7411,
@@ -52,16 +52,20 @@
       "sha256": "a3f9e9328aa36b612311f19e72ac31302b00734e6fb71e57d6c71779c89b1ddb"
     },
     "nirs4all-ui/assets/n4a-inspector.css": {
-      "bytes": 14029,
-      "sha256": "a4fcb27e4e5335a8e2b81f443ff5c972639f1a507f54853ae1ca8e10992f7697"
+      "bytes": 14244,
+      "sha256": "04ed4f9bbbab4aa9016e07001ddcba0acc8b40b49fd5e70bfc3f0b25c7573265"
     },
     "nirs4all-ui/src/n4aInspector/dagEvidence.ts": {
       "bytes": 6442,
       "sha256": "b96539625040f7c435087ed237da8bc583ef74767d44f52c15e5e526d4df7415"
     },
+    "nirs4all-ui/src/dag/DagGraphView.tsx": {
+      "bytes": 34303,
+      "sha256": "b16b015ab288b8ffffca2d3534ec5c4866f4b1ebd3c2b48227056662dde660ad"
+    },
     "nirs4all-web/web-app/inspector-host/main.tsx": {
-      "bytes": 16972,
-      "sha256": "d46cfbf013021614d6d9e980f4d9c10a29e681fe732978518646e5e10ffd15ba"
+      "bytes": 17551,
+      "sha256": "bddaf18121936fbf3ada35d04ef5ff684d938ffa041436dc29f43c69fc418867"
     },
     "nirs4all-web/web-app/inspector-host/worker.ts": {
       "bytes": 12433,
@@ -72,12 +76,12 @@
       "sha256": "4dd4f8cafc9a7cd7c650b11bfec3cfbfeeef16a84a11d1cd8d0c59212d28297e"
     },
     "nirs4all-web/web-app/inspector-host/InstrumentedWorkspace.tsx": {
-      "bytes": 22170,
-      "sha256": "e7fd09b8137db484f727ab7dad6595c202bec42ca7bc1422b4f60260552da108"
+      "bytes": 22578,
+      "sha256": "6da60d34c91a138e3207f8f5b263f55275add76779aa6b2f6388965e3eef4777"
     },
     "nirs4all-web/web-app/inspector-host/workspace-types.ts": {
-      "bytes": 1361,
-      "sha256": "4b0f76d6a63209feb2ab5737d267ef6441be683b02e1c3eb3bc7c1a693a1a2a7"
+      "bytes": 1463,
+      "sha256": "acf707e04d16c090e709035533450bab5043ddb5783fdfd9e07674d940bb6046"
     },
     "nirs4all-web/web-app/inspector-host/workspace.css": {
       "bytes": 7731,
@@ -105,11 +109,11 @@
   "outputs": {
     "index.html": {
       "bytes": 766,
-      "sha256": "92fc399613734375dc20cd44e7c1bdf8449e26c7497e9c8a3e67ca5a76bbfd6e"
+      "sha256": "ecaf5b8a270e5d76f1b52f4a58f8ec1b192126b1a2b82807d3e51872410058d7"
     },
     "source.tar.gz": {
-      "bytes": 4333624,
-      "sha256": "c391690ce2042389199c11f7c05a588fc9507cf3dd8cf06cc180b376e1e419f9"
+      "bytes": 4335890,
+      "sha256": "d0bcb8b13f9bd0f8b04e8a95bda82bfc857bacea95dccd83c19df07f71c1ab92"
     },
     "assets/nirs4all_core_wasm_native-B_QSIhho.js": {
       "bytes": 34171,
@@ -123,9 +127,9 @@
       "bytes": 22827,
       "sha256": "3f166255133c1987a21926ce3d8235b7065199276750143041121a24f6d0009d"
     },
-    "assets/index-BrozUagV.css": {
-      "bytes": 126522,
-      "sha256": "e908b823904726a68b05c6e2be5eaba3a127cba096f4359778e7e47bb1cf9bd3"
+    "assets/index-S5AjLd35.css": {
+      "bytes": 126641,
+      "sha256": "d4556e9eb1325fecb5d0901996e1f2a04f646a93c199661472170f2df5573adc"
     },
     "assets/nirs4all_core_wasm_native_bg-DUS52wAu.wasm": {
       "bytes": 14988170,
@@ -139,13 +143,13 @@
       "bytes": 165942,
       "sha256": "d3ca61b3646bea1b50aa2ebd6dc733c85721a7c20a3f8123adef7f3126936897"
     },
+    "assets/index-BOfF2Opc.js": {
+      "bytes": 443628,
+      "sha256": "508b6b660e0469774fe2cb31c0cd26cdb1c1ee189a36e07ea8e63ee277fe553b"
+    },
     "assets/dag_ml_wasm_bg-DVxFAowB.wasm": {
       "bytes": 9186371,
       "sha256": "cf950aad12e10bd84544869a0b2e71458475943ff2b1a79234a2253b2b65fde2"
-    },
-    "assets/index-BFDvZ8jC.js": {
-      "bytes": 442697,
-      "sha256": "5c5b22690b5fb03ba1e505fcc508a2f9a56fd020ce21a5ea6aebc318f5815cd1"
     },
     "assets/worker-BIKs-a4l.js": {
       "bytes": 41172,
