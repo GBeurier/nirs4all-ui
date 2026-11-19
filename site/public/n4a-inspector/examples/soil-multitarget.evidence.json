@@ -1,0 +1,96 @@
+{
+  "selection": {
+    "selection:rmse": {
+      "policy_id": "selection:rmse",
+      "selected_candidate_id": "variant:0316bcc75d269b96",
+      "metric_name": "rmse",
+      "objective": "minimize",
+      "metric_level": "sample",
+      "evaluation_scope": "oof",
+      "selected_score": 8.547334732054281,
+      "ranked_candidates": [
+        {
+          "candidate_id": "variant:0316bcc75d269b96",
+          "score": 8.547334732054281,
+          "rank": 1
+        },
+        {
+          "candidate_id": "variant:6482c879f2160ee5",
+          "score": 8.742360465839749,
+          "rank": 2
+        },
+        {
+          "candidate_id": "variant:99c0cc398ba06214",
+          "score": 9.262038775461548,
+          "rank": 3
+        }
+      ]
+    }
+  },
+  "refit": {
+    "requested": true,
+    "status": "completed",
+    "strategy": "refit_one"
+  },
+  "heldoutRows": 34,
+  "trainingPerformedOnReplay": false,
+  "recipe": {
+    "steps": [
+      {
+        "method_id": "models.pls.pls_regression",
+        "role": "regressor",
+        "params": {}
+      }
+    ],
+    "candidates": [
+      {
+        "n_components": 2
+      },
+      {
+        "n_components": 4
+      },
+      {
+        "n_components": 6
+      }
+    ]
+  },
+  "methodsVersion": "1.3.15+abi.2.22.0",
+  "dataset": {
+    "id": "zenodo_neospectra_soil_nir_ccby",
+    "title": "Zenodo NeoSpectra soil NIR CC-BY",
+    "url": "https://zenodo.org/records/13122321",
+    "license": "CC-BY-4.0",
+    "attribution": "Sanderman, Jonathan; Partida, Colleen; Safanelli, Jos\u00e9 Lucas; Mitu, Sadia Mannan; Ge, Yufeng; Murad, Omar; Shepherd, Keith (2024). Near-infrared (NIR) soil spectral library using the NeoSpectra Handheld NIR Analyzer by Si-Ware. Zenodo. doi:10.5281/zenodo.13122321.",
+    "originalSamples": 7790,
+    "selectedSamples": 160,
+    "excludedNonfiniteRows": 8,
+    "changes": [
+      "Original spectral channels and axis retained; spectra read at the canonical cache float32 precision.",
+      "Demonstration analysis, not a reproduction of the source publication benchmark.",
+      "160 distinct soil layers sampled evenly from eligible catalog order; first available catalog spectrum per layer, no additional spectral averaging.",
+      "Demo holdout by SHA-256(layer ID) modulo 5; not an origin-declared benchmark split.",
+      "Three explicit CV folds assigned by SHA-256(physical ID) modulo 3 within training only; selection uses OOF RMSE."
+    ],
+    "canonicalFiles": {
+      "canonical/observations.parquet": "ff12e26fdade18d81265361fed40613694e9615a504cb4f5566eb6247c5d62d4",
+      "canonical/variables.parquet": "e046e7520120176c205c3a649af83041c2b3393dc938afc5be0c78d25fcaf891",
+      "canonical/provenance.parquet": "2c8d761119fbbe3bf7472724975353906f06788d71ac7c639c1156648ee47f92",
+      "canonical/sources/X.parquet": "86e44d32b2058de6021c4e46f58fb5720e7e77864c2302f26097922dbf1cc630",
+      "canonical/curation/structure.parquet": "8ca6a063a0f70e0151c50935ee2a29b93ad292a904f7e7e0d7f488d114997795",
+      "canonical/curation/original_Y.parquet": "433288ad065a2a8db36f8c2b8acddc5fb776484b80ef59986e9bed5c59ea8b2d",
+      "canonical/curation/passport.parquet": "78dffc63e9024d5d0bf6b5928d59786e5a362048857167a4d35b343127fc63d3",
+      "canonical/curation/M.parquet": "ef67146f638df86437d88e8c57b355f20eaed6ca165c0fc48daac949976ca90c",
+      "canonical/curation/Y.parquet": "4300ae6a3e5f22145762df03c8ca62fff1718df49554fc5abcaec3d5ad671a89",
+      "canonical/curation/original_M.parquet": "2c8d761119fbbe3bf7472724975353906f06788d71ac7c639c1156648ee47f92",
+      "canonical/curation/measurements.parquet": "ef67146f638df86437d88e8c57b355f20eaed6ca165c0fc48daac949976ca90c"
+    },
+    "targetUnits": {
+      "oc_usda_c729_w_pct": null,
+      "clay_tot_usda_a334_w_pct": null
+    }
+  },
+  "producerArchiveSha256": "114d09724962e2e53f65819b10324b43400b00332d1b9fc72113bd91396eebb5",
+  "deliveredArchiveSha256": "1ef98415c6c072cbb318618312aef1604f4f6e45651a4694aecd05520baeda8d",
+  "deliveredFile": "07-soil-multitarget.n4a",
+  "note": "The producer hash identifies the single-fit archive. The delivered file adds the source-attribution attachment through Core storage without changing fitted state."
+}

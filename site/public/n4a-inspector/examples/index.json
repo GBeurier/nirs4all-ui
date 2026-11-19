@@ -1,0 +1,390 @@
+{
+  "schema": "nirs4all.inspector.examples.v1",
+  "generatedAt": "2026-11-19T13:05:36.099Z",
+  "runtime": "Core canonical n4a V1 / DAG-ML WASM / Methods WASM",
+  "examples": [
+    {
+      "id": "01-data-share",
+      "title": "Walnut spectra handover",
+      "scenario": "Data sharing",
+      "description": "136 spectra, source targets and original calibration / prediction split. No fitted model.",
+      "file": "01-data-share.n4a",
+      "datasets": [
+        "Dryad walnut kernel moisture NIR"
+      ],
+      "counts": {
+        "dataset": 1,
+        "attachment": 2
+      },
+      "bytes": 2253469,
+      "sources": [
+        {
+          "title": "Dryad walnut kernel moisture NIR",
+          "url": "https://doi.org/10.5061/dryad.xksn02vfp",
+          "license": "CC0-1.0",
+          "attribution": "Peng, Dan (2021). Spectra of walnut kernel for moisture content measurement. Dryad. doi:10.5061/dryad.xksn02vfp."
+        }
+      ],
+      "notes": [
+        "Original spectral channels and axis retained; spectra read at the canonical cache float32 precision.",
+        "Demonstration analysis, not a reproduction of the source publication benchmark.",
+        "The source identifier moisture_content_percent is retained verbatim. Values are used as supplied; catalog units are unspecified and no percentage scaling is applied.",
+        "Origin calibration/prediction or test assignment preserved.",
+        "Three explicit CV folds assigned by SHA-256(physical ID) modulo 3 within training only; selection uses OOF RMSE.",
+        "Candidate grids are finite demonstration settings; the selected candidate is not a claim of a global optimum."
+      ]
+    },
+    {
+      "id": "02-recipe-library",
+      "title": "Three reusable analysis recipes",
+      "scenario": "Pipeline sharing",
+      "description": "PLS, SNV → PLS and scaling → Ridge; complete stored execution plans. Training data is a reference.",
+      "file": "02-recipe-library.n4a",
+      "datasets": [
+        "Dryad walnut kernel moisture NIR"
+      ],
+      "counts": {
+        "recipe": 3,
+        "attachment": 5,
+        "dataset": 1
+      },
+      "bytes": 305295,
+      "sources": [
+        {
+          "title": "Dryad walnut kernel moisture NIR",
+          "url": "https://doi.org/10.5061/dryad.xksn02vfp",
+          "license": "CC0-1.0",
+          "attribution": "Peng, Dan (2021). Spectra of walnut kernel for moisture content measurement. Dryad. doi:10.5061/dryad.xksn02vfp."
+        }
+      ],
+      "notes": [
+        "Original spectral channels and axis retained; spectra read at the canonical cache float32 precision.",
+        "Demonstration analysis, not a reproduction of the source publication benchmark.",
+        "The source identifier moisture_content_percent is retained verbatim. Values are used as supplied; catalog units are unspecified and no percentage scaling is applied.",
+        "Origin calibration/prediction or test assignment preserved.",
+        "Three explicit CV folds assigned by SHA-256(physical ID) modulo 3 within training only; selection uses OOF RMSE.",
+        "Attach 01-data-share to run a stored recipe. No dataset bytes are included.",
+        "Candidate grids are finite demonstration settings; the selected candidate is not a claim of a global optimum."
+      ]
+    },
+    {
+      "id": "03-walnut-analysis",
+      "title": "Walnut moisture analysis",
+      "scenario": "Complete analysis",
+      "description": "Three PLS variants, three CV folds, OOF selection, full refit and untouched prediction cohort.",
+      "file": "03-walnut-analysis.n4a",
+      "datasets": [
+        "Dryad walnut kernel moisture NIR"
+      ],
+      "counts": {
+        "recipe": 1,
+        "attachment": 3,
+        "score": 1,
+        "prediction": 1,
+        "run": 1,
+        "result": 1,
+        "training_evidence": 1,
+        "model": 1,
+        "dataset": 1
+      },
+      "bytes": 4557975,
+      "sources": [
+        {
+          "title": "Dryad walnut kernel moisture NIR",
+          "url": "https://doi.org/10.5061/dryad.xksn02vfp",
+          "license": "CC0-1.0",
+          "attribution": "Peng, Dan (2021). Spectra of walnut kernel for moisture content measurement. Dryad. doi:10.5061/dryad.xksn02vfp."
+        }
+      ],
+      "notes": [
+        "Original spectral channels and axis retained; spectra read at the canonical cache float32 precision.",
+        "Demonstration analysis, not a reproduction of the source publication benchmark.",
+        "The source identifier moisture_content_percent is retained verbatim. Values are used as supplied; catalog units are unspecified and no percentage scaling is applied.",
+        "Origin calibration/prediction or test assignment preserved.",
+        "Three explicit CV folds assigned by SHA-256(physical ID) modulo 3 within training only; selection uses OOF RMSE.",
+        "Candidate grids are finite demonstration settings; the selected candidate is not a claim of a global optimum."
+      ]
+    },
+    {
+      "id": "04-deployment-model",
+      "title": "Fitted model without training spectra",
+      "scenario": "Model delivery",
+      "description": "A portable fitted PLS winner with evaluation evidence; training record omitted. Attach a data bundle for prediction.",
+      "file": "04-deployment-model.n4a",
+      "datasets": [
+        "Dryad walnut kernel moisture NIR"
+      ],
+      "counts": {
+        "recipe": 1,
+        "attachment": 3,
+        "score": 1,
+        "prediction": 1,
+        "run": 1,
+        "result": 1,
+        "training_evidence": 1,
+        "model": 1
+      },
+      "bytes": 2309587,
+      "sources": [
+        {
+          "title": "Dryad walnut kernel moisture NIR",
+          "url": "https://doi.org/10.5061/dryad.xksn02vfp",
+          "license": "CC0-1.0",
+          "attribution": "Peng, Dan (2021). Spectra of walnut kernel for moisture content measurement. Dryad. doi:10.5061/dryad.xksn02vfp."
+        }
+      ],
+      "notes": [
+        "Original spectral channels and axis retained; spectra read at the canonical cache float32 precision.",
+        "Demonstration analysis, not a reproduction of the source publication benchmark.",
+        "The source identifier moisture_content_percent is retained verbatim. Values are used as supplied; catalog units are unspecified and no percentage scaling is applied.",
+        "Origin calibration/prediction or test assignment preserved.",
+        "Three explicit CV folds assigned by SHA-256(physical ID) modulo 3 within training only; selection uses OOF RMSE.",
+        "Training spectrum bytes are omitted; outcome evidence still contains training IDs, OOF labels/predictions and scores. This is not an anonymized artifact.",
+        "Candidate grids are finite demonstration settings; the selected candidate is not a claim of a global optimum."
+      ]
+    },
+    {
+      "id": "05-preprocessing-campaign",
+      "title": "Preprocessing comparison campaign",
+      "scenario": "Analysis campaign",
+      "description": "Three independently executed workflows, shared dataset, candidate/fold scores and stored OOF predictions.",
+      "file": "05-preprocessing-campaign.n4a",
+      "datasets": [
+        "Dryad walnut kernel moisture NIR"
+      ],
+      "counts": {
+        "recipe": 3,
+        "attachment": 8,
+        "score": 3,
+        "prediction": 3,
+        "run": 3,
+        "result": 3,
+        "training_evidence": 3,
+        "dataset": 1
+      },
+      "bytes": 5774398,
+      "sources": [
+        {
+          "title": "Dryad walnut kernel moisture NIR",
+          "url": "https://doi.org/10.5061/dryad.xksn02vfp",
+          "license": "CC0-1.0",
+          "attribution": "Peng, Dan (2021). Spectra of walnut kernel for moisture content measurement. Dryad. doi:10.5061/dryad.xksn02vfp."
+        }
+      ],
+      "notes": [
+        "Original spectral channels and axis retained; spectra read at the canonical cache float32 precision.",
+        "Demonstration analysis, not a reproduction of the source publication benchmark.",
+        "The source identifier moisture_content_percent is retained verbatim. Values are used as supplied; catalog units are unspecified and no percentage scaling is applied.",
+        "Origin calibration/prediction or test assignment preserved.",
+        "Three explicit CV folds assigned by SHA-256(physical ID) modulo 3 within training only; selection uses OOF RMSE.",
+        "No top-level fitted replay entrypoint; select a stored plan to launch a fresh run. Compare scores within this dataset and protocol only.",
+        "Candidate grids are finite demonstration settings; the selected candidate is not a claim of a global optimum."
+      ]
+    },
+    {
+      "id": "06-milk-benchmark",
+      "title": "Milk fat benchmark starter",
+      "scenario": "Benchmark",
+      "description": "Four PLS settings with cow-grouped CV and holdout; stored OOF evidence, scores and a fitted winner. Heldout predictions are replayed on demand.",
+      "file": "06-milk-benchmark.n4a",
+      "datasets": [
+        "Zenodo milk composition NIR transmittance"
+      ],
+      "counts": {
+        "recipe": 1,
+        "attachment": 3,
+        "score": 1,
+        "prediction": 1,
+        "run": 1,
+        "result": 1,
+        "training_evidence": 1,
+        "model": 1,
+        "dataset": 1
+      },
+      "bytes": 2559418,
+      "sources": [
+        {
+          "title": "Zenodo milk composition NIR transmittance",
+          "url": "https://zenodo.org/records/8263430",
+          "license": "CC-BY-4.0",
+          "attribution": "Diaz-Olivares, Jose A.; van Nuenen, Arnout; Gote, Martin J.; Fonseca Diaz, Valeria; Saeys, Wouter; Adriaens, Ines; Aernouts, Ben (2023). Near-infrared spectra dataset of milk composition in transmittance mode. Zenodo. doi:10.5281/zenodo.8263430."
+        }
+      ],
+      "notes": [
+        "Original spectral channels and axis retained; spectra read at the canonical cache float32 precision.",
+        "Demonstration analysis, not a reproduction of the source publication benchmark.",
+        "240 source observations sampled evenly from eligible catalog order, retaining the declared Cow_ID.",
+        "All measurements of one cow stay together in the holdout and CV folds; demonstration grouping, not a source benchmark reproduction.",
+        "Three explicit CV folds assigned by SHA-256(physical ID) modulo 3 within training only; selection uses OOF RMSE.",
+        "Candidate grids are finite demonstration settings; the selected candidate is not a claim of a global optimum."
+      ]
+    },
+    {
+      "id": "07-soil-multitarget",
+      "title": "Soil carbon + clay campaign",
+      "scenario": "Multiple targets",
+      "description": "One two-output PLS analysis on 160 distinct soil layers, with heldout layers and identity-preserving predictions. Selection uses the owner’s unweighted multi-output RMSE; target-specific scores remain separate.",
+      "file": "07-soil-multitarget.n4a",
+      "datasets": [
+        "Zenodo NeoSpectra soil NIR CC-BY"
+      ],
+      "counts": {
+        "recipe": 1,
+        "attachment": 3,
+        "score": 1,
+        "prediction": 1,
+        "run": 1,
+        "result": 1,
+        "training_evidence": 1,
+        "model": 1,
+        "dataset": 1
+      },
+      "bytes": 4140558,
+      "sources": [
+        {
+          "title": "Zenodo NeoSpectra soil NIR CC-BY",
+          "url": "https://zenodo.org/records/13122321",
+          "license": "CC-BY-4.0",
+          "attribution": "Sanderman, Jonathan; Partida, Colleen; Safanelli, José Lucas; Mitu, Sadia Mannan; Ge, Yufeng; Murad, Omar; Shepherd, Keith (2024). Near-infrared (NIR) soil spectral library using the NeoSpectra Handheld NIR Analyzer by Si-Ware. Zenodo. doi:10.5281/zenodo.13122321."
+        }
+      ],
+      "notes": [
+        "Original spectral channels and axis retained; spectra read at the canonical cache float32 precision.",
+        "Demonstration analysis, not a reproduction of the source publication benchmark.",
+        "160 distinct soil layers sampled evenly from eligible catalog order; first available catalog spectrum per layer, no additional spectral averaging.",
+        "Demo holdout by SHA-256(layer ID) modulo 5; not an origin-declared benchmark split.",
+        "Three explicit CV folds assigned by SHA-256(physical ID) modulo 3 within training only; selection uses OOF RMSE.",
+        "Candidate grids are finite demonstration settings; the selected candidate is not a claim of a global optimum."
+      ]
+    },
+    {
+      "id": "08-results-review",
+      "title": "Two-study results review",
+      "scenario": "Results sharing",
+      "description": "Stored scores from walnut and milk; prediction-cache inventories are explicitly empty. Source datasets are references; no training spectra or fitted models.",
+      "file": "08-results-review.n4a",
+      "datasets": [
+        "Dryad walnut kernel moisture NIR",
+        "Zenodo milk composition NIR transmittance"
+      ],
+      "counts": {
+        "score": 2,
+        "prediction": 2,
+        "dataset": 2,
+        "attachment": 3
+      },
+      "bytes": 40403,
+      "sources": [
+        {
+          "title": "Dryad walnut kernel moisture NIR",
+          "url": "https://doi.org/10.5061/dryad.xksn02vfp",
+          "license": "CC0-1.0",
+          "attribution": "Peng, Dan (2021). Spectra of walnut kernel for moisture content measurement. Dryad. doi:10.5061/dryad.xksn02vfp."
+        },
+        {
+          "title": "Zenodo milk composition NIR transmittance",
+          "url": "https://zenodo.org/records/8263430",
+          "license": "CC-BY-4.0",
+          "attribution": "Diaz-Olivares, Jose A.; van Nuenen, Arnout; Gote, Martin J.; Fonseca Diaz, Valeria; Saeys, Wouter; Adriaens, Ines; Aernouts, Ben (2023). Near-infrared spectra dataset of milk composition in transmittance mode. Zenodo. doi:10.5281/zenodo.8263430."
+        }
+      ],
+      "notes": [
+        "Original spectral channels and axis retained; spectra read at the canonical cache float32 precision.",
+        "Demonstration analysis, not a reproduction of the source publication benchmark.",
+        "The source identifier moisture_content_percent is retained verbatim. Values are used as supplied; catalog units are unspecified and no percentage scaling is applied.",
+        "Origin calibration/prediction or test assignment preserved.",
+        "Three explicit CV folds assigned by SHA-256(physical ID) modulo 3 within training only; selection uses OOF RMSE.",
+        "240 source observations sampled evenly from eligible catalog order, retaining the declared Cow_ID.",
+        "All measurements of one cow stay together in the holdout and CV folds; demonstration grouping, not a source benchmark reproduction.",
+        "Scores across different targets/datasets have different units and must not be ranked together.",
+        "Candidate grids are finite demonstration settings; the selected candidate is not a claim of a global optimum."
+      ]
+    },
+    {
+      "id": "09-prediction-cohort",
+      "title": "Incoming unlabelled walnut batch",
+      "scenario": "Prediction handover",
+      "description": "34 real source spectra with labels intentionally withheld; attach to the deployment model to replay its fitted state.",
+      "file": "09-prediction-cohort.n4a",
+      "datasets": [
+        "Dryad walnut kernel moisture NIR"
+      ],
+      "counts": {
+        "dataset": 1,
+        "attachment": 2
+      },
+      "bytes": 568608,
+      "sources": [
+        {
+          "title": "Dryad walnut kernel moisture NIR",
+          "url": "https://doi.org/10.5061/dryad.xksn02vfp",
+          "license": "CC0-1.0",
+          "attribution": "Peng, Dan (2021). Spectra of walnut kernel for moisture content measurement. Dryad. doi:10.5061/dryad.xksn02vfp."
+        }
+      ],
+      "notes": [
+        "Original spectral channels and axis retained; spectra read at the canonical cache float32 precision.",
+        "Demonstration analysis, not a reproduction of the source publication benchmark.",
+        "The source identifier moisture_content_percent is retained verbatim. Values are used as supplied; catalog units are unspecified and no percentage scaling is applied.",
+        "Target labels and training folds removed intentionally. All rows are declared predict; no training can run on this record.",
+        "Candidate grids are finite demonstration settings; the selected candidate is not a claim of a global optimum."
+      ]
+    },
+    {
+      "id": "10-multi-study-campaign",
+      "title": "Three-dataset analysis workspace",
+      "scenario": "Multi-study campaign",
+      "description": "Five real workflows, three datasets, one or two targets per study, varied candidate counts and separate evaluation contexts.",
+      "file": "10-multi-study-campaign.n4a",
+      "datasets": [
+        "Dryad walnut kernel moisture NIR",
+        "Zenodo milk composition NIR transmittance",
+        "Zenodo NeoSpectra soil NIR CC-BY"
+      ],
+      "counts": {
+        "recipe": 5,
+        "attachment": 14,
+        "score": 5,
+        "prediction": 5,
+        "run": 5,
+        "result": 5,
+        "training_evidence": 5,
+        "dataset": 3
+      },
+      "bytes": 11157264,
+      "sources": [
+        {
+          "title": "Dryad walnut kernel moisture NIR",
+          "url": "https://doi.org/10.5061/dryad.xksn02vfp",
+          "license": "CC0-1.0",
+          "attribution": "Peng, Dan (2021). Spectra of walnut kernel for moisture content measurement. Dryad. doi:10.5061/dryad.xksn02vfp."
+        },
+        {
+          "title": "Zenodo milk composition NIR transmittance",
+          "url": "https://zenodo.org/records/8263430",
+          "license": "CC-BY-4.0",
+          "attribution": "Diaz-Olivares, Jose A.; van Nuenen, Arnout; Gote, Martin J.; Fonseca Diaz, Valeria; Saeys, Wouter; Adriaens, Ines; Aernouts, Ben (2023). Near-infrared spectra dataset of milk composition in transmittance mode. Zenodo. doi:10.5281/zenodo.8263430."
+        },
+        {
+          "title": "Zenodo NeoSpectra soil NIR CC-BY",
+          "url": "https://zenodo.org/records/13122321",
+          "license": "CC-BY-4.0",
+          "attribution": "Sanderman, Jonathan; Partida, Colleen; Safanelli, José Lucas; Mitu, Sadia Mannan; Ge, Yufeng; Murad, Omar; Shepherd, Keith (2024). Near-infrared (NIR) soil spectral library using the NeoSpectra Handheld NIR Analyzer by Si-Ware. Zenodo. doi:10.5281/zenodo.13122321."
+        }
+      ],
+      "notes": [
+        "Original spectral channels and axis retained; spectra read at the canonical cache float32 precision.",
+        "Demonstration analysis, not a reproduction of the source publication benchmark.",
+        "The source identifier moisture_content_percent is retained verbatim. Values are used as supplied; catalog units are unspecified and no percentage scaling is applied.",
+        "Origin calibration/prediction or test assignment preserved.",
+        "Three explicit CV folds assigned by SHA-256(physical ID) modulo 3 within training only; selection uses OOF RMSE.",
+        "240 source observations sampled evenly from eligible catalog order, retaining the declared Cow_ID.",
+        "All measurements of one cow stay together in the holdout and CV folds; demonstration grouping, not a source benchmark reproduction.",
+        "160 distinct soil layers sampled evenly from eligible catalog order; first available catalog spectrum per layer, no additional spectral averaging.",
+        "Demo holdout by SHA-256(layer ID) modulo 5; not an origin-declared benchmark split.",
+        "Study-specific scores stay separate; no cross-dataset winner is asserted. Select a compatible dataset and stored plan for a new run.",
+        "Candidate grids are finite demonstration settings; the selected candidate is not a claim of a global optimum."
+      ]
+    }
+  ]
+}
