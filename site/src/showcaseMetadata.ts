@@ -1,4 +1,4 @@
-export const CANONICAL_SITE_URL = "https://gbeurier.github.io/nirs4all-ui/";
+export const CANONICAL_SITE_URL = "https://showroom.nirs4all.org/";
 export const BRAND_ASSET_BASE_PATH = "./assets/brand/nirs4all-ui";
 export const REUSABLE_BRAND_BASE_PATH = "./assets/brands";
 export const REUSABLE_STYLE_BASE_PATH = "./assets/styles";
