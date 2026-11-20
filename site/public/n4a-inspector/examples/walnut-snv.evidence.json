@@ -1,1 +1,114 @@
-{"archiveSha256":"0b023cf78e8e6e5b9b9e42a4d7b77dfdebef3c158ffaf064d97ff3e2e6e82a36","selection":{"selection:rmse":{"policy_id":"selection:rmse","selected_candidate_id":"variant:0316bcc75d269b96","metric_name":"rmse","objective":"minimize","metric_level":"sample","evaluation_scope":"oof","selected_score":0.0017263252926617335,"ranked_candidates":[{"candidate_id":"variant:0316bcc75d269b96","score":0.0017263252926617335,"rank":1},{"candidate_id":"variant:6482c879f2160ee5","score":0.0019961894441326753,"rank":2},{"candidate_id":"variant:99c0cc398ba06214","score":0.0025998038066146387,"rank":3}]}},"refit":{"requested":true,"status":"completed","strategy":"refit_one"},"heldoutRows":34,"trainingPerformedOnReplay":false,"recipe":{"steps":[{"method_id":"preprocessing.scatter.snv","role":"transformer","params":{}},{"method_id":"models.pls.pls_regression","role":"regressor","params":{}}],"candidates":[{"n_components":2},{"n_components":4},{"n_components":6}]},"methodsVersion":"1.3.15+abi.2.22.0","dataset":{"id":"dryad_walnut_moisture_nir_manual","title":"Dryad walnut kernel moisture NIR","url":"https://doi.org/10.5061/dryad.xksn02vfp","license":"CC0-1.0","attribution":"Peng, Dan (2021). Spectra of walnut kernel for moisture content measurement. Dryad. doi:10.5061/dryad.xksn02vfp.","originalSamples":136,"selectedSamples":136,"excludedNonfiniteRows":0,"changes":["Original spectral channels and axis retained; spectra read at the canonical cache float32 precision.","Demonstration analysis, not a reproduction of the source publication benchmark.","The source identifier moisture_content_percent is retained verbatim. Values are used as supplied; catalog units are unspecified and no percentage scaling is applied.","Origin calibration/prediction or test assignment preserved.","Three explicit CV folds assigned by SHA-256(physical ID) modulo 3 within training only; selection uses OOF RMSE."],"canonicalFiles":{"canonical/observations.parquet":"731dd9fa361057424583fcde7c6d8276293f7a3cd7a54f401a4aabb6b5e20e12","canonical/variables.parquet":"612438274fa86980c2a182969f546a0c434d3ce589a22a4e1dc54a39559f7d42","canonical/provenance.parquet":"33232a317699d0f9d265882e27cc8c98d7caa1eaa23d76fbe653c7a90278ef2d","canonical/sources/X.parquet":"e8b39eea8ee1950f7ce226dcfb3dcd887e7d210a847dd76dcf407650a5769d58","canonical/curation/structure.parquet":"abe8b80d95d4a5977be9e95ca37a4d34b27e533144ce3a6e7d56d05d9b2b9111","canonical/curation/original_Y.parquet":"2c79bde5c67fc4d29e22069e21b3c4b1592bd6d2ce8a8f4b1c7d072d0570522f","canonical/curation/passport.parquet":"3321bd1da1f846a74b0166313aff1c3835721f38e05ac250e52439a03a833523","canonical/curation/M.parquet":"e41f167cd6638e02b9867e752769a8ccc682bab7f7d85722a4bd2af5569bc24f","canonical/curation/Y.parquet":"c17540dea2d0a7f4dabfe658b03620f7eed665a554fb7a350b96413f456d2cd3","canonical/curation/original_M.parquet":"33232a317699d0f9d265882e27cc8c98d7caa1eaa23d76fbe653c7a90278ef2d","canonical/curation/measurements.parquet":"e41f167cd6638e02b9867e752769a8ccc682bab7f7d85722a4bd2af5569bc24f"},"targetUnits":{"moisture_content_percent":null}}}
+{
+  "selection": {
+    "selection:rmse": {
+      "policy_id": "selection:rmse",
+      "selected_candidate_id": "variant:0316bcc75d269b96",
+      "metric_name": "rmse",
+      "objective": "minimize",
+      "metric_level": "sample",
+      "evaluation_scope": "oof",
+      "selected_score": 0.001634265803600184,
+      "ranked_candidates": [
+        {
+          "candidate_id": "variant:0316bcc75d269b96",
+          "score": 0.001634265803600184,
+          "rank": 1
+        },
+        {
+          "candidate_id": "variant:6482c879f2160ee5",
+          "score": 0.0017696886826714718,
+          "rank": 2
+        },
+        {
+          "candidate_id": "variant:99c0cc398ba06214",
+          "score": 0.0021620040645687383,
+          "rank": 3
+        }
+      ]
+    }
+  },
+  "refit": {
+    "requested": true,
+    "status": "completed",
+    "strategy": "refit_one"
+  },
+  "heldoutRows": 34,
+  "trainingPerformedOnReplay": false,
+  "recipe": {
+    "steps": [
+      {
+        "method_id": "preprocessing.derivatives.savitzky_golay",
+        "role": "transformer",
+        "params": {
+          "window_length": 11,
+          "polyorder": 2,
+          "deriv": 1
+        }
+      },
+      {
+        "method_id": "preprocessing.scatter.snv",
+        "role": "transformer",
+        "params": {}
+      },
+      {
+        "method_id": "preprocessing.scaling.standard_scale",
+        "role": "transformer",
+        "params": {}
+      },
+      {
+        "method_id": "models.pls.pls_regression",
+        "role": "regressor",
+        "params": {}
+      }
+    ],
+    "candidates": [
+      {
+        "n_components": 2
+      },
+      {
+        "n_components": 4
+      },
+      {
+        "n_components": 6
+      }
+    ]
+  },
+  "methodsVersion": "1.3.15+abi.2.22.0",
+  "dataset": {
+    "id": "dryad_walnut_moisture_nir_manual",
+    "title": "Dryad walnut kernel moisture NIR",
+    "url": "https://doi.org/10.5061/dryad.xksn02vfp",
+    "license": "CC0-1.0",
+    "attribution": "Peng, Dan (2021). Spectra of walnut kernel for moisture content measurement. Dryad. doi:10.5061/dryad.xksn02vfp.",
+    "originalSamples": 136,
+    "selectedSamples": 136,
+    "excludedNonfiniteRows": 0,
+    "changes": [
+      "Original spectral channels and axis retained; spectra read at the canonical cache float32 precision.",
+      "Demonstration analysis, not a reproduction of the source publication benchmark.",
+      "The source identifier moisture_content_percent is retained verbatim. Values are used as supplied; catalog units are unspecified and no percentage scaling is applied.",
+      "Origin calibration/prediction or test assignment preserved.",
+      "Three explicit CV folds assigned by SHA-256(physical ID) modulo 3 within training only; selection uses OOF RMSE."
+    ],
+    "canonicalFiles": {
+      "canonical/observations.parquet": "731dd9fa361057424583fcde7c6d8276293f7a3cd7a54f401a4aabb6b5e20e12",
+      "canonical/variables.parquet": "612438274fa86980c2a182969f546a0c434d3ce589a22a4e1dc54a39559f7d42",
+      "canonical/provenance.parquet": "33232a317699d0f9d265882e27cc8c98d7caa1eaa23d76fbe653c7a90278ef2d",
+      "canonical/sources/X.parquet": "e8b39eea8ee1950f7ce226dcfb3dcd887e7d210a847dd76dcf407650a5769d58",
+      "canonical/curation/structure.parquet": "abe8b80d95d4a5977be9e95ca37a4d34b27e533144ce3a6e7d56d05d9b2b9111",
+      "canonical/curation/original_Y.parquet": "2c79bde5c67fc4d29e22069e21b3c4b1592bd6d2ce8a8f4b1c7d072d0570522f",
+      "canonical/curation/passport.parquet": "3321bd1da1f846a74b0166313aff1c3835721f38e05ac250e52439a03a833523",
+      "canonical/curation/M.parquet": "e41f167cd6638e02b9867e752769a8ccc682bab7f7d85722a4bd2af5569bc24f",
+      "canonical/curation/Y.parquet": "c17540dea2d0a7f4dabfe658b03620f7eed665a554fb7a350b96413f456d2cd3",
+      "canonical/curation/original_M.parquet": "33232a317699d0f9d265882e27cc8c98d7caa1eaa23d76fbe653c7a90278ef2d",
+      "canonical/curation/measurements.parquet": "e41f167cd6638e02b9867e752769a8ccc682bab7f7d85722a4bd2af5569bc24f"
+    },
+    "targetUnits": {
+      "moisture_content_percent": null
+    }
+  },
+  "producerArchiveSha256": "81c979b4a94227fef1f378e8f94181114bd6722df86e163225aa9f00686e956b",
+  "deliveredArchiveSha256": "0841a5cdcc2cc232f163bb981601406689cd296b403ea119617fb0a9c38e10e2",
+  "deliveredFile": "03-walnut-analysis.n4a",
+  "note": "Source attribution was appended through Core storage without changing fitted state."
+}

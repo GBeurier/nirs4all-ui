@@ -2,22 +2,22 @@
 
 Ten real owner-executed demonstration bundles. These are not reproductions of the source publications.
 
-Open 04 and attach 09 to replay a fitted model on 34 unlabelled spectra. Open 02 and attach 01 to run a stored recipe on source data.
+Open 04 and attach 09 to replay a fitted multi-stage pipeline on 34 unlabelled spectra. Open 02 and attach 01 to run one of the three stored pipelines on source data.
 
 Walnut keeps origin calibration/test assignments. Milk keeps every cow together in the holdout and CV folds (177 train observations, 63 heldout, 39 cows total). The grouped folds are intentionally not claimed as balanced. Soil contains 160 distinct layers; selection uses unweighted multi-output RMSE and target-specific metrics remain separate.
 
 | Bundle | Scenario |
 | --- | --- |
 | 01-data-share.n4a | 136 spectra, source targets and original calibration / prediction split. No fitted model. |
-| 02-recipe-library.n4a | PLS, SNV → PLS and scaling → Ridge; complete stored execution plans. Training data is a reference. |
-| 03-walnut-analysis.n4a | Three PLS variants, three CV folds, OOF selection, full refit and untouched prediction cohort. |
-| 04-deployment-model.n4a | A portable fitted PLS winner with evaluation evidence; training record omitted. Attach a data bundle for prediction. |
-| 05-preprocessing-campaign.n4a | Three independently executed workflows, shared dataset, candidate/fold scores and stored OOF predictions. |
-| 06-milk-benchmark.n4a | Four PLS settings with cow-grouped CV and holdout; stored OOF evidence, scores and a fitted winner. Heldout predictions are replayed on demand. |
-| 07-soil-multitarget.n4a | One two-output PLS analysis on 160 distinct soil layers, with heldout layers and identity-preserving predictions. Selection uses the owner’s unweighted multi-output RMSE; target-specific scores remain separate. |
+| 02-recipe-library.n4a | Three stored plans with three candidate settings each. Compare Savitzky–Golay derivative → SNV → scaling → PLS, MSC → detrending → smoothing → PLS, and detrending → smoothing → scaling → Ridge. Training data is a reference. |
+| 03-walnut-analysis.n4a | Savitzky–Golay derivative → SNV → scaling → PLS, with three candidates, three CV folds, OOF selection, full refit and the original holdout. |
+| 04-deployment-model.n4a | A portable fitted Savitzky–Golay derivative → SNV → scaling → PLS model with evaluation evidence. Attach a data bundle for prediction. |
+| 05-preprocessing-campaign.n4a | Three multi-stage pipelines and a raw PLS baseline, with a shared dataset, candidate/fold scores and stored OOF predictions. |
+| 06-milk-benchmark.n4a | Savitzky–Golay smoothing → SNV → scaling → PLS, with four candidates, cow-grouped CV and holdout, and stored OOF evidence. Heldout predictions are replayed on demand. |
+| 07-soil-multitarget.n4a | Savitzky–Golay derivative → SNV → scaling → two-output PLS on 160 distinct soil layers. Selection uses the owner’s unweighted multi-output RMSE. Target-specific scores remain separate. |
 | 08-results-review.n4a | Stored scores from walnut and milk; prediction-cache inventories are explicitly empty. Source datasets are references; no training spectra or fitted models. |
 | 09-prediction-cohort.n4a | 34 real source spectra with labels intentionally withheld; attach to the deployment model to replay its fitted state. |
-| 10-multi-study-campaign.n4a | Five real workflows, three datasets, one or two targets per study, varied candidate counts and separate evaluation contexts. |
+| 10-multi-study-campaign.n4a | Five multi-stage pipelines and a raw PLS baseline across three datasets, with distinct evaluation contexts. |
 
 ## Sources and licenses
 

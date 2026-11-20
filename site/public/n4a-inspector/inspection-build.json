@@ -94,6 +94,10 @@
     "nirs4all-web/web-app/src/lib/n4a-inspection-port.ts": {
       "bytes": 1808,
       "sha256": "677746ea68fad3703a58263b100769e04e6668c9a3b5da7861cc344f80938117"
+    },
+    "nirs4all-web/web-app/scripts/generate-inspector-examples.mjs": {
+      "bytes": 16767,
+      "sha256": "3ef7e669d902817f6cccc6d5b7a74ad5ca1df98c074646ab2f9ad1f6b2e7c5c6"
     }
   },
   "native": {
@@ -112,8 +116,8 @@
       "sha256": "ecaf5b8a270e5d76f1b52f4a58f8ec1b192126b1a2b82807d3e51872410058d7"
     },
     "source.tar.gz": {
-      "bytes": 4335890,
-      "sha256": "d0bcb8b13f9bd0f8b04e8a95bda82bfc857bacea95dccd83c19df07f71c1ab92"
+      "bytes": 4336151,
+      "sha256": "7f1b1a5b99e3d5fe1f5283d86524dc70017bab4846689a48cf31f1a283419037"
     },
     "assets/nirs4all_core_wasm_native-B_QSIhho.js": {
       "bytes": 34171,
@@ -464,8 +468,8 @@
       "sha256": "52412d7bc7ce4157ea628bbaacb8829e0a9cb3c58f57f99176126bc8cf2bfc85"
     },
     "examples/10-multi-study-campaign.n4a": {
-      "bytes": 11157264,
-      "sha256": "4a215d32e6cebee66391a2baaaa59673eceed4b5ce93748ff7abb16c928273c6"
+      "bytes": 12929260,
+      "sha256": "a5ba84cec1f6a850213a43f67fbd1db9b4179c7f47ed1193bad2d9433546bee3"
     },
     "examples/01-data-share.n4a": {
       "bytes": 2253469,
@@ -476,64 +480,68 @@
       "sha256": "d2e3dcb6d03c1e2775bb38256302266caf972f09ae8ef4575165d5ce6088a85b"
     },
     "examples/04-deployment-model.n4a": {
-      "bytes": 2309587,
-      "sha256": "03598c055cb2fff92f8d80a79eb3d711e1f616103d51ba81e187e6dddbdd9a84"
+      "bytes": 2632735,
+      "sha256": "55d1d4eee7de5dac76174436925b8391427665afd7654df5304598734d1008f5"
     },
     "examples/walnut-ridge.evidence.json": {
-      "bytes": 3098,
-      "sha256": "6ba64f07ab62ddc9068bd6c8efa4376bbd6da4f4e6d669dd21becff5c5890874"
+      "bytes": 3318,
+      "sha256": "30afd5bec9df022f477161f26d5d9945df44d49f5d893335904ca74361fd9eb8"
     },
     "examples/walnut-pls.evidence.json": {
-      "bytes": 3999,
-      "sha256": "d68aabab6efd042ad9ca8fc453397a8b963b795b1c9bbd9ffbff2d8aa60c53b4"
+      "bytes": 3016,
+      "sha256": "afcd943bdb27bb15f3bdf95bd959bfe0e93d6c95347fd45ae6242127e7f4f6f6"
     },
     "examples/05-preprocessing-campaign.n4a": {
-      "bytes": 5774398,
-      "sha256": "97518b6dd31e7cf4d05d1fffcc782b5f67ac6ae7275844630142492cf4506ff8"
+      "bytes": 7554697,
+      "sha256": "92ba362809ebbb555882bbabf9cf0c8d31c81cff9d55958a029d35c4cd57e1af"
     },
     "examples/milk-pls.evidence.json": {
-      "bytes": 4300,
-      "sha256": "ba5b09731472dc359ab94775b4774ff24f915a4ba12102ba6c30c2882297e032"
+      "bytes": 4692,
+      "sha256": "4db8a96cb02a612ef85a63d5329513de6accbcea15b3c9df31c87ef32de0ce11"
     },
     "examples/08-results-review.n4a": {
-      "bytes": 40403,
-      "sha256": "bf4bbd52c0d2c74a7f7e7e13d02a4a22e7fbdacda4888f0ce39298415ce523da"
+      "bytes": 40451,
+      "sha256": "50fa4d8e5fbe9ba43053b081c12784730e48071e9350a0663e1b11ce8252f5cd"
     },
     "examples/06-milk-benchmark.n4a": {
-      "bytes": 2559418,
-      "sha256": "37210257325b0e0204623024a8d37dffe52bec73fe923c516790921ae5157d8a"
+      "bytes": 2890586,
+      "sha256": "8730aa6b2be2bb8ab1396d6049bd81025a23013ba39cf554385c799fbb78fc44"
     },
     "examples/09-prediction-cohort.n4a": {
       "bytes": 568608,
       "sha256": "57eeb72e4e053c8d44a60eefe235a8313126f8f44c6363f5016a709c92e56629"
     },
     "examples/07-soil-multitarget.n4a": {
-      "bytes": 4140558,
-      "sha256": "1ef98415c6c072cbb318618312aef1604f4f6e45651a4694aecd05520baeda8d"
+      "bytes": 3840417,
+      "sha256": "c11061f55f1d66cf635ea1984ac9121779417c9c9476993e206d01366453db28"
     },
     "examples/README.md": {
-      "bytes": 3551,
-      "sha256": "8384b49d9e674786ec46a7280209ca323a7d593b82bf7e65102b3706c5295355"
+      "bytes": 3819,
+      "sha256": "8470e99d0a963f4edbe4fadb24d17ace85fc61fdc88e5b7c5e7da6e9c0befcc6"
     },
     "examples/index.json": {
-      "bytes": 19772,
-      "sha256": "70acb62d76706279ccdca40c73b8f0cb692ab0be07fa2abcd06e303f64777fc7"
+      "bytes": 19921,
+      "sha256": "c3c8d66a5de48651a6172ab6c1f0cce0c6fb4b943b4f51b9468e5c16a418cf57"
     },
     "examples/03-walnut-analysis.n4a": {
-      "bytes": 4557975,
-      "sha256": "dd2578e2799ac445c030d931801559d381f1adfe08ed2a4e3c6df1475db89187"
+      "bytes": 4881123,
+      "sha256": "0841a5cdcc2cc232f163bb981601406689cd296b403ea119617fb0a9c38e10e2"
     },
     "examples/walnut-snv.evidence.json": {
-      "bytes": 3093,
-      "sha256": "1ce0b5c5afd483e978942a37fa8e3a280bf0a6262ed1b8ee8a9797985bf8c19d"
+      "bytes": 4389,
+      "sha256": "63e36f652ea25315fe5bbce3f2f458d6be143cee15f115aa31d985d640bb8173"
     },
     "examples/02-recipe-library.n4a": {
-      "bytes": 305295,
-      "sha256": "d4f72c4a70975b8b67f88214916b915ddc18fead5d95062d342ee1666fb8323d"
+      "bytes": 334835,
+      "sha256": "6bc673386d34d20e79bcffc5ba12af9002f122e443cfb5f22bb3a2abc44b2e90"
     },
     "examples/soil-multitarget.evidence.json": {
-      "bytes": 4180,
-      "sha256": "20f8067cf5f114ea37e5fbeb9819deb7a1b3b8c244023eac135f3c3e5a64a4de"
+      "bytes": 4566,
+      "sha256": "e644fced91f6dd7716829f0fe0f41a798ba683df8f89f1fc33b46adec613d715"
+    },
+    "examples/walnut-msc.evidence.json": {
+      "bytes": 3319,
+      "sha256": "9776582ebee259d68ca75bf6d19165cad22b354f40c9eac2a1da6e2e3b71d9fb"
     }
   },
   "executionRuntimes": {

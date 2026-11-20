@@ -2,26 +2,26 @@
   "selection": {
     "selection:rmse": {
       "policy_id": "selection:rmse",
-      "selected_candidate_id": "variant:0316bcc75d269b96",
+      "selected_candidate_id": "variant:99c0cc398ba06214",
       "metric_name": "rmse",
       "objective": "minimize",
       "metric_level": "sample",
       "evaluation_scope": "oof",
-      "selected_score": 8.547334732054281,
+      "selected_score": 8.766799487102045,
       "ranked_candidates": [
         {
-          "candidate_id": "variant:0316bcc75d269b96",
-          "score": 8.547334732054281,
+          "candidate_id": "variant:99c0cc398ba06214",
+          "score": 8.766799487102045,
           "rank": 1
         },
         {
           "candidate_id": "variant:6482c879f2160ee5",
-          "score": 8.742360465839749,
+          "score": 8.775373660877554,
           "rank": 2
         },
         {
-          "candidate_id": "variant:99c0cc398ba06214",
-          "score": 9.262038775461548,
+          "candidate_id": "variant:0316bcc75d269b96",
+          "score": 8.964765168457465,
           "rank": 3
         }
       ]
@@ -36,6 +36,25 @@
   "trainingPerformedOnReplay": false,
   "recipe": {
     "steps": [
+      {
+        "method_id": "preprocessing.derivatives.savitzky_golay",
+        "role": "transformer",
+        "params": {
+          "window_length": 15,
+          "polyorder": 2,
+          "deriv": 1
+        }
+      },
+      {
+        "method_id": "preprocessing.scatter.snv",
+        "role": "transformer",
+        "params": {}
+      },
+      {
+        "method_id": "preprocessing.scaling.standard_scale",
+        "role": "transformer",
+        "params": {}
+      },
       {
         "method_id": "models.pls.pls_regression",
         "role": "regressor",
@@ -60,7 +79,7 @@
     "title": "Zenodo NeoSpectra soil NIR CC-BY",
     "url": "https://zenodo.org/records/13122321",
     "license": "CC-BY-4.0",
-    "attribution": "Sanderman, Jonathan; Partida, Colleen; Safanelli, Jos\u00e9 Lucas; Mitu, Sadia Mannan; Ge, Yufeng; Murad, Omar; Shepherd, Keith (2024). Near-infrared (NIR) soil spectral library using the NeoSpectra Handheld NIR Analyzer by Si-Ware. Zenodo. doi:10.5281/zenodo.13122321.",
+    "attribution": "Sanderman, Jonathan; Partida, Colleen; Safanelli, José Lucas; Mitu, Sadia Mannan; Ge, Yufeng; Murad, Omar; Shepherd, Keith (2024). Near-infrared (NIR) soil spectral library using the NeoSpectra Handheld NIR Analyzer by Si-Ware. Zenodo. doi:10.5281/zenodo.13122321.",
     "originalSamples": 7790,
     "selectedSamples": 160,
     "excludedNonfiniteRows": 8,
@@ -89,8 +108,8 @@
       "clay_tot_usda_a334_w_pct": null
     }
   },
-  "producerArchiveSha256": "114d09724962e2e53f65819b10324b43400b00332d1b9fc72113bd91396eebb5",
-  "deliveredArchiveSha256": "1ef98415c6c072cbb318618312aef1604f4f6e45651a4694aecd05520baeda8d",
+  "producerArchiveSha256": "c16fc49fb471ecb421d639a8d458825ac58a2362ca290ba369351a0f42063dc6",
+  "deliveredArchiveSha256": "c11061f55f1d66cf635ea1984ac9121779417c9c9476993e206d01366453db28",
   "deliveredFile": "07-soil-multitarget.n4a",
-  "note": "The producer hash identifies the single-fit archive. The delivered file adds the source-attribution attachment through Core storage without changing fitted state."
+  "note": "Source attribution was appended through Core storage without changing fitted state."
 }

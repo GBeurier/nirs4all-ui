@@ -2,31 +2,31 @@
   "selection": {
     "selection:rmse": {
       "policy_id": "selection:rmse",
-      "selected_candidate_id": "variant:0316bcc75d269b96",
+      "selected_candidate_id": "variant:77f734ea06cb7d20",
       "metric_name": "rmse",
       "objective": "minimize",
       "metric_level": "sample",
       "evaluation_scope": "oof",
-      "selected_score": 0.22035358612640704,
+      "selected_score": 0.07744788923493048,
       "ranked_candidates": [
         {
-          "candidate_id": "variant:0316bcc75d269b96",
-          "score": 0.22035358612640704,
+          "candidate_id": "variant:77f734ea06cb7d20",
+          "score": 0.07744788923493048,
           "rank": 1
         },
         {
-          "candidate_id": "variant:77f734ea06cb7d20",
-          "score": 0.2552088063827337,
+          "candidate_id": "variant:0316bcc75d269b96",
+          "score": 0.21958545327904014,
           "rank": 2
         },
         {
           "candidate_id": "variant:6482c879f2160ee5",
-          "score": 0.3122131847826998,
+          "score": 0.28201942377992906,
           "rank": 3
         },
         {
           "candidate_id": "variant:99c0cc398ba06214",
-          "score": 0.3883551326523677,
+          "score": 0.34926276861201666,
           "rank": 4
         }
       ]
@@ -41,6 +41,25 @@
   "trainingPerformedOnReplay": false,
   "recipe": {
     "steps": [
+      {
+        "method_id": "preprocessing.derivatives.savitzky_golay",
+        "role": "transformer",
+        "params": {
+          "window_length": 9,
+          "polyorder": 2,
+          "deriv": 0
+        }
+      },
+      {
+        "method_id": "preprocessing.scatter.snv",
+        "role": "transformer",
+        "params": {}
+      },
+      {
+        "method_id": "preprocessing.scaling.standard_scale",
+        "role": "transformer",
+        "params": {}
+      },
       {
         "method_id": "models.pls.pls_regression",
         "role": "regressor",
@@ -96,8 +115,8 @@
       "Fat": null
     }
   },
-  "producerArchiveSha256": "9e482c891770e0d16bd0cac72c0babe0cbf64e9182dfa71751f44630ff30d620",
-  "deliveredArchiveSha256": "37210257325b0e0204623024a8d37dffe52bec73fe923c516790921ae5157d8a",
+  "producerArchiveSha256": "b2593b60df63d89daafde348abb6095835c842cc2993d742521bcbe2e59d30c9",
+  "deliveredArchiveSha256": "8730aa6b2be2bb8ab1396d6049bd81025a23013ba39cf554385c799fbb78fc44",
   "deliveredFile": "06-milk-benchmark.n4a",
-  "note": "The producer hash identifies the single-fit archive. The delivered file adds the source-attribution attachment through Core storage without changing fitted state."
+  "note": "Source attribution was appended through Core storage without changing fitted state."
 }
