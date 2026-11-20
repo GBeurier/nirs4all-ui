@@ -1,7 +1,7 @@
 {
   "schema": "nirs4all.inspector-local-build.v1",
   "sourceKind": "explicit-local-working-trees",
-  "note": "Local unpublished source candidate; the native bridge is the explicitly selected existing artifact. This does not claim a native rebuild or a registry release.",
+  "note": "UI showroom source built with the previously published owner WASM cohort and verified runtime hashes.",
   "sources": {
     "selected-core-js/bindings/wasm/src/n4a-inspection.js": {
       "bytes": 4721,
@@ -98,6 +98,50 @@
     "nirs4all-web/web-app/scripts/generate-inspector-examples.mjs": {
       "bytes": 16767,
       "sha256": "3ef7e669d902817f6cccc6d5b7a74ad5ca1df98c074646ab2f9ad1f6b2e7c5c6"
+    },
+    "nirs4all-ui/site/inspector-host/InstrumentedWorkspace.tsx": {
+      "bytes": 22109,
+      "sha256": "91df5ce23effeee5270970ffc45c341efbe5b0b1533b3bb634ad974e4a4aaa4e"
+    },
+    "nirs4all-ui/site/inspector-host/PipelineSource.tsx": {
+      "bytes": 4300,
+      "sha256": "b1e1016b8d0c85f971259736917b474667957f523ff844723ee60d121c70e915"
+    },
+    "nirs4all-ui/site/inspector-host/index.html": {
+      "bytes": 662,
+      "sha256": "5eb13fd3e6028167c1f5fb2b23d377d5c6df2075f1fca1785592bbc5cd8e39a0"
+    },
+    "nirs4all-ui/site/inspector-host/main.tsx": {
+      "bytes": 22041,
+      "sha256": "eb8d24fc7fd14d62e935d53edbe5560b7518f34ddbb25a3607099fb13118231a"
+    },
+    "nirs4all-ui/site/inspector-host/pipeline.ts": {
+      "bytes": 3751,
+      "sha256": "acd20d0a95ab2513033f00128583e6f03721c399a000f6de7be3fc174282cb00"
+    },
+    "nirs4all-ui/site/inspector-host/runtime.ts": {
+      "bytes": 491,
+      "sha256": "4dd4f8cafc9a7cd7c650b11bfec3cfbfeeef16a84a11d1cd8d0c59212d28297e"
+    },
+    "nirs4all-ui/site/inspector-host/style.css": {
+      "bytes": 1455,
+      "sha256": "5f948d26b626e810e4c034d33be0dc793bb99212e0c687b11de273af3c9cfcc6"
+    },
+    "nirs4all-ui/site/inspector-host/worker.ts": {
+      "bytes": 16484,
+      "sha256": "c29a5a0439098fcfbcbbb73a06caafceb6565fc2761ebf138619ed9905eb70e9"
+    },
+    "nirs4all-ui/site/inspector-host/workspace-types.ts": {
+      "bytes": 2187,
+      "sha256": "38ff623c0f9a037e2a50f33a0b2ccbe0f597781f3f41804e19490faba9fc5cd3"
+    },
+    "nirs4all-ui/site/inspector-host/workspace.css": {
+      "bytes": 9258,
+      "sha256": "b52c976443e8b5add3713dcf4c537f662d666e1a721d617d0454549cbe9429be"
+    },
+    "nirs4all-ui/scripts/build-showroom-inspector.mjs": {
+      "bytes": 7528,
+      "sha256": "e3b67006352c4b7df1da7c7562fcedd23dc6ddbf2c5c275b1b6aab04ab838156"
     }
   },
   "native": {
@@ -113,55 +157,11 @@
   "outputs": {
     "index.html": {
       "bytes": 766,
-      "sha256": "ecaf5b8a270e5d76f1b52f4a58f8ec1b192126b1a2b82807d3e51872410058d7"
+      "sha256": "dc95eceb157787bcb3b4d0f18c69ec23cadaafee9173186e7fb16161a4c41d4b"
     },
     "source.tar.gz": {
-      "bytes": 4336151,
-      "sha256": "7f1b1a5b99e3d5fe1f5283d86524dc70017bab4846689a48cf31f1a283419037"
-    },
-    "assets/nirs4all_core_wasm_native-B_QSIhho.js": {
-      "bytes": 34171,
-      "sha256": "7780339c49def934fd6ce3e263b343bc78b01277dc7ae4657778e3548592588a"
-    },
-    "assets/index-XpmIeum4.js": {
-      "bytes": 199680,
-      "sha256": "fa44289183aea22d59581a55b28abe194ac66b46bcd9027b08b4cb1abdde07be"
-    },
-    "assets/dag_ml_wasm-CivDB_Rw.js": {
-      "bytes": 22827,
-      "sha256": "3f166255133c1987a21926ce3d8235b7065199276750143041121a24f6d0009d"
-    },
-    "assets/index-S5AjLd35.css": {
-      "bytes": 126641,
-      "sha256": "d4556e9eb1325fecb5d0901996e1f2a04f646a93c199661472170f2df5573adc"
-    },
-    "assets/nirs4all_core_wasm_native_bg-DUS52wAu.wasm": {
-      "bytes": 14988170,
-      "sha256": "3377eb6c0e2bcff7a042fce6c5c4af0dd7d5db3940ec15a645114c69cef1eab3"
-    },
-    "assets/n4m-D2m-Gkf8.wasm": {
-      "bytes": 4981470,
-      "sha256": "f3d8d90ff9513e2f54bb83a586186a3830f2bcf1792bb6ae269149157250aca6"
-    },
-    "assets/n4m-WRDNDtoI.js": {
-      "bytes": 165942,
-      "sha256": "d3ca61b3646bea1b50aa2ebd6dc733c85721a7c20a3f8123adef7f3126936897"
-    },
-    "assets/index-BOfF2Opc.js": {
-      "bytes": 443628,
-      "sha256": "508b6b660e0469774fe2cb31c0cd26cdb1c1ee189a36e07ea8e63ee277fe553b"
-    },
-    "assets/dag_ml_wasm_bg-DVxFAowB.wasm": {
-      "bytes": 9186371,
-      "sha256": "cf950aad12e10bd84544869a0b2e71458475943ff2b1a79234a2253b2b65fde2"
-    },
-    "assets/worker-BIKs-a4l.js": {
-      "bytes": 41172,
-      "sha256": "09119507f7d3a9140799c313e8f37332b329c5423ca0c31ef9848e797db2a404"
-    },
-    "assets/n4m_estimator_controller-9bLByet5.js": {
-      "bytes": 12435,
-      "sha256": "eb2c9a7e887867619f774e31ca684fed1cf8cd8c3058abb44fa52d2de25b61dd"
+      "bytes": 4350173,
+      "sha256": "c90c786cd6bf96518aaf46f4b33bc484a9272b6697d29713066839d9bf628f41"
     },
     "legal/dag/LICENSING.md": {
       "bytes": 1406,
@@ -542,6 +542,50 @@
     "examples/walnut-msc.evidence.json": {
       "bytes": 3319,
       "sha256": "9776582ebee259d68ca75bf6d19165cad22b354f40c9eac2a1da6e2e3b71d9fb"
+    },
+    "assets/dag_ml_wasm-CivDB_Rw.js": {
+      "bytes": 22827,
+      "sha256": "3f166255133c1987a21926ce3d8235b7065199276750143041121a24f6d0009d"
+    },
+    "assets/dag_ml_wasm_bg-DVxFAowB.wasm": {
+      "bytes": 9186371,
+      "sha256": "cf950aad12e10bd84544869a0b2e71458475943ff2b1a79234a2253b2b65fde2"
+    },
+    "assets/index-Cf_hHcen.css": {
+      "bytes": 127985,
+      "sha256": "05fc6466e329f00c6d0ce1dfc0d4c97c10ad771502c2548ea3822f2c976eaf29"
+    },
+    "assets/index-DSyxlY74.js": {
+      "bytes": 501221,
+      "sha256": "3ffb13eb08830ffea66e8e398015844d195aa8851803ad435fb2212a5e85358c"
+    },
+    "assets/index-DY8dPGq8.js": {
+      "bytes": 199680,
+      "sha256": "20ec79cee3777e34fcbc34a64774dc72efbeb3afe25c9e2d0335cb3fa1ab6130"
+    },
+    "assets/n4m-BzwiF1tH.js": {
+      "bytes": 165942,
+      "sha256": "60f3f9d1ec2e26fc2ee52d292399b55fe53b816a520b6c489e8312158d7f7caf"
+    },
+    "assets/n4m-D2m-Gkf8.wasm": {
+      "bytes": 4981470,
+      "sha256": "f3d8d90ff9513e2f54bb83a586186a3830f2bcf1792bb6ae269149157250aca6"
+    },
+    "assets/n4m_estimator_controller-9bLByet5.js": {
+      "bytes": 12435,
+      "sha256": "eb2c9a7e887867619f774e31ca684fed1cf8cd8c3058abb44fa52d2de25b61dd"
+    },
+    "assets/nirs4all_core_wasm_native-B_QSIhho.js": {
+      "bytes": 34171,
+      "sha256": "7780339c49def934fd6ce3e263b343bc78b01277dc7ae4657778e3548592588a"
+    },
+    "assets/nirs4all_core_wasm_native_bg-DUS52wAu.wasm": {
+      "bytes": 14988170,
+      "sha256": "3377eb6c0e2bcff7a042fce6c5c4af0dd7d5db3940ec15a645114c69cef1eab3"
+    },
+    "assets/worker-_2JeJSfI.js": {
+      "bytes": 43441,
+      "sha256": "afd20f8030b48079a07899df980495e3def45ff2e2009fb6cb4e14da5f877017"
     }
   },
   "executionRuntimes": {
@@ -581,6 +625,6 @@
   "publication": {
     "kind": "standalone-instrumented-preview",
     "examples": 10,
-    "note": "Existing UI GitHub Pages channel. No package release or native rebuild is claimed."
+    "note": "Existing UI GitHub Pages channel. WASM artifacts are reused byte for byte."
   }
 }

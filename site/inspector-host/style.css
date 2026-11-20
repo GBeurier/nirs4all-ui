@@ -1,0 +1,16 @@
+body { margin: 0; background: var(--paper); color: var(--text); font-family: var(--font); }
+.n4ai-host { max-width: 1280px; margin: 0 auto; padding: 20px; }
+.n4ai-host-bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; font-size: 13px; color: var(--text-2); }
+.n4ai-host-bar a { color: var(--teal-d); font-family: var(--display); font-weight: 600; }
+.n4ai-host-bar button { margin-left: auto; }
+.n4ai-host button, .n4ai-host select, .n4ai-host input { font: inherit; }
+.n4ai-host-bar button, .n4ai-host-source button, .n4ai-host select, .n4ai-host-source input:not([type=file]) { padding: 6px 10px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 7px; }
+.n4ai-host-source { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; padding: 14px; border: 1px dashed var(--border); border-radius: 10px; }
+.n4ai-host-source p { margin: 0; }
+.n4ai-host-source p:nth-of-type(2) { color: var(--text-2); font-size: 12px; }
+.n4ai-host-source input[type=file] { max-width: 100%; }
+.n4ai-host-source input[type=number] { width: 90px; }
+.n4ai-host-source label { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-width: 0; max-width: 100%; }
+.n4ai-host-source select { min-width: 0; max-width: 100%; }
+.n4ai-host-source input:not([type=file]):not([type=number]) { width: 140px; max-width: 100%; }
+@media(max-width:600px) { .n4ai-host { padding: 8px; } }

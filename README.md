@@ -319,6 +319,13 @@ base so the showcase works at the GitHub project URL and at the root of
 `showroom.nirs4all.org`. The custom domain is configured in the repository's
 Pages settings, with a DNS CNAME pointing to `gbeurier.github.io`.
 
+The standalone N4a Inspector lives at `/n4a-inspector/`. Its showroom host is
+in `site/inspector-host/`. Run `node scripts/build-showroom-inspector.mjs`
+after changing the host. The script uses the existing publication source
+archive and verifies the deployed WASM digests before updating the standalone
+assets and source archive. `npm run site:build` includes those assets in the
+Pages artifact.
+
 `site/src/App.test.tsx` is the focused hardening check for the showcase: it
 verifies that every public React component, lab, and dataset-builder export
 appears in the page and that the mirrored brand/logo, crawler metadata,
