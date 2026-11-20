@@ -272,6 +272,7 @@ export function App() {
         </a>
         <nav aria-label="Sections">
           <a href="#workbench">Workbench</a>
+          <a className="topbar-inspector" href="./n4a-inspector/">N4A Inspector</a>
           <a href="#showroom">Showroom</a>
           <a href="#builder">Builder</a>
           <a href="#pipeline-editor">Pipeline editor</a>

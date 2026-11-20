@@ -451,7 +451,9 @@ button { font-family: inherit; }
 @media (max-width: 860px) {
   .hero { grid-template-columns: 1fr; }
   .hero-visual { order: -1; }
-  .topbar nav { display: none; }
+  .topbar { gap: 8px; }
+  .topbar nav a:not(.topbar-inspector) { display: none; }
+  .topbar .topbar-inspector { padding-inline: 6px; }
 }
 
 /* ---------- workbench capsules ---------- */

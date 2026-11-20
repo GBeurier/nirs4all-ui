@@ -33,6 +33,8 @@ jobs:
         run: npm run ci
 
       - name: Build showcase
+        env:
+          NIRS4ALL_UI_BASE: "./"
         run: npm run site:build
 
       - name: Upload Pages artifact

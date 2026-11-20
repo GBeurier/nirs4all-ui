@@ -314,10 +314,10 @@ build also copies the package brand kit to namespaced GitHub Pages URLs under
 CSS such as `assets/datasetBuilder.css` and `assets/theme.css` remains
 available through the npm asset export.
 The npm package keeps the same files available through the
-`nirs4all-ui/assets/*` export. Production Pages is currently served from the
-GitHub project-page path with the default `/nirs4all-ui/` Vite base. When a
-dedicated subdomain such as `ui.nirs4all.org` is enabled, switch the Pages
-workflow to `NIRS4ALL_UI_BASE=/` and add `site/public/CNAME`.
+`nirs4all-ui/assets/*` export. The Pages workflow builds with a relative Vite
+base so the showcase works at the GitHub project URL and at the root of
+`showroom.nirs4all.org`. The custom domain is configured in the repository's
+Pages settings, with a DNS CNAME pointing to `gbeurier.github.io`.
 
 `site/src/App.test.tsx` is the focused hardening check for the showcase: it
 verifies that every public React component, lab, and dataset-builder export
