@@ -40,8 +40,8 @@
       "sha256": "d28d20c8364cbd86003b025b1f92504f2a77d602acd73cf6cc84e269f3b2959c"
     },
     "nirs4all-ui/src/n4aInspector/N4aInspector.tsx": {
-      "bytes": 54375,
-      "sha256": "c526d93d9f277256bb7cf122b04af9b69b8cbd1355dff60968d1a1c07b668334"
+      "bytes": 54380,
+      "sha256": "a84f286d6ec518698d1c569a0a1b629984a663836b25b9cc21548fbd7a245ada"
     },
     "nirs4all-ui/src/n4aInspector/model.ts": {
       "bytes": 7411,
@@ -100,8 +100,8 @@
       "sha256": "3ef7e669d902817f6cccc6d5b7a74ad5ca1df98c074646ab2f9ad1f6b2e7c5c6"
     },
     "nirs4all-ui/site/inspector-host/InstrumentedWorkspace.tsx": {
-      "bytes": 22109,
-      "sha256": "91df5ce23effeee5270970ffc45c341efbe5b0b1533b3bb634ad974e4a4aaa4e"
+      "bytes": 22009,
+      "sha256": "cb971f804325e0fd0cb68234343d6eee6987640711e8418b0abbb5f0d325d918"
     },
     "nirs4all-ui/site/inspector-host/PipelineSource.tsx": {
       "bytes": 4300,
@@ -157,11 +157,11 @@
   "outputs": {
     "index.html": {
       "bytes": 766,
-      "sha256": "dc95eceb157787bcb3b4d0f18c69ec23cadaafee9173186e7fb16161a4c41d4b"
+      "sha256": "3f480a1bad8e9ca3d05947d6ef8e41e601a6e084e7871d8d818c32dadad2cc2a"
     },
     "source.tar.gz": {
-      "bytes": 4350173,
-      "sha256": "c90c786cd6bf96518aaf46f4b33bc484a9272b6697d29713066839d9bf628f41"
+      "bytes": 4350065,
+      "sha256": "fc751af9376b6dfa362a2dd51fc71126be1649a663568b8c0560d519b382c01d"
     },
     "legal/dag/LICENSING.md": {
       "bytes": 1406,
@@ -555,13 +555,13 @@
       "bytes": 127985,
       "sha256": "05fc6466e329f00c6d0ce1dfc0d4c97c10ad771502c2548ea3822f2c976eaf29"
     },
-    "assets/index-DSyxlY74.js": {
-      "bytes": 501221,
-      "sha256": "3ffb13eb08830ffea66e8e398015844d195aa8851803ad435fb2212a5e85358c"
-    },
     "assets/index-DY8dPGq8.js": {
       "bytes": 199680,
       "sha256": "20ec79cee3777e34fcbc34a64774dc72efbeb3afe25c9e2d0335cb3fa1ab6130"
+    },
+    "assets/index-Du6gE67B.js": {
+      "bytes": 501124,
+      "sha256": "26d8fc6b0e50b5fa06b666fc1483e948283273fa868da55cf3e4cfdda51808b7"
     },
     "assets/n4m-BzwiF1tH.js": {
       "bytes": 165942,

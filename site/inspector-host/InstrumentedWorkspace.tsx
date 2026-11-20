@@ -301,9 +301,10 @@ function ExploreViews(props: InstrumentedWorkspaceProps & { inspection: NonNulla
             </span>
             <button type="button" className="n4wb-btn n4wb-btn-ghost n4iw-inspect" onClick={() => props.onInspectArtifact(active.id)}>Inspect artifact</button>
           </div>
-          {view === 'pipelines' && definition ? <>
-            <Generation definition={definition} />
-            {definition.kind === 'native' && <section className="n4iw-operation" aria-label="Run selected pipeline">
+          {view === 'pipelines' ? <>
+            <PreviewSlot artifact={active} state={previews[active.id]} onRequestPreview={onRequestPreview} />
+            {definition && <Generation definition={definition} />}
+            {definition?.kind === 'native' && <section className="n4iw-operation" aria-label="Run selected pipeline">
               <h4 className="n4ai-h4">Run this pipeline</h4>
               {props.actionInputs}
               <button type="button" className="n4wb-btn n4wb-btn-primary" disabled={props.actionDisabled || !props.datasetId || !props.sourceId.trim()} onClick={() => {
@@ -312,14 +313,12 @@ function ExploreViews(props: InstrumentedWorkspaceProps & { inspection: NonNulla
               }}>Run in browser</button>
               {!props.datasetId && <p className="n4ai-caption">Choose an embedded training dataset or attach a data bundle to run.</p>}
             </section>}
-            <h4 className="n4ai-h4">{definition.kind === 'native' ? 'SDK recipe source' : 'Pipeline source'}</h4>
-            <SourceEditor source={definition} />
-            <details className="n4ai-details">
-              <summary>Pipeline diagram</summary>
-              <PreviewSlot artifact={active} state={previews[active.id]} onRequestPreview={onRequestPreview} />
-            </details>
+            {definition && <details className="n4ai-details">
+              <summary>{definition.kind === 'native' ? 'SDK recipe source' : 'Pipeline source'} · JSON / YAML</summary>
+              <SourceEditor source={definition} />
+            </details>}
+            {definition === null && <p className="n4wb-note">This plan has no embedded native SDK recipe.</p>}
           </> : <>
-            {view === 'pipelines' && definition === null && <p className="n4wb-note">This plan has no embedded native SDK recipe. Its stored graph may be available in Stored graphs.</p>}
             {view === 'models' && active.storage === 'embedded' && inspection.entrypoints.some(entry => entry.owner === 'dag-ml' &&
               entry.rootArtifact === active.id && ['predict', 'predict-external'].includes(entry.operation)) && (
               <section className="n4iw-operation" aria-label="Fitted model actions">
