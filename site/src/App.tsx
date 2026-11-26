@@ -1,3 +1,4 @@
+import { PackageGraphDemo } from "./demo/PackageGraphDemo.js";
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
@@ -277,6 +278,7 @@ export function App() {
           <a href="#builder">Builder</a>
           <a href="#pipeline-editor">Pipeline editor</a>
           <a href="#graph">Graph</a>
+          <a href="#package-graph">Packages</a>
           <a href="#chains">Chains</a>
           <a href="#brand">Brand</a>
           <a href="#surface">API</a>
@@ -363,6 +365,10 @@ export function App() {
           ))}
         </div>
       </Section>
+
+      <section id="package-graph" className="section" aria-label="Ecosystem package dependencies">
+        <PackageGraphDemo />
+      </section>
 
       <Section
         id="builder"

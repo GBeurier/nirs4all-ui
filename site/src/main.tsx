@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
+import { PackageGraphDemo } from "./demo/PackageGraphDemo.js";
 import { App } from "./App.js";
 import "../../assets/theme.css";
 import "../../assets/viz.css";
@@ -14,6 +15,7 @@ import "./styles.css";
 
 createRoot(document.getElementById("root") as HTMLElement).render(
   <StrictMode>
-    <App />
+    {new URLSearchParams(location.search).get("view") === "package-graph"
+      ? <main><PackageGraphDemo /></main> : <App />}
   </StrictMode>,
 );
