@@ -255,6 +255,12 @@ entries imports it.
   there is exactly one data table, and non-finite cells read "not available"). The locale
   defaults to English. Remount on axis, signal or series-group changes; use `update` for
   selection or title changes.
+- `mountSpectraCompare` takes the `SpectraCompareChart` props: a `before` and an `after`
+  layer (`{ id, label, yLabel, axis, series, dashed? }`) overlaid on one shared x-axis.
+  Each layer keeps its own x values, which the host passes already in the shared unit
+  (the chart converts nothing). When the y labels differ, `after` gets a right y-axis;
+  `sharedY` forces one scale and `xDescending` draws wavenumbers high to low. Hover or
+  ←/→ reads the nearest point of each layer; a per-layer table is the text alternative.
 - `mountOwnerProposals` renders host-projected proposals in the given order, labels
   scores as uncalibrated and shows a dash for missing scores. Alternatives report
   their opaque `choiceId`; overrides report the exact host `choice.value`. The host

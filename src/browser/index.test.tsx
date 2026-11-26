@@ -20,7 +20,7 @@ vi.mock("react-dom/client", () => ({
   },
 }));
 
-import { mountPackageGraph, mountSpectraExplorer, type SpectraExplorerProps } from "./index.js";
+import { mountPackageGraph, mountSpectraCompare, mountSpectraExplorer, type SpectraExplorerProps } from "./index.js";
 
 const host = { nodeType: 1 } as unknown as HTMLElement;
 const markup = () => renderToStaticMarkup(roots.renders.at(-1) as ReactElement);
@@ -114,6 +114,26 @@ describe("browser mount lifecycle", () => {
     expect(() => handle.update(props)).toThrow(/after unmount/);
     expect(() => mountSpectraExplorer(null as unknown as HTMLElement, props)).toThrow(TypeError);
     expect(roots.created).toBe(1);
+  });
+});
+
+describe("browser spectra compare mount", () => {
+  const layer = (id: string, yLabel: string, color: string) => ({
+    id, label: id, yLabel, axis: [1000, 1100], series: [{ id: `${id}-1`, values: [1, 2], color }],
+  });
+
+  it("overlays both layers in one chart, English by default, with one data table", () => {
+    const handle = mountSpectraCompare(host, { title: "Compare", before: layer("before", "Reflectance", "#999"), after: layer("after", "Absorbance", "#0d9488"), axisUnit: "nm" });
+    const html = markup();
+    expect(tables(html)).toBe(1);
+    expect(html.match(/<svg\b/g)).toHaveLength(1);
+    expect(html).toContain("right axis");
+    expect(html).toContain("Chart data");
+    handle.update({ title: "Compare", before: layer("before", "Absorbance", "#999"), after: layer("after", "Absorbance", "#0d9488") });
+    expect(roots.created).toBe(1);
+    expect(markup()).not.toContain("right axis");
+    handle.unmount();
+    expect(roots.unmounts).toBe(1);
   });
 });
 

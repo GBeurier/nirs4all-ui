@@ -19,6 +19,7 @@ import { createRoot } from "react-dom/client";
 import { DatasetPreviewCard, type DatasetPreviewCardProps } from "../components/DatasetPreviewCard.js";
 import { OwnerProposalList, type OwnerProposalListProps } from "../datasetBuilder/OwnerProposalList.js";
 import { PackageGraphView, type PackageGraphViewProps } from "../packageGraph/PackageGraphView.js";
+import { SpectraCompareChart, type SpectraCompareChartProps } from "../qualification/SpectraCompareChart.js";
 import { SpectraExplorer, type SpectraExplorerProps } from "../qualification/SpectraExplorer.js";
 import "./browser.css";
 
@@ -27,6 +28,7 @@ export { projectPackageReleases } from "../packageGraph/model.js";
 export type { PackageGraph, PackageReleases, PackageReleaseTargets, PublicReleaseSnapshot } from "../packageGraph/model.js";
 export type { DatasetPreviewView } from "../dataset/datasetPreview.js";
 export type { ExplorerSeries, SpectraExplorerProps } from "../qualification/SpectraExplorer.js";
+export type { CompareLayer, SpectraCompareChartProps } from "../qualification/SpectraCompareChart.js";
 export type {
   OwnerProposalAlternative,
   OwnerProposalDisplay,
@@ -118,6 +120,19 @@ export function mountDatasetPreview(
  */
 export function mountSpectraExplorer(host: HTMLElement, props: SpectraExplorerProps): Mounted<SpectraExplorerProps> {
   return mountComponent(host, BrowserSpectraExplorer, props);
+}
+
+function BrowserSpectraCompare(props: SpectraCompareChartProps) {
+  return <SpectraCompareChart {...props} locale={props.locale ?? "en"} />;
+}
+
+/**
+ * Mount the before/after compare chart (English by default): two layers on one shared x-axis,
+ * with a second y-axis when their y labels differ. Hosts pass every x value already in the
+ * shared unit; the chart converts nothing.
+ */
+export function mountSpectraCompare(host: HTMLElement, props: SpectraCompareChartProps): Mounted<SpectraCompareChartProps> {
+  return mountComponent(host, BrowserSpectraCompare, props);
 }
 
 /** Mount the controlled owner proposal list; callbacks stay host-owned. */
