@@ -29,3 +29,4 @@ export * as qualification from "./qualification/index.js";
 export * as pipelines from "./pipelines/index.js";
 export * as multimodal from "./multimodal/index.js";
 export * as pipelineEditor from "./pipelineEditor/index.js";
+export * as packageGraph from "./packageGraph/index.js";

@@ -2,7 +2,7 @@
 /**
  * Optional self-contained browser entry for vanilla (non-React) hosts.
  *
- * Exactly three runtime functions mount existing presentational components into a
+ * Mount functions render existing presentational components into a
  * host element. Each call owns one React root in its own closure: no registry, global
  * bus, store, fetch, owner import, WASM, parser, inference or scientific computation.
  * `update` replaces the complete props; `unmount` releases the root. Hosts keep data
@@ -18,9 +18,13 @@ import { createRoot } from "react-dom/client";
 
 import { DatasetPreviewCard, type DatasetPreviewCardProps } from "../components/DatasetPreviewCard.js";
 import { OwnerProposalList, type OwnerProposalListProps } from "../datasetBuilder/OwnerProposalList.js";
+import { PackageGraphView, type PackageGraphViewProps } from "../packageGraph/PackageGraphView.js";
 import { SpectraExplorer, type SpectraExplorerProps } from "../qualification/SpectraExplorer.js";
 import "./browser.css";
 
+export type { PackageGraphViewProps } from "../packageGraph/PackageGraphView.js";
+export { projectPackageReleases } from "../packageGraph/model.js";
+export type { PackageGraph, PackageReleases, PackageReleaseTargets, PublicReleaseSnapshot } from "../packageGraph/model.js";
 export type { DatasetPreviewView } from "../dataset/datasetPreview.js";
 export type { ExplorerSeries, SpectraExplorerProps } from "../qualification/SpectraExplorer.js";
 export type {
@@ -119,4 +123,9 @@ export function mountSpectraExplorer(host: HTMLElement, props: SpectraExplorerPr
 /** Mount the controlled owner proposal list; callbacks stay host-owned. */
 export function mountOwnerProposals(host: HTMLElement, props: OwnerProposalListProps): Mounted<OwnerProposalListProps> {
   return mountComponent(host, OwnerProposalList, props);
+}
+
+/** Mount the package graph. Update with a new public snapshot without replacing the root. */
+export function mountPackageGraph(host: HTMLElement, props: PackageGraphViewProps): Mounted<PackageGraphViewProps> {
+  return mountComponent(host, PackageGraphView, props);
 }
