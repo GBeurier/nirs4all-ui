@@ -33,6 +33,7 @@ export * from './EigenvalueScree.js';
 export * from './ScoreMap.js';
 export * from './TargetDistribution.js';
 export * from './SpectraExplorer.js';
+export * from './SpectraCompareChart.js';
 export * from './CheckList.js';
 export * from './MeasureBars.js';
 export * from './HypothesisTestTable.js';
