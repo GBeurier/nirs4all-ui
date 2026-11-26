@@ -6,6 +6,7 @@
  * `--text` or `--border` are read when present and fall back to the shared palette.
  */
 @import "../../assets/qualification.css";
+@import "../../assets/packageGraph.css";
 
 .n4ui-b-root {
   --n4ui-b-text: var(--text, #0f172a);

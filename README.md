@@ -220,7 +220,7 @@ entries imports it.
 | File (`dist/browser/`) | Export | Use |
 | --- | --- | --- |
 | `nirs4all-ui-browser.iife.js` | `nirs4all-ui/browser/standalone` | Classic `<script>`; defines `globalThis.Nirs4allUIBrowser`. |
-| `nirs4all-ui-browser.mjs` | `nirs4all-ui/browser` | ES module with the same three functions; no global assignment. Types: `index.d.ts`. |
+| `nirs4all-ui-browser.mjs` | `nirs4all-ui/browser` | ES module with the same browser API; no global assignment. Types: `index.d.ts`. |
 | `browser.css` | `nirs4all-ui/browser/styles.css` | Class-scoped styles (no `:root` tokens or global element rules). |
 
 ```html
@@ -263,6 +263,40 @@ entries imports it.
 Hosts stage `nirs4all-ui-browser.iife.js` (or the `.mjs`), `browser.css`,
 `THIRD_PARTY_NOTICES.md` and the texts in `LICENSES/THIRD-PARTY/` together, because
 the bundle contains MIT-licensed React code.
+
+## Ecosystem package graph
+
+React hosts can import `PackageGraphView` from `nirs4all-ui/packageGraph` and
+`nirs4all-ui/assets/packageGraph.css`. Vanilla hosts use `mountPackageGraph`
+and the existing browser stylesheet. Supply the
+[ecosystem artifact graph](https://github.com/GBeurier/nirs4all-ecosystem/blob/main/docs/contracts/release/artifact-graph.n4a.json)
+and, optionally, public release observations. The diagram and accessible table
+cover the same artifacts and relationships, including packages without a
+public release observation. Use the artifact selector to trace its dependencies
+and consumers, and the relationship filter to narrow the trace.
+
+```js
+const { mountPackageGraph, projectPackageReleases } = Nirs4allUIBrowser;
+const view = mountPackageGraph(document.getElementById("package-graph"), {
+  graph,
+  releases: projectPackageReleases(graph, releaseTargets, publicSnapshot),
+});
+
+function onSnapshotRefresh(graph, releaseTargets, publicSnapshot) {
+  view.update({
+    graph,
+    releases: projectPackageReleases(graph, releaseTargets, publicSnapshot),
+  });
+}
+```
+
+The host provides the current ecosystem
+[release target mapping](https://github.com/GBeurier/nirs4all-ecosystem/blob/main/docs/contracts/release/artifact-release-targets.n4a.json)
+and Cockpit's public `data/current.json`. Release targets match exactly by
+package ID, registry and target name. A channel may have a known status without
+a reported version. The same mount keeps its current filters while newer graph
+and release snapshot data are rendered. Hosts own refresh scheduling and data
+loading.
 
 ## Development
 

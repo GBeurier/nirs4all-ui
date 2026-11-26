@@ -20,7 +20,7 @@ vi.mock("react-dom/client", () => ({
   },
 }));
 
-import { mountSpectraExplorer, type SpectraExplorerProps } from "./index.js";
+import { mountPackageGraph, mountSpectraExplorer, type SpectraExplorerProps } from "./index.js";
 
 const host = { nodeType: 1 } as unknown as HTMLElement;
 const markup = () => renderToStaticMarkup(roots.renders.at(-1) as ReactElement);
@@ -114,5 +114,27 @@ describe("browser mount lifecycle", () => {
     expect(() => handle.update(props)).toThrow(/after unmount/);
     expect(() => mountSpectraExplorer(null as unknown as HTMLElement, props)).toThrow(TypeError);
     expect(roots.created).toBe(1);
+  });
+});
+
+describe("browser package graph mount", () => {
+  it("updates observed release versions on the same root", () => {
+    const graph = {
+      schema_version: "n4a.artifact-graph/v1",
+      artifacts: { "io.node-wasm": { repository: "nirs4all-io", action: "build", inputs: {} } },
+    } as const;
+    const releaseProps = (version: string) => ({
+      graph,
+      releases: {
+        generatedAt: "2026-11-26T00:00:00Z",
+        byArtifact: { "io.node-wasm": [{ registry: "npm", name: "@nirs4all/io-wasm", status: "green", version }] },
+      },
+    });
+    const handle = mountPackageGraph(host, releaseProps("0.3.9"));
+    expect(markup()).toContain("0.3.9");
+    handle.update(releaseProps("0.3.10"));
+    expect(roots.created).toBe(1);
+    expect(markup()).toContain("0.3.10");
+    expect(markup()).not.toContain("0.3.9");
   });
 });
